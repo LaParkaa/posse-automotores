@@ -31,8 +31,8 @@ export default async function Home() {
       <main>
         {/* HERO */}
         <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 pb-20 pt-24 text-center">
-          <div className="absolute inset-0 bg-cover bg-center opacity-60" style={{ backgroundImage: "url('/img/frente%20local.jpg')" }} />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-car-black" />
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/img/frente%20local.jpg')" }} />
+          <div className="absolute inset-0 bg-black/45" />
           <div className="relative z-10 max-w-3xl">
             <span className="mb-6 inline-block rounded-full border border-car-gold bg-car-gold/15 px-4 py-1.5 text-xs font-bold uppercase tracking-[3px] text-car-gold">
               Justiniano Posse · Córdoba · Argentina
