@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --font-barlow: "Barlow", sans-serif;
+  --font-barlow-condensed: "Barlow Condensed", sans-serif;
+
+  --color-car-black: #0d0d12;
+  --color-car-gray: #141824;
+  --color-car-gray2: #1e2434;
+  --color-car-gold: #C9A227;
+  --color-car-gold-dark: #a8881f;
+  --color-car-white: #EEF2FF;
+  --color-car-muted: #7a8aaa;
+}
+
+:root {
+  --font-barlow: "Barlow", sans-serif;
+  --font-barlow-condensed: "Barlow Condensed", sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: #0d0d12;
+  color: #EEF2FF;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0d0d12; }
+::-webkit-scrollbar-thumb { background: #C9A227; border-radius: 3px; }
