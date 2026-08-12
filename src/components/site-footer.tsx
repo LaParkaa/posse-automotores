@@ -9,9 +9,7 @@ export function SiteFooter() {
       <p className="mt-2 text-sm text-car-muted">
         Justiniano Posse, Córdoba · {new Date().getFullYear()}
       </p>
-      <p className="mt-1 text-xs text-car-muted">
-        <Link href="/admin" className="hover:text-car-gold">Admin</Link>
-      </p>
+      <Link href="/admin" className="mt-3 inline-block text-[#111318] hover:text-car-muted transition-colors select-none">·</Link>
     </footer>
   );
 }

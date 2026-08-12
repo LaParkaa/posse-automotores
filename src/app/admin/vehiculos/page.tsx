@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireAdminSession } from "@/lib/auth";
 import { getAllVehiculos } from "@/lib/data";
 import { AdminShell } from "@/components/admin-shell";
-import { toggleEstado, softDeleteVehiculo } from "./actions";
+import { toggleEstado } from "./actions";
+import { DeleteButton } from "./delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -77,19 +78,7 @@ export default async function AdminVehiculosPage() {
                     >
                       Editar
                     </Link>
-                    <form
-                      action={softDeleteVehiculo.bind(null, v.id)}
-                      onSubmit={(e) => {
-                        if (!confirm("¿Eliminar este vehículo?")) e.preventDefault();
-                      }}
-                    >
-                      <button
-                        type="submit"
-                        className="rounded border border-red-900 px-3 py-1 text-xs text-red-400 transition hover:bg-red-900/30"
-                      >
-                        Eliminar
-                      </button>
-                    </form>
+                    <DeleteButton id={v.id} />
                   </div>
                 </td>
               </tr>

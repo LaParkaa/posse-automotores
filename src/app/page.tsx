@@ -32,8 +32,20 @@ export default async function Home() {
         {/* HERO */}
         <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 pb-20 pt-24 text-center">
           <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/img/frente%20local.jpg')" }} />
+          <video
+            className="absolute inset-0 h-full w-full object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster="/img/frente%20local.jpg"
+            aria-hidden="true"
+          >
+            <source src="/toma_publicitaria_de_que_pasd.mp4" type="video/mp4" />
+          </video>
           <div className="absolute inset-0 bg-black/45" />
-          <div className="relative z-10 max-w-3xl">
+          <div className="relative z-10 max-w-3xl lg:-translate-y-8">
             <span className="mb-6 inline-block rounded-full border border-car-gold bg-car-gold/15 px-4 py-1.5 text-xs font-bold uppercase tracking-[3px] text-car-gold">
               Justiniano Posse · Córdoba · Argentina
             </span>
@@ -53,6 +65,30 @@ export default async function Home() {
                 Consultanos ahora
               </Link>
             </div>
+            <Link
+              href="/lavadero"
+              className="group mx-auto mt-8 grid max-w-2xl overflow-hidden rounded-lg border border-car-gold/35 bg-car-black/70 text-left shadow-[0_16px_45px_rgba(0,0,0,0.35)] backdrop-blur-md transition hover:scale-[1.01] hover:border-car-gold sm:grid-cols-[190px_1fr] lg:translate-y-24"
+            >
+              <span
+                className="min-h-36 bg-cover bg-center sm:min-h-full"
+                style={{ backgroundImage: "url('/Gemini_Generated_Image_crrcp3crrcp3crrc.png')" }}
+                aria-hidden="true"
+              />
+              <span className="flex flex-col justify-center p-5">
+                <span className="font-condensed text-xs font-bold uppercase tracking-[3px] text-car-gold">
+                  Nuevo servicio
+                </span>
+                <span className="mt-1 font-condensed text-2xl font-black italic uppercase text-car-white">
+                  Lavadero Posse Automotores
+                </span>
+                <span className="mt-2 text-sm leading-6 text-car-white/70">
+                  Lavado exterior, interior, aspirado, encerado y cuidado integral para tu vehículo.
+                </span>
+                <span className="mt-4 font-condensed text-sm font-bold uppercase tracking-wide text-car-gold transition group-hover:text-car-white">
+                  Conocer el lavadero
+                </span>
+              </span>
+            </Link>
           </div>
           <div className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 text-car-white/30">
             <div className="h-10 w-px bg-gradient-to-b from-car-gold to-transparent" />

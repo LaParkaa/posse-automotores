@@ -1,0 +1,185 @@
+[
+  {
+    "slug": "bmw-328-luxury-2016",
+    "nombre": "BMW 328 Luxury",
+    "marca": "BMW",
+    "modelo": "328 Luxury",
+    "anio": "2016",
+    "kilometraje": "190.000 km",
+    "combustible": "Nafta",
+    "transmision": "Automático",
+    "motor": "2.0",
+    "tipo": "Sedán",
+    "estado": "disponible",
+    "descripcion": "Sedán ejecutivo con el sello BMW: manejo preciso, motor ágil y terminaciones de lujo en cada detalle. Ideal para quien busca distinción, tecnología y placer de conducción en el día a día.",
+    "imagenes": [
+      "img/bmw_328_luxury_2016_1.jpg",
+      "img/bmw_328_luxury_2016_2.jpg",
+      "img/bmw_328_luxury_2016_3.jpg",
+      "img/bmw_328_luxury_2016_4.jpg",
+      "img/bmw_328_luxury_2016_5.jpg"
+    ]
+  },
+  {
+    "slug": "vw-amarok-v6-extreme-2019",
+    "nombre": "VW Amarok V6 Extreme",
+    "marca": "Volkswagen",
+    "modelo": "Amarok V6 Extreme",
+    "anio": "2019",
+    "kilometraje": "116.000 km",
+    "combustible": "Diesel",
+    "transmision": "Automático",
+    "motor": "V6 3.0",
+    "tipo": "Pick-up",
+    "estado": "disponible",
+    "descripcion": "Pick-up V6 4x4 con toda la robustez y el equipamiento premium de la línea Extreme. Motor diesel potente, gran capacidad de trabajo y el confort de un vehículo pensado para ruta y ciudad por igual.",
+    "imagenes": [
+      "img/amarok_v6_extreme_2019_1.jpg",
+      "img/amarok_v6_extreme_2019_2.jpg",
+      "img/amarok_v6_extreme_2019_3.jpg",
+      "img/amarok_v6_extreme_2019_4.jpg",
+      "img/amarok_v6_extreme_2019_5.jpg"
+    ]
+  },
+  {
+    "slug": "vw-amarok-v6-confort-2025",
+    "nombre": "VW Amarok V6 Confort",
+    "marca": "Volkswagen",
+    "modelo": "Amarok V6 Confort",
+    "anio": "2025",
+    "kilometraje": "27.000 km",
+    "combustible": "Diesel",
+    "transmision": "Automático",
+    "motor": "V6 3.0",
+    "tipo": "Pick-up",
+    "estado": "disponible",
+    "descripcion": "Amarok V6 último modelo con apenas 27.000 km, prácticamente como nueva. Fuerza, tecnología y comodidad en una pick-up 4x4 lista para trabajo o uso familiar.",
+    "imagenes": [
+      "img/amarok_v6_confort_2025_1.jpg",
+      "img/amarok_v6_confort_2025_2.jpg",
+      "img/amarok_v6_confort_2025_3.jpg",
+      "img/amarok_v6_confort_2025_4.jpg"
+    ]
+  },
+  {
+    "slug": "renault-kangoo-express-2025",
+    "nombre": "Renault Kangoo Express 5A 1.6 SCE 114",
+    "marca": "Renault",
+    "modelo": "Kangoo Express 5A 1.6 SCE 114",
+    "anio": "2025",
+    "kilometraje": "1.100 km",
+    "combustible": "Nafta",
+    "transmision": "Manual",
+    "motor": "1.6",
+    "tipo": "Utilitario",
+    "estado": "disponible",
+    "descripcion": "Furgón utilitario de origen nacional con apenas 1.100 km, prácticamente a estrenar. Ideal para trabajo diario, con amplia capacidad de carga y bajo costo de mantenimiento.",
+    "imagenes": [
+      "img/kangoo_express_2025_1.jpg",
+      "img/kangoo_express_2025_2.jpg",
+      "img/kangoo_express_2025_3.jpg",
+      "img/kangoo_express_2025_4.jpg",
+      "img/kangoo_express_2025_5.jpg"
+    ]
+  },
+  {
+    "slug": "vw-amarok-v6-extreme-2025",
+    "nombre": "VW Amarok V6 Extreme",
+    "marca": "Volkswagen",
+    "modelo": "Amarok V6 Extreme",
+    "anio": "2025",
+    "kilometraje": "30.000 km",
+    "combustible": "Diesel",
+    "transmision": "Automático",
+    "motor": "V6 3.0",
+    "tipo": "Pick-up",
+    "estado": "vendido",
+    "descripcion": "Pick-up V6 4x4 de alto nivel, con gran confort de marcha, excelente respuesta y presencia premium. Ideal para combinar trabajo, ruta y uso familiar con la seguridad de una unidad seleccionada por Posse Automotores.",
+    "imagenes": [
+      "img/amarok_v6_2025.jpg",
+      "img/amarok_v6_2025.jpg",
+      "img/amarok_v6_2025.jpg",
+      "img/amarok_v6_2025.jpg"
+    ]
+  },
+  {
+    "slug": "toyota-corolla-xei-2011",
+    "nombre": "Toyota Corolla XEI",
+    "marca": "Toyota",
+    "modelo": "Corolla XEI",
+    "anio": "2011",
+    "kilometraje": "Consultá km",
+    "combustible": "Nafta",
+    "transmision": "Manual",
+    "motor": "1.8",
+    "tipo": "Sedán",
+    "estado": "vendido",
+    "descripcion": "Sedán confiable, cómodo y reconocido por su bajo costo de mantenimiento. Una opción sólida para quien busca calidad Toyota, buen andar y practicidad para todos los días.",
+    "imagenes": [
+      "img/toyota_corolla_xei_2011.jpg",
+      "img/toyota_corolla_xei_2011.jpg",
+      "img/toyota_corolla_xei_2011.jpg",
+      "img/toyota_corolla_xei_2011.jpg"
+    ]
+  },
+  {
+    "slug": "vw-vento-2-5-at-2014",
+    "nombre": "VW Vento 2.5 AT",
+    "marca": "Volkswagen",
+    "modelo": "Vento 2.5 AT",
+    "anio": "2014",
+    "kilometraje": "Consultá km",
+    "combustible": "Nafta",
+    "transmision": "Automático",
+    "motor": "2.5",
+    "tipo": "Sedán",
+    "estado": "vendido",
+    "descripcion": "Sedán amplio, potente y confortable, con caja automática y una mecánica muy buscada. Pensado para quienes quieren un auto con buen desempeño, presencia y comodidad en ruta.",
+    "imagenes": [
+      "img/vento_2.5at_2014.jpg",
+      "img/vento_2.5at_2014.jpg",
+      "img/vento_2.5at_2014.jpg",
+      "img/vento_2.5at_2014.jpg"
+    ]
+  },
+  {
+    "slug": "fiat-punto-1-4-2012",
+    "nombre": "Fiat Punto 1.4",
+    "marca": "Fiat",
+    "modelo": "Punto 1.4",
+    "anio": "2012",
+    "kilometraje": "Consultá km",
+    "combustible": "Nafta",
+    "transmision": "Manual",
+    "motor": "1.4",
+    "tipo": "Hatchback",
+    "estado": "vendido",
+    "descripcion": "Hatchback práctico y económico, con diseño vigente y buen espacio interior. Una alternativa equilibrada para ciudad, viajes cortos y uso diario.",
+    "imagenes": [
+      "img/fiat_punto_1.4_2012.jpg",
+      "img/fiat_punto_1.4_2012.jpg",
+      "img/fiat_punto_1.4_2012.jpg",
+      "img/fiat_punto_1.4_2012.jpg"
+    ]
+  },
+  {
+    "slug": "renault-clio-1-2-2007",
+    "nombre": "Renault Clio 1.2",
+    "marca": "Renault",
+    "modelo": "Clio 1.2",
+    "anio": "2007",
+    "kilometraje": "Consultá km",
+    "combustible": "Nafta",
+    "transmision": "Manual",
+    "motor": "1.2",
+    "tipo": "Hatchback",
+    "estado": "vendido",
+    "descripcion": "Compacto simple, ágil y rendidor, ideal para moverse con bajo consumo y mantenimiento accesible. Una opción muy práctica para primer auto o uso urbano.",
+    "imagenes": [
+      "img/clio_1.2_2007.jpg",
+      "img/clio_1.2_2007.jpg",
+      "img/clio_1.2_2007.jpg",
+      "img/clio_1.2_2007.jpg"
+    ]
+  }
+]
