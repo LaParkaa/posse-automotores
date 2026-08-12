@@ -65,30 +65,6 @@ export default async function Home() {
                 Consultanos ahora
               </Link>
             </div>
-            <Link
-              href="/lavadero"
-              className="group mx-auto mt-8 grid max-w-2xl overflow-hidden rounded-lg border border-car-gold/35 bg-car-black/70 text-left shadow-[0_16px_45px_rgba(0,0,0,0.35)] backdrop-blur-md transition hover:scale-[1.01] hover:border-car-gold sm:grid-cols-[190px_1fr] lg:translate-y-24"
-            >
-              <span
-                className="min-h-36 bg-cover bg-center sm:min-h-full"
-                style={{ backgroundImage: "url('/Gemini_Generated_Image_crrcp3crrcp3crrc.png')" }}
-                aria-hidden="true"
-              />
-              <span className="flex flex-col justify-center p-5">
-                <span className="font-condensed text-xs font-bold uppercase tracking-[3px] text-car-gold">
-                  Nuevo servicio
-                </span>
-                <span className="mt-1 font-condensed text-2xl font-black italic uppercase text-car-white">
-                  Lavadero Posse Automotores
-                </span>
-                <span className="mt-2 text-sm leading-6 text-car-white/70">
-                  Lavado exterior, interior, aspirado, encerado y cuidado integral para tu vehículo.
-                </span>
-                <span className="mt-4 font-condensed text-sm font-bold uppercase tracking-wide text-car-gold transition group-hover:text-car-white">
-                  Conocer el lavadero
-                </span>
-              </span>
-            </Link>
           </div>
           <div className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 text-car-white/30">
             <div className="h-10 w-px bg-gradient-to-b from-car-gold to-transparent" />
@@ -261,6 +237,31 @@ export default async function Home() {
               />
             </div>
           </div>
+
+          <Link
+            href="/lavadero"
+            className="group mx-auto mt-16 grid max-w-5xl overflow-hidden rounded-lg border border-car-gold/35 bg-car-gray text-left shadow-[0_16px_45px_rgba(0,0,0,0.25)] transition hover:scale-[1.01] hover:border-car-gold sm:grid-cols-[220px_1fr]"
+          >
+            <span
+              className="min-h-36 bg-cover bg-center sm:min-h-full"
+              style={{ backgroundImage: "url('/Gemini_Generated_Image_crrcp3crrcp3crrc.png')" }}
+              aria-hidden="true"
+            />
+            <span className="flex flex-col justify-center p-6">
+              <span className="font-condensed text-xs font-bold uppercase tracking-[3px] text-car-gold">
+                Nuevo servicio
+              </span>
+              <span className="mt-1 font-condensed text-2xl font-black italic uppercase text-car-white">
+                Lavadero Posse Automotores
+              </span>
+              <span className="mt-2 text-sm leading-6 text-car-white/70">
+                Lavado exterior, interior, aspirado, encerado y cuidado integral para tu vehículo.
+              </span>
+              <span className="mt-4 font-condensed text-sm font-bold uppercase tracking-wide text-car-gold transition group-hover:text-car-white">
+                Conocer el lavadero
+              </span>
+            </span>
+          </Link>
         </section>
       </main>
       <SiteFooter />
