@@ -1,5 +1,71 @@
 [
   {
+    "slug": "renault-alaskan-at-intens-2024",
+    "nombre": "Renault Alaskan AT Intens",
+    "marca": "Renault",
+    "modelo": "Alaskan AT Intens",
+    "anio": "2024",
+    "kilometraje": "52.000 km",
+    "combustible": "Diesel",
+    "transmision": "Automático",
+    "motor": "2.3",
+    "tipo": "Pick-up",
+    "estado": "disponible",
+    "descripcion": "Pick-up Alaskan tope de gama, con caja automática y apenas 52.000 km. Fuerza, tecnología y el confort de una cabina premium para trabajo, ruta o uso familiar.",
+    "imagenes": [
+      "img/alaskan_at_intens_2024_1.jpg",
+      "img/alaskan_at_intens_2024_2.jpg",
+      "img/alaskan_at_intens_2024_3.jpg",
+      "img/alaskan_at_intens_2024_4.jpg",
+      "img/alaskan_at_intens_2024_5.jpg"
+    ],
+    "videos": ["videos/alaskan_at_intens_2024.mp4"]
+  },
+  {
+    "slug": "peugeot-208-allure-2021",
+    "nombre": "Peugeot 208 Allure",
+    "marca": "Peugeot",
+    "modelo": "208 Allure",
+    "anio": "2021",
+    "kilometraje": "52.000 km",
+    "combustible": "Nafta",
+    "transmision": "Manual",
+    "motor": "1.6",
+    "tipo": "Hatchback",
+    "estado": "disponible",
+    "descripcion": "Hatchback moderno y ágil, con diseño europeo y muy buen equipamiento de la versión Allure. Ideal para ciudad y ruta, con bajo consumo y mantenimiento accesible.",
+    "imagenes": [
+      "img/208_allure_2021_1.jpg",
+      "img/208_allure_2021_2.jpg",
+      "img/208_allure_2021_3.jpg",
+      "img/208_allure_2021_4.jpg",
+      "img/208_allure_2021_5.jpg"
+    ],
+    "videos": ["videos/208_allure_2021.mp4"]
+  },
+  {
+    "slug": "fiat-toro-tdi-manual-2017",
+    "nombre": "Fiat Toro TDI Manual",
+    "marca": "Fiat",
+    "modelo": "Toro TDI Manual",
+    "anio": "2017",
+    "kilometraje": "111.000 km",
+    "combustible": "Diesel",
+    "transmision": "Manual",
+    "motor": "2.0",
+    "tipo": "Pick-up",
+    "estado": "disponible",
+    "descripcion": "Pick-up mediana con motor turbodiésel y caja manual, robusta y versátil para trabajo y uso diario. Buen equipamiento y una mecánica muy conocida en el mercado.",
+    "imagenes": [
+      "img/toro_tdi_manual_2017_1.jpg",
+      "img/toro_tdi_manual_2017_2.jpg",
+      "img/toro_tdi_manual_2017_3.jpg",
+      "img/toro_tdi_manual_2017_4.jpg",
+      "img/toro_tdi_manual_2017_5.jpg"
+    ],
+    "videos": ["videos/toro_tdi_manual_2017.mp4"]
+  },
+  {
     "slug": "bmw-328-luxury-2016",
     "nombre": "BMW 328 Luxury",
     "marca": "BMW",

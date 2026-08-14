@@ -14,6 +14,7 @@ export type Vehiculo = {
   precio_texto: string;
   cover_image_url: string | null;
   imagenes: string[];
+  videos: string[];
   estado: "disponible" | "vendido";
   badge: string | null;
   created_at: string;

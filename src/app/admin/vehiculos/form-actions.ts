@@ -19,7 +19,15 @@ export async function createVehiculo(formData: FormData) {
     : [];
   const coverImageUrl = imagenes[0] ?? null;
 
-  const { error } = await supabase.from("vehiculos").insert({
+  const videosRaw = formData.get("videos") as string;
+  const videos = videosRaw
+    ? videosRaw
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
+  const { error } = await supabase.from("vehiculos_posse").insert({
     slug,
     nombre,
     marca: formData.get("marca") as string,
@@ -34,6 +42,7 @@ export async function createVehiculo(formData: FormData) {
     precio_texto: (formData.get("precio_texto") as string) || "Consultá precio",
     cover_image_url: coverImageUrl,
     imagenes,
+    videos,
     estado: (formData.get("estado") as string) || "disponible",
     badge: (formData.get("badge") as string) || null,
   });
@@ -59,8 +68,16 @@ export async function updateVehiculo(id: string, formData: FormData) {
     : [];
   const coverImageUrl = imagenes[0] ?? null;
 
+  const videosRaw = formData.get("videos") as string;
+  const videos = videosRaw
+    ? videosRaw
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
   const { error } = await supabase
-    .from("vehiculos")
+    .from("vehiculos_posse")
     .update({
       slug,
       nombre,
@@ -76,6 +93,7 @@ export async function updateVehiculo(id: string, formData: FormData) {
       precio_texto: (formData.get("precio_texto") as string) || "Consultá precio",
       cover_image_url: coverImageUrl,
       imagenes,
+      videos,
       estado: (formData.get("estado") as string) || "disponible",
       badge: (formData.get("badge") as string) || null,
     })

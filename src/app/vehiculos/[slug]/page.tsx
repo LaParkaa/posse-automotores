@@ -4,10 +4,14 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FloatingWhatsApp } from "@/components/floating-whatsapp";
-import { getVehiculoBySlug } from "@/lib/data";
+import { getVehiculoBySlug, getVehiculosDisponibles } from "@/lib/data";
 import { buildWhatsAppUrl } from "@/lib/utils";
+import { ImageLightbox } from "@/components/image-lightbox";
 
-export const dynamic = "force-dynamic";
+export async function generateStaticParams() {
+  const vehiculos = await getVehiculosDisponibles();
+  return vehiculos.map((v) => ({ slug: v.slug }));
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -93,18 +97,30 @@ export default async function VehiculoPage({ params }: { params: Promise<{ slug:
                 <p className="mt-4 leading-8 text-car-white/70">{v.descripcion}</p>
               </div>
             )}
-            {v.imagenes && v.imagenes.length > 1 && (
+            {v.imagenes && v.imagenes.length > 0 && (
               <div>
                 <h2 className="font-condensed text-2xl font-black italic text-car-white">
                   Galería
                 </h2>
+                <p className="mt-1 text-sm text-car-muted">Tocá una foto para ampliarla</p>
+                <div className="mt-5">
+                  <ImageLightbox imagenes={v.imagenes} alt={v.nombre} />
+                </div>
+              </div>
+            )}
+            {v.videos && v.videos.length > 0 && (
+              <div>
+                <h2 className="font-condensed text-2xl font-black italic text-car-white">
+                  Video
+                </h2>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  {v.imagenes.slice(1).map((url, i) => (
-                    <img
-                      key={i}
+                  {v.videos.map((url, i) => (
+                    <video
+                      key={url + i}
                       src={url}
-                      alt={`${v.nombre} ${i + 2}`}
-                      className="aspect-video w-full rounded object-cover"
+                      controls
+                      preload="metadata"
+                      className="aspect-video w-full rounded bg-black object-cover"
                     />
                   ))}
                 </div>
