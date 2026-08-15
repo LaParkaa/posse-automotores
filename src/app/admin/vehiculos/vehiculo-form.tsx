@@ -9,6 +9,8 @@ const BUCKET = "vehiculos-posse";
 const inputClass =
   "w-full rounded border border-white/15 bg-car-gray2 px-4 py-2.5 text-sm text-car-white outline-none focus:border-car-gold";
 const labelClass = "mb-1.5 block text-xs uppercase tracking-wide text-car-muted";
+const sectionTitleClass =
+  "font-condensed text-sm font-bold uppercase tracking-wide text-car-gold";
 
 function getSupabase() {
   return createBrowserClient(
@@ -140,89 +142,100 @@ export function VehiculoForm({
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      className="max-w-2xl space-y-5 rounded-lg border border-white/10 bg-car-gray p-5 sm:p-8"
+      className="max-w-2xl space-y-6 rounded-lg border border-white/10 bg-car-gray p-5 sm:p-8"
     >
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label className={labelClass}>Nombre completo *</label>
-          <input name="nombre" defaultValue={vehiculo?.nombre} required className={inputClass} placeholder="VW Amarok V6 Extreme" />
+      {/* ── Datos del vehículo ─────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <h2 className={sectionTitleClass}>Datos del vehículo</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Nombre *</label>
+            <input name="nombre" defaultValue={vehiculo?.nombre} required className={inputClass} placeholder="VW Amarok V6 Extreme" />
+          </div>
+          <div>
+            <label className={labelClass}>Marca *</label>
+            <input name="marca" defaultValue={vehiculo?.marca} required className={inputClass} placeholder="Volkswagen" />
+          </div>
+          <div>
+            <label className={labelClass}>Modelo *</label>
+            <input name="modelo" defaultValue={vehiculo?.modelo} required className={inputClass} placeholder="Amarok V6 Extreme" />
+          </div>
+          <div>
+            <label className={labelClass}>Año *</label>
+            <input name="anio" type="number" defaultValue={vehiculo?.anio} required className={inputClass} placeholder="2025" />
+          </div>
+          <div>
+            <label className={labelClass}>Kilometraje</label>
+            <input name="kilometraje" defaultValue={vehiculo?.kilometraje ?? "Consultá km"} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Combustible *</label>
+            <select name="combustible" defaultValue={vehiculo?.combustible ?? "Nafta"} required className={inputClass}>
+              {["Nafta", "Diesel", "Híbrido", "Eléctrico", "GNC"].map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Transmisión *</label>
+            <select name="transmision" defaultValue={vehiculo?.transmision ?? "Manual"} required className={inputClass}>
+              <option value="Manual">Manual</option>
+              <option value="Automático">Automático</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Motor</label>
+            <input name="motor" defaultValue={vehiculo?.motor ?? ""} className={inputClass} placeholder="V6 3.0" />
+          </div>
+          <div>
+            <label className={labelClass}>Tipo</label>
+            <select name="tipo" defaultValue={vehiculo?.tipo ?? ""} className={inputClass}>
+              <option value="">— Sin especificar —</option>
+              {["Sedán", "Hatchback", "SUV", "Pick-up", "Camioneta", "Moto", "Utilitario"].map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div>
-          <label className={labelClass}>Marca *</label>
-          <input name="marca" defaultValue={vehiculo?.marca} required className={inputClass} placeholder="Volkswagen" />
-        </div>
-        <div>
-          <label className={labelClass}>Modelo *</label>
-          <input name="modelo" defaultValue={vehiculo?.modelo} required className={inputClass} placeholder="Amarok V6 Extreme" />
-        </div>
-        <div>
-          <label className={labelClass}>Año *</label>
-          <input name="anio" type="number" defaultValue={vehiculo?.anio} required className={inputClass} placeholder="2025" />
-        </div>
-        <div>
-          <label className={labelClass}>Kilometraje</label>
-          <input name="kilometraje" defaultValue={vehiculo?.kilometraje ?? "Consultá km"} className={inputClass} />
-        </div>
-        <div>
-          <label className={labelClass}>Combustible *</label>
-          <select name="combustible" defaultValue={vehiculo?.combustible ?? "Nafta"} required className={inputClass}>
-            {["Nafta", "Diesel", "Híbrido", "Eléctrico", "GNC"].map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelClass}>Transmisión *</label>
-          <select name="transmision" defaultValue={vehiculo?.transmision ?? "Manual"} required className={inputClass}>
-            <option value="Manual">Manual</option>
-            <option value="Automático">Automático</option>
-          </select>
-        </div>
-        <div>
-          <label className={labelClass}>Motor</label>
-          <input name="motor" defaultValue={vehiculo?.motor ?? ""} className={inputClass} placeholder="V6 3.0" />
-        </div>
-        <div>
-          <label className={labelClass}>Tipo</label>
-          <select name="tipo" defaultValue={vehiculo?.tipo ?? ""} className={inputClass}>
-            <option value="">— Sin especificar —</option>
-            {["Sedán", "Hatchback", "SUV", "Pick-up", "Camioneta", "Moto", "Utilitario"].map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelClass}>Precio</label>
-          <input name="precio_texto" defaultValue={vehiculo?.precio_texto ?? "Consultá precio"} className={inputClass} placeholder="Consultá precio" />
-        </div>
-        <div>
-          <label className={labelClass}>Estado</label>
-          <select name="estado" defaultValue={vehiculo?.estado ?? "disponible"} className={inputClass}>
-            <option value="disponible">Disponible</option>
-            <option value="vendido">Vendido</option>
-          </select>
-        </div>
-        <div>
-          <label className={labelClass}>Badge</label>
-          <select name="badge" defaultValue={vehiculo?.badge ?? ""} className={inputClass}>
-            <option value="">— Sin badge —</option>
-            <option value="Nuevo ingreso">Nuevo ingreso</option>
-            <option value="Destacado">Destacado</option>
-            <option value="Usado">Usado</option>
-          </select>
+          <label className={labelClass}>Descripción</label>
+          <textarea name="descripcion" defaultValue={vehiculo?.descripcion ?? ""} rows={3} className={inputClass} />
         </div>
       </div>
 
-      <div>
-        <label className={labelClass}>Descripción</label>
-        <textarea name="descripcion" defaultValue={vehiculo?.descripcion ?? ""} rows={4} className={inputClass} />
+      {/* ── Precio y estado ────────────────────────────────────────────── */}
+      <div className="space-y-3 border-t border-white/10 pt-5">
+        <h2 className={sectionTitleClass}>Precio y estado</h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className={labelClass}>Precio</label>
+            <input name="precio_texto" defaultValue={vehiculo?.precio_texto ?? "Consultá precio"} className={inputClass} placeholder="Consultá precio" />
+          </div>
+          <div>
+            <label className={labelClass}>Estado</label>
+            <select name="estado" defaultValue={vehiculo?.estado ?? "disponible"} className={inputClass}>
+              <option value="disponible">Disponible</option>
+              <option value="vendido">Vendido</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Badge</label>
+            <select name="badge" defaultValue={vehiculo?.badge ?? ""} className={inputClass}>
+              <option value="">— Sin badge —</option>
+              <option value="Nuevo ingreso">Nuevo ingreso</option>
+              <option value="Destacado">Destacado</option>
+              <option value="Usado">Usado</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      {/* ── Imágenes ───────────────────────────────────────────────────── */}
-      <div>
+      {/* ── Fotos y video ──────────────────────────────────────────────── */}
+      <div className="space-y-3 border-t border-white/10 pt-5">
+        <h2 className={sectionTitleClass}>Fotos y video</h2>
+
         <label className={labelClass}>
-          Fotos del vehículo{" "}
-          <span className="normal-case text-car-muted/60">(la primera es la principal)</span>
+          Fotos <span className="normal-case text-car-muted/60">(la primera es la principal)</span>
         </label>
 
         {imagenes.length > 0 && (
@@ -279,18 +292,18 @@ export function VehiculoForm({
           {uploading ? (
             <><Loader2 size={16} className="animate-spin" /> Subiendo...</>
           ) : (
-            <><ImagePlus size={16} /> Agregar fotos (galería o cámara)</>
+            <><ImagePlus size={16} /> Agregar fotos</>
           )}
         </button>
 
         <p className="mt-1.5 text-xs text-car-muted">
-          En iPhone: elegís desde la galería o sacás foto directo. Podés subir varias a la vez.
+          Podés elegir varias fotos a la vez, desde la galería o la cámara.
         </p>
       </div>
 
       {/* ── Video ──────────────────────────────────────────────────────── */}
       <div>
-        <label className={labelClass}>Video del vehículo</label>
+        <label className={labelClass}>Video (opcional)</label>
 
         {videos.length > 0 && (
           <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -328,7 +341,7 @@ export function VehiculoForm({
           {uploading ? (
             <><Loader2 size={16} className="animate-spin" /> Subiendo...</>
           ) : (
-            <><VideoIcon size={16} /> Agregar video (opcional)</>
+            <><VideoIcon size={16} /> Agregar video</>
           )}
         </button>
 
@@ -341,20 +354,20 @@ export function VehiculoForm({
         </p>
       )}
 
-      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-        <button
-          type="submit"
-          disabled={submitting || uploading}
-          className="rounded bg-car-gold px-6 py-3 font-condensed font-bold uppercase tracking-wide text-car-black transition hover:bg-car-gold-dark disabled:opacity-50"
-        >
-          {submitting ? "Guardando..." : "Guardar vehículo"}
-        </button>
+      <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-5 sm:flex-row">
         <a
           href="/admin/vehiculos"
-          className="rounded border border-white/15 px-6 py-3 text-center text-sm text-car-muted transition hover:text-car-white"
+          className="rounded border border-white/15 px-6 py-3 text-center text-sm font-semibold text-car-muted transition hover:text-car-white"
         >
           Cancelar
         </a>
+        <button
+          type="submit"
+          disabled={submitting || uploading}
+          className="flex-1 rounded bg-car-gold py-3 font-condensed font-bold uppercase tracking-wide text-car-black transition hover:bg-car-gold-dark disabled:opacity-50 sm:flex-none sm:px-8"
+        >
+          {submitting ? "Guardando..." : "Guardar vehículo"}
+        </button>
       </div>
     </form>
   );
