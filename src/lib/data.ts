@@ -43,6 +43,9 @@ const localVehiculos: Vehiculo[] = (vehiculosLocales as VehiculoLocal[]).map((v,
     badge: index === 0 ? "Destacado" : null,
     created_at: new Date(Date.now() - index * 1000).toISOString(),
     deleted_at: null,
+    sold_at: null,
+    sale_price: null,
+    sale_notes: null,
   };
 });
 
@@ -61,12 +64,13 @@ export async function getVehiculosDisponibles(): Promise<Vehiculo[]> {
     const { data, error } = await supabase
       .from("vehiculos_posse")
       .select("*")
-      .eq("estado", "disponible")
+      .in("estado", ["disponible", "reservado"])
       .is("deleted_at", null)
+      .order("estado", { ascending: true })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data;
-  })(), localVehiculos.filter((v) => v.estado === "disponible"));
+  })(), localVehiculos.filter((v) => v.estado !== "vendido"));
 }
 
 export async function getVehiculosVendidos(): Promise<Vehiculo[]> {
@@ -90,7 +94,7 @@ export async function getVehiculoBySlug(slug: string): Promise<Vehiculo | null> 
       .from("vehiculos_posse")
       .select("*")
       .eq("slug", slug)
-      .eq("estado", "disponible")
+      .in("estado", ["disponible", "reservado"])
       .is("deleted_at", null)
       .single();
     if (error) throw new Error(error.message);
