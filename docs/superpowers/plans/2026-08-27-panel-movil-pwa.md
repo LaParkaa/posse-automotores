@@ -769,7 +769,13 @@ La landing muestra el badge de reservado y se actualiza sola cuando el dueño ca
 
 **Interfaces:**
 - Consumes: `useVehiculosRealtime` (Tarea 3), `Vehiculo` (Tarea 1).
-- Produces: `<CatalogoLive vehiculos={Vehiculo[]}>{(lista) => ReactNode}</CatalogoLive>` — componente cliente que recibe la lista del servidor, la mantiene viva y la pasa como argumento a su children, ya filtrada (sin vendidos ni borrados).
+- Produces: `<CatalogoLive vehiculos={Vehiculo[]} className={string} vacio={ReactNode} />` — componente cliente que recibe la lista del servidor, la mantiene viva y renderiza él mismo las `VehicleCard` dentro de un `div` con `className`. Si no queda ninguna, renderiza `vacio`.
+
+> **Por qué no un render prop.** Un Server Component no puede pasarle una
+> función a un Client Component: React no serializa funciones a través de esa
+> frontera y la página revienta con "Functions are not valid as a child of
+> Client Components". Los `ReactNode` sí se serializan, así que el estado
+> vacío viaja como elemento (`vacio`) y el componente hace el `.map()` adentro.
 
 - [ ] **Step 1: Variante reservado en la tarjeta**
 
@@ -823,24 +829,36 @@ Crear `src/components/catalogo-live.tsx`:
 
 ```tsx
 "use client";
+import { VehicleCard } from "@/components/vehicle-card";
 import { useVehiculosRealtime } from "@/lib/use-vehiculos-realtime";
 import type { Vehiculo } from "@/lib/types";
 
 /**
- * Envuelve una grilla del catálogo público: recibe lo que renderizó el
- * servidor y vuelve a renderizar cuando cambia el stock. Filtra los vendidos,
- * que tienen su propia sección.
+ * Grilla del catálogo público: recibe lo que renderizó el servidor y vuelve a
+ * renderizar cuando cambia el stock. Filtra los vendidos, que tienen su propia
+ * sección.
  */
 export function CatalogoLive({
   vehiculos,
-  children,
+  className,
+  vacio,
 }: {
   vehiculos: Vehiculo[];
-  children: (lista: Vehiculo[]) => React.ReactNode;
+  className: string;
+  vacio?: React.ReactNode;
 }) {
   const vivos = useVehiculosRealtime(vehiculos);
   const publicables = vivos.filter((v) => v.estado !== "vendido" && v.deleted_at === null);
-  return <>{children(publicables)}</>;
+
+  if (publicables.length === 0) return <>{vacio ?? null}</>;
+
+  return (
+    <div className={className}>
+      {publicables.map((v) => (
+        <VehicleCard key={v.id} vehiculo={v} />
+      ))}
+    </div>
+  );
 }
 ```
 
@@ -869,37 +887,50 @@ Reemplazar exactamente este bloque, que hoy está justo después del `</form>` d
         )}
 ```
 
-por este, que conserva las mismas clases y el mismo copy, movidos adentro del callback:
+por este, que conserva las mismas clases y el mismo copy:
 
 ```tsx
-        <CatalogoLive vehiculos={filtered}>
-          {(lista) =>
-            lista.length === 0 ? (
-              <div className="py-20 text-center text-car-muted">
-                <p className="font-condensed text-2xl font-bold italic">No encontramos vehículos con esos filtros.</p>
-                <Link href="/catalogo" className="mt-4 inline-block text-car-gold underline">Ver todos</Link>
-              </div>
-            ) : (
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {lista.map((v) => <VehicleCard key={v.id} vehiculo={v} />)}
-              </div>
-            )
+        <CatalogoLive
+          vehiculos={filtered}
+          className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+          vacio={
+            <div className="py-20 text-center text-car-muted">
+              <p className="font-condensed text-2xl font-bold italic">No encontramos vehículos con esos filtros.</p>
+              <Link href="/catalogo" className="mt-4 inline-block text-car-gold underline">Ver todos</Link>
+            </div>
           }
-        </CatalogoLive>
+        />
 ```
+
+`VehicleCard` deja de usarse directamente en esta página: si el import queda
+sin uso, borralo.
 
 - [ ] **Step 4: Conectar la home**
 
-En `src/app/page.tsx`, agregar el import de `CatalogoLive` y envolver únicamente la grilla de destacados — la línea que hoy dice
-`{featured.map((v) => <VehicleCard key={v.id} vehiculo={v} />)}`:
+En `src/app/page.tsx`, agregar el import de `CatalogoLive` y reemplazar el `div`
+de la grilla de destacados completo:
 
 ```tsx
-<CatalogoLive vehiculos={featured}>
-  {(lista) => lista.map((v) => <VehicleCard key={v.id} vehiculo={v} />)}
-</CatalogoLive>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {featured.map((v) => <VehicleCard key={v.id} vehiculo={v} />)}
+            </div>
 ```
 
-La sección de vendidos de la home queda como está: se actualiza al recargar.
+por:
+
+```tsx
+            <CatalogoLive
+              vehiculos={featured}
+              className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            />
+```
+
+La home no tenía estado vacío para esta grilla, así que no se le pasa `vacio`.
+
+La sección de vendidos de la home queda como está: usa `VehicleCardVendido`, se
+actualiza al recargar, y no se toca. El import de `VehicleCard` (sin la
+variante `Vendido`) puede quedar sin uso: si es así, sacalo de la lista de
+imports.
 
 - [ ] **Step 5: Verificar que compila**
 
