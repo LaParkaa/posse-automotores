@@ -13,9 +13,10 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-car-black">
       <div className="flex items-center justify-between px-5 py-5">
-        <p className="font-condensed text-base font-black italic text-car-white">
-          <span className="text-car-gold">POSSE</span> ADMIN
-        </p>
+        <div className="flex items-center gap-2">
+          <img src="/logo-posse.png" alt="Posse Automotores" className="h-8 w-auto" />
+          <span className="font-condensed text-base font-black italic text-car-gold">ADMIN</span>
+        </div>
         {onClose && (
           <button onClick={onClose} className="text-car-muted hover:text-car-white lg:hidden">
             <X size={20} />
@@ -77,9 +78,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <button onClick={() => setOpen(true)} className="text-car-white/70 hover:text-car-white">
             <Menu size={22} />
           </button>
-          <p className="font-condensed text-base font-black italic text-car-white">
-            <span className="text-car-gold">POSSE</span> ADMIN
-          </p>
+          <img src="/logo-posse.png" alt="Posse Automotores" className="h-7 w-auto" />
+          <span className="font-condensed text-base font-black italic text-car-gold">ADMIN</span>
         </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-8">{children}</main>

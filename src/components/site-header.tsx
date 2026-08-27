@@ -14,8 +14,8 @@ export function SiteHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-car-gold/20 bg-car-black/92 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
-        <Link href="/" className="font-condensed text-xl font-black italic tracking-wide text-car-white">
-          <span className="text-car-gold">POSSE</span> AUTOMOTORES
+        <Link href="/" aria-label="Posse Automotores — inicio">
+          <img src="/logo-posse.png" alt="Posse Automotores" className="h-10 w-auto" />
         </Link>
         <nav className="hidden items-center gap-7 md:flex">
           {links.map((l) => (

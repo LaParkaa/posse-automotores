@@ -31,9 +31,16 @@ export default function AdminLoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-car-black px-5">
       <div className="w-full max-w-sm">
-        <p className="mb-8 text-center font-condensed text-2xl font-black italic text-car-white">
-          <span className="text-car-gold">POSSE</span> ADMIN
-        </p>
+        <div className="mb-8 text-center">
+          <img
+            src="/logo-posse.png"
+            alt="Posse Automotores"
+            className="mx-auto h-16 w-auto"
+          />
+          <p className="mt-2 font-condensed text-sm font-black italic uppercase tracking-[4px] text-car-gold">
+            Admin
+          </p>
+        </div>
         <form
           onSubmit={handleSubmit}
           className="space-y-4 rounded-lg border border-car-gold/20 bg-car-gray p-8"
