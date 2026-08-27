@@ -18,10 +18,16 @@ export function VehicleCard({ vehiculo }: { vehiculo: Vehiculo }) {
         ) : (
           <div className="aspect-video w-full bg-car-gray2" />
         )}
-        {vehiculo.badge && (
-          <span className="absolute left-3 top-3 rounded bg-car-gold px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-car-black">
-            {vehiculo.badge}
+        {vehiculo.estado === "reservado" ? (
+          <span className="absolute left-3 top-3 rounded bg-amber-400 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-car-black">
+            Reservado
           </span>
+        ) : (
+          vehiculo.badge && (
+            <span className="absolute left-3 top-3 rounded bg-car-gold px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-car-black">
+              {vehiculo.badge}
+            </span>
+          )
         )}
       </Link>
       <div className="p-5 space-y-4">
@@ -37,13 +43,19 @@ export function VehicleCard({ vehiculo }: { vehiculo: Vehiculo }) {
           ))}
         </div>
         <p className="font-condensed text-2xl font-black text-car-gold">{vehiculo.precio_texto}</p>
-        <Link
-          href={buildWhatsAppUrl(vehiculo.nombre, vehiculo.anio, "card")}
-          target="_blank" rel="noopener"
-          className="flex w-full items-center justify-center gap-2 rounded bg-[#25D366] py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#1da851]"
-        >
-          <WaIcon /> Consultar por WhatsApp
-        </Link>
+        {vehiculo.estado === "reservado" ? (
+          <p className="flex w-full items-center justify-center rounded border border-amber-400/40 bg-amber-400/10 py-3 text-center text-sm font-bold uppercase tracking-wide text-amber-400">
+            Reservado · consultá por similares
+          </p>
+        ) : (
+          <Link
+            href={buildWhatsAppUrl(vehiculo.nombre, vehiculo.anio, "card")}
+            target="_blank" rel="noopener"
+            className="flex w-full items-center justify-center gap-2 rounded bg-[#25D366] py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#1da851]"
+          >
+            <WaIcon /> Consultar por WhatsApp
+          </Link>
+        )}
       </div>
     </article>
   );

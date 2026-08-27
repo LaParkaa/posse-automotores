@@ -2,7 +2,8 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FloatingWhatsApp } from "@/components/floating-whatsapp";
-import { VehicleCard, VehicleCardVendido } from "@/components/vehicle-card";
+import { VehicleCardVendido } from "@/components/vehicle-card";
+import { CatalogoLive } from "@/components/catalogo-live";
 import { getVehiculosDisponibles, getVehiculosVendidos } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -99,9 +100,10 @@ export default async function Home() {
               </h2>
               <div className="mx-auto mt-4 h-0.5 w-12 bg-car-gold" />
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {featured.map((v) => <VehicleCard key={v.id} vehiculo={v} />)}
-            </div>
+            <CatalogoLive
+              vehiculos={featured}
+              className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            />
             {disponibles.length > 3 && (
               <div className="mt-10 text-center">
                 <Link href="/catalogo" className="inline-flex items-center gap-2 rounded bg-car-gold px-8 py-3 font-condensed font-bold uppercase tracking-wide text-car-black transition hover:bg-car-gold-dark">

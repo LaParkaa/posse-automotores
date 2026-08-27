@@ -1,7 +1,7 @@
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FloatingWhatsApp } from "@/components/floating-whatsapp";
-import { VehicleCard } from "@/components/vehicle-card";
+import { CatalogoLive } from "@/components/catalogo-live";
 import { getVehiculosDisponibles } from "@/lib/data";
 import Link from "next/link";
 
@@ -70,16 +70,16 @@ export default async function CatalogoPage({
           )}
         </form>
 
-        {filtered.length === 0 ? (
-          <div className="py-20 text-center text-car-muted">
-            <p className="font-condensed text-2xl font-bold italic">No encontramos vehículos con esos filtros.</p>
-            <Link href="/catalogo" className="mt-4 inline-block text-car-gold underline">Ver todos</Link>
-          </div>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((v) => <VehicleCard key={v.id} vehiculo={v} />)}
-          </div>
-        )}
+        <CatalogoLive
+          vehiculos={filtered}
+          className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+          vacio={
+            <div className="py-20 text-center text-car-muted">
+              <p className="font-condensed text-2xl font-bold italic">No encontramos vehículos con esos filtros.</p>
+              <Link href="/catalogo" className="mt-4 inline-block text-car-gold underline">Ver todos</Link>
+            </div>
+          }
+        />
       </main>
       <SiteFooter />
       <FloatingWhatsApp />
