@@ -10,7 +10,9 @@ PWA mobile-first en `/panel` para que el dueño gestione el stock desde su iPhon
 registrando fecha y hora de venta, y consulte métricas de rendimiento. El
 catálogo público refleja los cambios en vivo, sin recargar.
 
-`/admin` queda intacto y sigue siendo el panel de escritorio.
+`/admin` sigue siendo el panel de escritorio. Se pensó dejarlo intacto, pero
+terminó necesitando cambios para no corromper los campos de venta nuevos: ver
+el final de la sección 8.
 
 ## Decisiones tomadas
 
@@ -18,7 +20,7 @@ catálogo público refleja los cambios en vivo, sin recargar.
 | --- | --- |
 | Sincronización | Supabase Realtime completo (público + panel) |
 | Estado `reservado` en el público | Visible con badge, sin botón de WhatsApp |
-| Ubicación de la PWA | Ruta nueva `/panel`; `/admin` sin cambios |
+| Ubicación de la PWA | Ruta nueva `/panel`; `/admin` ajustado después (sección 8) |
 | Gráficos | SVG propio, sin dependencias nuevas |
 | Flujo de venta | Hoja rápida con campos opcionales |
 | Service worker | No se incluye |
