@@ -17,6 +17,23 @@ type Toast = { texto: string; tono: "ok" | "error"; deshacer?: () => void };
 export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: string }) {
   const vivos = useVehiculosRealtime(vehiculos);
 
+  // El panel se usa como acceso directo y puede quedar abierto días. Si "ahora"
+  // quedara clavado en el render del servidor, el KPI de la semana seguiría
+  // mostrando la semana pasada. Arranca con el valor del servidor —para que la
+  // hidratación coincida— y después se actualiza solo.
+  const [ahoraVivo, setAhoraVivo] = useState(ahora);
+
+  useEffect(() => {
+    const refrescar = () => setAhoraVivo(new Date().toISOString());
+    const id = setInterval(refrescar, 15 * 60 * 1000);
+    document.addEventListener("visibilitychange", refrescar);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", refrescar);
+    };
+  }, []);
+
   const [tab, setTab] = useState<Tab>("stock");
   const [ventaAbierta, setVentaAbierta] = useState<Vehiculo | null>(null);
   const [pendientes, setPendientes] = useState<Set<string>>(new Set());
@@ -24,7 +41,7 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
   const [, startTransition] = useTransition();
 
   const activos = useMemo(() => vivos.filter((v) => v.deleted_at === null), [vivos]);
-  const kpis = useMemo(() => getKpis(activos, ahora), [activos, ahora]);
+  const kpis = useMemo(() => getKpis(activos, ahoraVivo), [activos, ahoraVivo]);
 
   // El toast se va solo a los 6 segundos, que es la ventana para tocar "Deshacer".
   useEffect(() => {
@@ -53,7 +70,8 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
       try {
         const r = await accion();
         setToast(r.ok ? exito : { texto: r.error ?? "No se pudo guardar", tono: "error" });
-      } catch {
+      } catch (error) {
+        console.error("panel: falló la acción", error);
         // La acción puede rechazar en vez de devolver un resultado: se cortó la
         // red o venció la sesión. Sin este catch la fila queda pendiente para
         // siempre y sus botones no vuelven a responder hasta recargar.
@@ -130,7 +148,7 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
         {tab === "stock" ? (
           <StockList vehiculos={activos} onEstado={onEstado} pendientes={pendientes} />
         ) : (
-          <SalesChart vehiculos={activos} ahora={ahora} />
+          <SalesChart vehiculos={activos} ahora={ahoraVivo} />
         )}
       </main>
 

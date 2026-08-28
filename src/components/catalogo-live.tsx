@@ -18,7 +18,14 @@ export function CatalogoLive({
   vacio?: React.ReactNode;
 }) {
   const vivos = useVehiculosRealtime(vehiculos);
-  const publicables = vivos.filter((v) => v.estado !== "vendido" && v.deleted_at === null);
+  // Esta grilla puede venir recortada (destacados) o filtrada (marca, tipo), y
+  // el criterio vive en el servidor. Un auto que llega por realtime no sabe si
+  // entra en ese recorte, así que solo seguimos los que el servidor mandó: los
+  // cambios de estado se ven en vivo, y un auto nuevo aparece al recargar.
+  const delServidor = new Set(vehiculos.map((v) => v.id));
+  const publicables = vivos.filter(
+    (v) => delServidor.has(v.id) && v.estado !== "vendido" && v.deleted_at === null
+  );
 
   if (publicables.length === 0) return <>{vacio ?? null}</>;
 
