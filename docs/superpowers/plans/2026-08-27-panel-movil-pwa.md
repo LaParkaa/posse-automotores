@@ -1372,6 +1372,22 @@ function horaAhora(): string {
   });
 }
 
+/**
+ * Formato argentino: el punto separa los miles y la coma los decimales.
+ * Devuelve null si no quedó un número usable, porque el precio es opcional.
+ */
+function parsearPrecio(texto: string): number | null {
+  const limpio = texto
+    .replace(/[^\d.,]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  if (!limpio) return null;
+
+  const valor = Number(limpio);
+  return Number.isFinite(valor) && valor > 0 ? valor : null;
+}
+
 export function SaleSheet({
   vehiculo,
   onCerrar,
@@ -1383,17 +1399,26 @@ export function SaleSheet({
 }) {
   const [precio, setPrecio] = useState("");
   const [nota, setNota] = useState("");
+  const [idPrevio, setIdPrevio] = useState<string | null>(vehiculo?.id ?? null);
+
+  // Cada vez que la hoja se abre para otro vehículo —o se cierra— los campos
+  // vuelven a cero. Si no, el precio tipeado para un auto y después cancelado
+  // reaparece en la venta del siguiente. Ajustar el estado durante el render,
+  // y no en un efecto, es lo que pide el linter del proyecto.
+  const idActual = vehiculo?.id ?? null;
+  if (idActual !== idPrevio) {
+    setIdPrevio(idActual);
+    setPrecio("");
+    setNota("");
+  }
 
   if (!vehiculo) return null;
 
   function confirmar() {
-    const limpio = precio.replace(/[^\d]/g, "");
     onConfirmar({
-      precio: limpio ? Number(limpio) : null,
+      precio: parsearPrecio(precio),
       nota: nota.trim() || null,
     });
-    setPrecio("");
-    setNota("");
   }
 
   return (
@@ -1421,7 +1446,7 @@ export function SaleSheet({
           inputMode="numeric"
           value={precio}
           onChange={(e) => setPrecio(e.target.value)}
-          placeholder="Ej: 32000"
+          placeholder="Ej: 32.000,50"
           className="mt-1 min-h-11 w-full rounded border border-white/15 bg-car-gray2 px-3 text-car-white placeholder:text-car-muted/60 focus:border-car-gold focus:outline-none"
         />
 
@@ -1514,6 +1539,7 @@ export function StockList({
             key={valor}
             type="button"
             onClick={() => setFiltro(valor)}
+            aria-pressed={filtro === valor}
             className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-bold uppercase tracking-wide transition ${
               filtro === valor
                 ? "bg-car-gold text-car-black"
