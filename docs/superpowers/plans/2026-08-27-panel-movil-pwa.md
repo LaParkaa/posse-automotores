@@ -1160,10 +1160,22 @@ async function actualizar(id: string, campos: Record<string, unknown>): Promise<
 /** Campos de venta en blanco: un auto que vuelve al stock no conserva la venta. */
 const SIN_VENTA = { sold_at: null, sale_price: null, sale_notes: null };
 
+/** Los únicos estados a los que puede volver un auto sin registrar una venta. */
+const ESTADOS_EN_STOCK = ["disponible", "reservado"] as const;
+type EstadoEnStock = (typeof ESTADOS_EN_STOCK)[number];
+
 export async function cambiarEstado(
   id: string,
-  estado: "disponible" | "reservado"
+  estado: EstadoEnStock
 ): Promise<ResultadoAccion> {
+  // Una Server Action es un endpoint POST público: el tipo de TypeScript no
+  // frena a quien la llame por fuera del cliente. Sin esta validación se podría
+  // dejar un auto en "vendido" con sold_at nulo, que es justo lo que las
+  // métricas de ventas descartan.
+  if (!ESTADOS_EN_STOCK.includes(estado)) {
+    return { ok: false, error: "Estado inválido" };
+  }
+
   return actualizar(id, { estado, ...SIN_VENTA });
 }
 
