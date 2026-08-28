@@ -167,11 +167,13 @@ reservado tiene prioridad sobre `badge`.
 - `public/panel.webmanifest`: `start_url: "/panel"`, `scope: "/panel"`,
   `display: "standalone"`, `background_color` y `theme_color` `#0d0d12`,
   íconos 192 y 512.
-- Íconos: el logo existente (`public/Gemini_Generated_Image_*.png`) mide
-  2390×1792 y pesa 9,6 MB — no sirve. Se generan `icon-180.png`, `icon-192.png`
-  y `icon-512.png` con un script Node de un solo uso que escribe PNG con `zlib`
-  de la stdlib (fondo `#0d0d12`, marca en `#C9A227`). El script queda en
-  `scripts/gen-panel-icons.mjs`; los PNG se commitean.
+- Íconos: el logo viejo (`public/Gemini_Generated_Image_*.png`) mide 2390×1792
+  y pesa 9,6 MB — no sirve. Los íconos se generan a partir del logo nuevo con
+  `scripts/gen-logo-assets.mjs`, que usa `sharp` (ya presente en
+  `node_modules`): recorta la silueta del auto y la centra en dorado `#C9A227`
+  sobre `#0d0d12`. Produce `public/icons/icon-{180,192,512}.png` más
+  `src/app/icon.png` y `src/app/apple-icon.png`, que Next enlaza solo. Los PNG
+  se commitean.
 - Todos los contenedores fijos usan `env(safe-area-inset-*)` para el notch y la
   barra inferior del iPhone.
 - Sin service worker: en una app de inventario en tiempo real, servir stock
@@ -223,8 +225,13 @@ Cada uno tiene una responsabilidad y se puede leer sin abrir los demás.
 - Tocar **Vend** abre la hoja inferior: `sold_at` ya está resuelto, precio real y
   nota son opcionales, y un botón grande "Confirmar venta" se puede tocar sin
   llenar nada.
-- Al confirmar: actualización optimista de la fila, luego la Server Action.
-  Si falla, se revierte y se muestra el error en el toast.
+- Al confirmar: la fila se marca como pendiente (atenuada, botones
+  deshabilitados) mientras corre la Server Action; el estado real llega por
+  Realtime y por la revalidación. No se hace actualización optimista: entre el
+  parche optimista, el evento de Realtime y las props nuevas del servidor
+  habría tres escritores peleando por la misma fila. Si la acción falla —o
+  rechaza, por corte de red o sesión vencida— la fila se libera igual y el
+  error se muestra en el toast.
 - Toast "Vendido · Deshacer" durante 6 s → `deshacerVenta()`.
 - Tocar **Disp**/**Res** cambia el estado directo, sin hoja.
 - Gráfico: tap en una barra muestra el valor de ese período.
@@ -280,7 +287,36 @@ Modificados:
 - `src/app/catalogo/page.tsx`, `src/app/page.tsx` — envolver la grilla en
   `CatalogoLive`
 
-Sin cambios: todo `/admin`.
+`/admin` sí terminó modificándose, contra lo previsto. La revisión final
+encontró que el panel viejo escribía el vocabulario de dos estados sobre las
+mismas filas y corrompía los datos nuevos: marcar vendido desde `/admin` dejaba
+`sold_at` nulo y la venta no aparecía en ninguna métrica; reactivar conservaba
+la fecha vieja; y guardar un auto reservado lo des-reservaba solo, porque el
+`<select>` no tenía esa opción. Con aprobación explícita del usuario se
+corrigió:
+
+- `src/app/admin/vehiculos/actions.ts` — `toggleEstado` delega en las Server
+  Actions del panel en vez de duplicar la contabilidad de la venta
+- `src/app/admin/vehiculos/form-actions.ts` — valida el estado y mantiene
+  coherentes `sold_at`, `sale_price` y `sale_notes`
+- `src/app/admin/vehiculos/vehiculo-form.tsx` y `page.tsx` — soportan los tres
+  estados
+- `src/lib/data.ts` y `src/app/admin/page.tsx` — el dashboard cuenta los
+  reservados
+
+## Seguridad de los campos de venta
+
+Las políticas RLS de la tabla son por fila, no por columna, así que la anon key
+—que viaja en el bundle público— puede leer `sale_price` y `sale_notes`, y el
+canal de Realtime los transmite a cualquier visitante del catálogo. Se cierra
+con:
+
+```sql
+revoke select (sale_price, sale_notes) on public.vehiculos_posse from anon;
+```
+
+El SSR no se ve afectado: `src/lib/data.ts` usa siempre el cliente de
+service-role.
 
 ## Fuera de alcance
 
