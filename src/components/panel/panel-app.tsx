@@ -50,9 +50,17 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
   function ejecutar(id: string, accion: () => Promise<{ ok: boolean; error?: string }>, exito: Toast) {
     marcarPendiente(id, true);
     startTransition(async () => {
-      const r = await accion();
-      marcarPendiente(id, false);
-      setToast(r.ok ? exito : { texto: r.error ?? "No se pudo guardar", tono: "error" });
+      try {
+        const r = await accion();
+        setToast(r.ok ? exito : { texto: r.error ?? "No se pudo guardar", tono: "error" });
+      } catch {
+        // La acción puede rechazar en vez de devolver un resultado: se cortó la
+        // red o venció la sesión. Sin este catch la fila queda pendiente para
+        // siempre y sus botones no vuelven a responder hasta recargar.
+        setToast({ texto: "No se pudo guardar. Revisá la conexión.", tono: "error" });
+      } finally {
+        marcarPendiente(id, false);
+      }
     });
   }
 
