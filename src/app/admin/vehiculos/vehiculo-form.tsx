@@ -215,6 +215,7 @@ export function VehiculoForm({
             <label className={labelClass}>Estado</label>
             <select name="estado" defaultValue={vehiculo?.estado ?? "disponible"} className={inputClass}>
               <option value="disponible">Disponible</option>
+              <option value="reservado">Reservado</option>
               <option value="vendido">Vendido</option>
             </select>
           </div>

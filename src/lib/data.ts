@@ -129,7 +129,12 @@ export async function getVehiculoById(id: string): Promise<Vehiculo | null> {
   })(), localVehiculos.find((v) => v.id === id) ?? null);
 }
 
-export async function countVehiculos(): Promise<{ total: number; disponibles: number; vendidos: number }> {
+export async function countVehiculos(): Promise<{
+  total: number;
+  disponibles: number;
+  reservados: number;
+  vendidos: number;
+}> {
   return withLocalFallback((async () => {
     const supabase = createAdminSupabaseClient();
     const { data } = await supabase
@@ -140,11 +145,13 @@ export async function countVehiculos(): Promise<{ total: number; disponibles: nu
     return {
       total: all.length,
       disponibles: all.filter((v) => v.estado === "disponible").length,
+      reservados: all.filter((v) => v.estado === "reservado").length,
       vendidos: all.filter((v) => v.estado === "vendido").length,
     };
   })(), {
     total: localVehiculos.length,
     disponibles: localVehiculos.filter((v) => v.estado === "disponible").length,
+    reservados: localVehiculos.filter((v) => v.estado === "reservado").length,
     vendidos: localVehiculos.filter((v) => v.estado === "vendido").length,
   });
 }

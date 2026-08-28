@@ -17,10 +17,11 @@ export default async function AdminDashboardPage() {
           Panel de administración — Posse Automotores
         </p>
       </div>
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Total vehículos", value: counts.total, color: "text-car-white" },
           { label: "Disponibles", value: counts.disponibles, color: "text-emerald-400" },
+          { label: "Reservados", value: counts.reservados, color: "text-amber-400" },
           { label: "Vendidos", value: counts.vendidos, color: "text-car-gold" },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-lg border border-white/10 bg-car-gray2 p-6">

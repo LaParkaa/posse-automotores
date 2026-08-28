@@ -7,6 +7,22 @@ import { DeleteButton } from "./delete-button";
 
 export const dynamic = "force-dynamic";
 
+/** Estilo y texto del botón de estado, por cada uno de los tres estados posibles. */
+const ESTADO_UI: Record<string, { clases: string; label: string }> = {
+  disponible: {
+    clases: "bg-emerald-900/50 text-emerald-400 active:bg-emerald-900/70",
+    label: "Disponible · tocá para marcar vendido",
+  },
+  reservado: {
+    clases: "bg-amber-900/40 text-amber-400 active:bg-amber-900/60",
+    label: "Reservado · tocá para marcar vendido",
+  },
+  vendido: {
+    clases: "bg-car-gold/15 text-car-gold active:bg-car-gold/25",
+    label: "Vendido · tocá para reactivar",
+  },
+};
+
 export default async function AdminVehiculosPage() {
   await requireAdminSession();
   const vehiculos = await getAllVehiculos();
@@ -61,12 +77,10 @@ export default async function AdminVehiculosPage() {
                   <button
                     type="submit"
                     className={`w-full rounded-full px-4 py-2.5 text-sm font-bold uppercase tracking-wide transition ${
-                      v.estado === "disponible"
-                        ? "bg-emerald-900/50 text-emerald-400 active:bg-emerald-900/70"
-                        : "bg-car-gold/15 text-car-gold active:bg-car-gold/25"
+                      (ESTADO_UI[v.estado] ?? ESTADO_UI.disponible).clases
                     }`}
                   >
-                    {v.estado === "disponible" ? "Disponible · tocá para marcar vendido" : "Vendido · tocá para reactivar"}
+                    {(ESTADO_UI[v.estado] ?? ESTADO_UI.disponible).label}
                   </button>
                 </form>
 

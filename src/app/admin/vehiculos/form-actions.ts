@@ -4,6 +4,32 @@ import { revalidatePath } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase";
 import { buildSlug } from "@/lib/utils";
 
+/** Únicos valores de estado que acepta el check constraint de la tabla. */
+const ESTADOS_VALIDOS = ["disponible", "reservado", "vendido"] as const;
+type EstadoValido = (typeof ESTADOS_VALIDOS)[number];
+
+function parseEstado(valor: FormDataEntryValue | null): EstadoValido {
+  // El <select> del formulario es input no confiable: validamos contra la
+  // lista real en vez de castear a ciegas, porque la tabla tiene un check
+  // constraint que rechazaría con un error crudo de Postgres cualquier otra cosa.
+  return ESTADOS_VALIDOS.includes(valor as EstadoValido) ? (valor as EstadoValido) : "disponible";
+}
+
+/**
+ * Calcula los campos de venta (sold_at, sale_price, sale_notes) a partir del
+ * estado elegido en el formulario y el sold_at que ya tenía la fila.
+ * - Si el estado no es "vendido", se limpian los tres campos: un auto que
+ *   vuelve al stock no puede conservar datos de una venta vieja.
+ * - Si es "vendido", se conserva el sold_at existente (no se mueve la fecha
+ *   al reguardar), o se usa la fecha/hora actual si todavía no tenía una.
+ */
+function camposDeVenta(estado: EstadoValido, soldAtActual: string | null) {
+  if (estado !== "vendido") {
+    return { sold_at: null, sale_price: null, sale_notes: null };
+  }
+  return { sold_at: soldAtActual ?? new Date().toISOString() };
+}
+
 /**
  * El slug tiene unique constraint. Si ya existe un vehiculo con el mismo
  * nombre y anio (otra unidad del mismo modelo), le agrega un sufijo -2, -3, etc.
@@ -53,6 +79,8 @@ export async function createVehiculo(formData: FormData) {
         .filter(Boolean)
     : [];
 
+  const estado = parseEstado(formData.get("estado"));
+
   const { error } = await supabase.from("vehiculos_posse").insert({
     slug,
     nombre,
@@ -69,13 +97,16 @@ export async function createVehiculo(formData: FormData) {
     cover_image_url: coverImageUrl,
     imagenes,
     videos,
-    estado: (formData.get("estado") as string) || "disponible",
+    estado,
+    ...camposDeVenta(estado, null),
     badge: (formData.get("badge") as string) || null,
   });
 
   if (error) throw new Error(error.message);
   revalidatePath("/admin/vehiculos");
   revalidatePath("/");
+  revalidatePath("/catalogo");
+  revalidatePath("/panel");
   redirect("/admin/vehiculos");
 }
 
@@ -102,6 +133,14 @@ export async function updateVehiculo(id: string, formData: FormData) {
         .filter(Boolean)
     : [];
 
+  const { data: filaActual } = await supabase
+    .from("vehiculos_posse")
+    .select("sold_at")
+    .eq("id", id)
+    .single();
+
+  const estado = parseEstado(formData.get("estado"));
+
   const { error } = await supabase
     .from("vehiculos_posse")
     .update({
@@ -120,7 +159,8 @@ export async function updateVehiculo(id: string, formData: FormData) {
       cover_image_url: coverImageUrl,
       imagenes,
       videos,
-      estado: (formData.get("estado") as string) || "disponible",
+      estado,
+      ...camposDeVenta(estado, filaActual?.sold_at ?? null),
       badge: (formData.get("badge") as string) || null,
     })
     .eq("id", id);
@@ -128,5 +168,7 @@ export async function updateVehiculo(id: string, formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/admin/vehiculos");
   revalidatePath("/");
+  revalidatePath("/catalogo");
+  revalidatePath("/panel");
   redirect("/admin/vehiculos");
 }
