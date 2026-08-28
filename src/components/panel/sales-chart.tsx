@@ -98,7 +98,9 @@ export function SalesChart({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora:
 
           {serie.map((bucket, i) =>
             // Solo algunas etiquetas: 30 no entran en el ancho de un teléfono.
-            i % Math.ceil(serie.length / 6) === 0 ? (
+            // Se cuenta desde la más nueva para que el período actual —el que
+            // más se mira— siempre quede rotulado.
+            (serie.length - 1 - i) % Math.ceil(serie.length / 6) === 0 ? (
               <text
                 key={bucket.key}
                 x={i * paso + paso / 2}
