@@ -133,11 +133,16 @@ export async function updateVehiculo(id: string, formData: FormData) {
         .filter(Boolean)
     : [];
 
-  const { data: filaActual } = await supabase
+  // Si no podemos confirmar qué sold_at tenía la fila, abortamos. Seguir
+  // asumiendo "no tenía venta previa" volvería a fechar hoy una venta vieja,
+  // que es exactamente la corrupción que este archivo existe para evitar.
+  const { data: filaActual, error: errorLectura } = await supabase
     .from("vehiculos_posse")
     .select("sold_at")
     .eq("id", id)
     .single();
+
+  if (errorLectura) throw new Error(errorLectura.message);
 
   const estado = parseEstado(formData.get("estado"));
 
