@@ -51,6 +51,7 @@ export function StockList({
             key={valor}
             type="button"
             onClick={() => setFiltro(valor)}
+            aria-pressed={filtro === valor}
             className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-bold uppercase tracking-wide transition ${
               filtro === valor
                 ? "bg-car-gold text-car-black"
