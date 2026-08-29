@@ -29,7 +29,10 @@ export function VehiculoForm({
   action,
   vehiculo,
 }: {
-  action: (formData: FormData) => Promise<void>;
+  // En el camino feliz la accion redirige y no devuelve nada. Si algo falla
+  // devuelve el motivo, porque Next censura el texto de los errores tirados
+  // desde una Server Action en produccion.
+  action: (formData: FormData) => Promise<{ ok: false; error: string } | void>;
   vehiculo?: Vehiculo;
 }) {
   const [imagenes, setImagenes] = useState<string[]>(vehiculo?.imagenes ?? []);
@@ -126,7 +129,11 @@ export function VehiculoForm({
     formData.set("imagenes", imagenes.join("\n"));
     formData.set("videos", videos.join("\n"));
     try {
-      await action(formData);
+      const resultado = await action(formData);
+      if (resultado && !resultado.ok) {
+        setSubmitError(`No se pudo guardar: ${resultado.error}`);
+        return;
+      }
     } catch (err) {
       setSubmitError(
         err instanceof Error

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase";
 import { buildSlug } from "@/lib/utils";
+import { siguienteSlugLibre } from "@/lib/slug";
 
 /** Únicos valores de estado que acepta el check constraint de la tabla. */
 const ESTADOS_VALIDOS = ["disponible", "reservado", "vendido"] as const;
@@ -31,8 +32,9 @@ function camposDeVenta(estado: EstadoValido, soldAtActual: string | null) {
 }
 
 /**
- * El slug tiene unique constraint. Si ya existe un vehiculo con el mismo
- * nombre y anio (otra unidad del mismo modelo), le agrega un sufijo -2, -3, etc.
+ * El slug tiene unique constraint. Trae la familia de slugs que empiezan igual
+ * -incluidos los de vehiculos borrados, que siguen reteniendo el suyo- y elige
+ * el primero libre.
  */
 async function buildUniqueSlug(
   supabase: ReturnType<typeof createAdminSupabaseClient>,
@@ -46,15 +48,34 @@ async function buildUniqueSlug(
   if (excludeId) query = query.neq("id", excludeId);
 
   const { data, error } = await query;
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("buildUniqueSlug:", error);
+    throw new Error(error.message);
+  }
 
-  const ocupados = new Set((data ?? []).map((v) => v.slug));
-  if (!ocupados.has(base)) return base;
-
-  let n = 2;
-  while (ocupados.has(`${base}-${n}`)) n++;
-  return `${base}-${n}`;
+  return siguienteSlugLibre(base, (data ?? []).map((v) => v.slug));
 }
+
+/**
+ * Next borra el texto de los errores de las Server Actions en produccion, asi
+ * que un throw le llega al usuario como "An error occurred in the Server
+ * Components render". Por eso las acciones devuelven el error en vez de
+ * tirarlo, y este helper lo traduce a algo accionable.
+ */
+function mensajeDeError(error: { code?: string; message: string }): string {
+  if (error.code === "23505") {
+    return "Ya existe un vehiculo con ese nombre y anio. Cambiale algo al nombre para diferenciarlo.";
+  }
+  if (error.code === "23514") {
+    return "Algun dato no es valido para la base. Revisa el estado y el anio.";
+  }
+  if (error.code === "23502") {
+    return "Falta completar un campo obligatorio.";
+  }
+  return error.message;
+}
+
+export type ResultadoFormulario = { ok: false; error: string };
 
 export async function createVehiculo(formData: FormData) {
   const supabase = createAdminSupabaseClient();
@@ -102,7 +123,11 @@ export async function createVehiculo(formData: FormData) {
     badge: (formData.get("badge") as string) || null,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("guardando vehiculo:", error);
+    return { ok: false as const, error: mensajeDeError(error) };
+  }
+
   revalidatePath("/admin/vehiculos");
   revalidatePath("/");
   revalidatePath("/catalogo");
@@ -142,7 +167,10 @@ export async function updateVehiculo(id: string, formData: FormData) {
     .eq("id", id)
     .single();
 
-  if (errorLectura) throw new Error(errorLectura.message);
+  if (errorLectura) {
+    console.error("updateVehiculo, lectura previa:", errorLectura);
+    return { ok: false as const, error: mensajeDeError(errorLectura) };
+  }
 
   const estado = parseEstado(formData.get("estado"));
 
@@ -170,7 +198,11 @@ export async function updateVehiculo(id: string, formData: FormData) {
     })
     .eq("id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("guardando vehiculo:", error);
+    return { ok: false as const, error: mensajeDeError(error) };
+  }
+
   revalidatePath("/admin/vehiculos");
   revalidatePath("/");
   revalidatePath("/catalogo");
