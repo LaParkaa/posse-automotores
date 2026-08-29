@@ -1,15 +1,17 @@
 import type { Metadata, Viewport } from "next";
 
+// El login es la primera pantalla que ve el celular al abrir el acceso directo
+// con la sesión vencida. Sin estos meta tags iOS lo sacaría de la app y lo
+// abriría en Safari con toda la barra de navegación, que es justo lo que el
+// acceso directo viene a evitar.
 export const metadata: Metadata = {
-  title: "Panel · Posse Automotores",
-  description: "Gestión de stock y métricas de venta.",
+  title: "Ingresar · Posse Automotores",
   manifest: "/panel.webmanifest",
   appleWebApp: {
     capable: true,
     title: "Posse",
     statusBarStyle: "black-translucent",
   },
-  // El panel es privado: nunca debe aparecer en buscadores.
   robots: { index: false, follow: false },
   // Next 16 emite el nombre estandarizado (mobile-web-app-capable). iOS moderno
   // abre en pantalla completa por el "display: standalone" del manifest, pero
@@ -23,10 +25,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  // Deja que el fondo llegue hasta debajo del notch y de la barra de gestos.
   viewportFit: "cover",
 };
 
-export default function PanelLayout({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-car-black text-car-white">{children}</div>;
+export default function LoginLayout({ children }: { children: React.ReactNode }) {
+  return children;
 }

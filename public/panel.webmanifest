@@ -3,7 +3,7 @@
   "short_name": "Posse",
   "description": "Gestión de stock y métricas de venta de Posse Automotores.",
   "start_url": "/panel",
-  "scope": "/panel",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0d0d12",
