@@ -32,7 +32,11 @@ export async function middleware(request: NextRequest) {
       !request.nextUrl.pathname.startsWith("/admin/login"));
 
   if (!user && rutaProtegida) {
-    return NextResponse.redirect(new URL("/admin/login", request.url));
+    // Guardamos el destino para que el login devuelva al usuario adonde iba.
+    // Sin esto, entrar a /panel sin sesion terminaba siempre en /admin.
+    const login = new URL("/admin/login", request.url);
+    login.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(login);
   }
 
   return response;

@@ -3,6 +3,17 @@ import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 
+/**
+ * Destino al que volver despues de entrar. Se lee del parametro "next" que
+ * pone el middleware. Solo se aceptan rutas internas: un valor como
+ * "//otro-sitio.com" seria un redirect abierto.
+ */
+function destinoSeguro(): string {
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (next && next.startsWith("/") && !next.startsWith("//")) return next;
+  return "/admin";
+}
+
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +34,7 @@ export default function AdminLoginPage() {
       setError("Credenciales incorrectas");
       setLoading(false);
     } else {
-      router.push("/admin");
+      router.push(destinoSeguro());
       router.refresh();
     }
   }
