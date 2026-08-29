@@ -14,6 +14,8 @@ import sharp from "sharp";
 import { mkdir } from "node:fs/promises";
 
 const SRC = "img/logo nuevo.jpeg";
+/** El mismo logo en un lienzo mas alto, subido aparte para los iconos de app. */
+const SRC_ICONO = "img/logo-app.jpeg";
 const WHITE = { r: 0xee, g: 0xf2, b: 0xff };
 const GOLD = { r: 0xc9, g: 0xa2, b: 0x27 };
 const BLACK = { r: 0x0d, g: 0x0d, b: 0x12, alpha: 1 };
@@ -25,8 +27,8 @@ const NOISE_FLOOR = 40;
  * Usa la luminancia invertida del JPEG como canal alfa: donde había trazo negro
  * el alfa queda opaco, donde había papel blanco queda transparente.
  */
-async function lineArtToAlpha() {
-  const { data, info } = await sharp(SRC)
+async function lineArtToAlpha(archivo = SRC) {
+  const { data, info } = await sharp(archivo)
     .flatten({ background: "#ffffff" })
     .greyscale()
     .raw()
@@ -78,10 +80,15 @@ function findCarHeight(alpha, width, height) {
   return Math.round(height * 0.55);
 }
 
-/** Silueta del auto en dorado, centrada sobre un cuadrado car-black. */
-async function buildIcon(carPng, size) {
-  const glyph = await sharp(carPng)
-    .resize({ width: Math.round(size * 0.92), fit: "inside" })
+/**
+ * Logo completo en dorado, centrado sobre un cuadrado car-black.
+ * El lockup es apaisado (mas o menos 3.3:1), asi que ocupa una banda al medio
+ * del icono; se deja algo de margen para que no toque los bordes al recortarse
+ * en redondeado.
+ */
+async function buildIcon(logoPng, size) {
+  const glyph = await sharp(logoPng)
+    .resize({ width: Math.round(size * 0.84), fit: "inside" })
     .toBuffer();
 
   return sharp({
@@ -97,28 +104,16 @@ const mask = await lineArtToAlpha();
 await tint(mask, WHITE).png().toFile("public/logo-posse.png");
 await tint(mask, GOLD).png().toFile("public/logo-posse-gold.png");
 
-// Aislar el auto: recortar el lockup a la altura de la franja vacía.
-const goldTrimmed = await tint(mask, GOLD)
-  .raw()
-  .toBuffer({ resolveWithObject: true });
-const { width: tw, height: th } = goldTrimmed.info;
-const trimmedAlpha = Buffer.alloc(tw * th);
-for (let i = 0; i < trimmedAlpha.length; i++) {
-  trimmedAlpha[i] = goldTrimmed.data[i * 4 + 3];
-}
-const carHeight = findCarHeight(trimmedAlpha, tw, th);
-
-const carPng = await sharp(goldTrimmed.data, { raw: { width: tw, height: th, channels: 4 } })
-  .extract({ left: 0, top: 0, width: tw, height: carHeight })
-  .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 0 })
-  .png()
-  .toBuffer();
+// Los iconos de app llevan el logo completo, no solo el auto.
+const mascaraIcono = await lineArtToAlpha(SRC_ICONO);
+const logoPng = await tint(mascaraIcono, GOLD).png().toBuffer();
+const { width: lw, height: lh } = await sharp(logoPng).metadata();
 
 await mkdir("public/icons", { recursive: true });
 for (const size of [180, 192, 512]) {
-  await sharp(await buildIcon(carPng, size)).toFile(`public/icons/icon-${size}.png`);
+  await sharp(await buildIcon(logoPng, size)).toFile(`public/icons/icon-${size}.png`);
 }
-await sharp(await buildIcon(carPng, 512)).toFile("src/app/apple-icon.png");
-await sharp(await buildIcon(carPng, 512)).resize(256, 256).toFile("src/app/icon.png");
+await sharp(await buildIcon(logoPng, 512)).toFile("src/app/apple-icon.png");
+await sharp(await buildIcon(logoPng, 512)).resize(256, 256).toFile("src/app/icon.png");
 
-console.log(`lockup ${tw}x${th}, auto recortado a ${carHeight}px de alto`);
+console.log(`iconos con el lockup completo (${lw}x${lh})`);
