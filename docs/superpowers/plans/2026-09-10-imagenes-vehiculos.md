@@ -737,3 +737,237 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 EOF
 )"
 ```
+
+---
+
+### Task 5: Galería de la ficha con zoom tipo lupa (agregada durante la ejecución, a pedido del usuario)
+
+**Contexto:** Task añadida después de que el usuario, viendo Task 1 en el navegador, pidió un layout de galería estilo Mercado Libre: foto grande + columna de miniaturas + una lupa que amplía al pasar el mouse. La galería actual (`ImageLightbox`, usada solo en `src/app/vehiculos/[slug]/page.tsx:107`) es una grilla que abre un modal a pantalla completa al hacer click; esta task la reemplaza por completo con un nuevo componente. `ImageLightbox` no se usa en ningún otro lugar del proyecto (confirmado por búsqueda), así que se elimina en vez de dejarla sin uso.
+
+**Files:**
+- Create: `src/components/gallery-zoom.tsx`
+- Modify: `src/app/vehiculos/[slug]/page.tsx:105-108`
+- Delete: `src/components/image-lightbox.tsx`
+
+**Interfaces:**
+- Produces: `GalleryZoom({ imagenes: string[]; alt: string })`, exportado desde `src/components/gallery-zoom.tsx`. Mismos props que el `ImageLightbox` que reemplaza, para que el cambio en la página de detalle sea un swap directo.
+
+- [ ] **Step 1: Crear el componente `GalleryZoom`**
+
+Crear `src/components/gallery-zoom.tsx`:
+
+```tsx
+"use client";
+import { useRef, useState } from "react";
+
+/** Cuánto amplía la lupa respecto del tamaño real de la imagen. */
+const ZOOM = 2.5;
+
+export function GalleryZoom({ imagenes, alt }: { imagenes: string[]; alt: string }) {
+  const [selected, setSelected] = useState(0);
+  const [hovering, setHovering] = useState(false);
+  const [pos, setPos] = useState({ x: 0.5, y: 0.5 });
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const imageBoxRef = useRef<HTMLDivElement>(null);
+
+  if (imagenes.length === 0) return null;
+
+  function onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = imageBoxRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+    const y = Math.min(Math.max((e.clientY - rect.top) / rect.height, 0), 1);
+    setPos({ x, y });
+  }
+
+  function close() {
+    setOpenIndex(null);
+  }
+
+  function prev(e: React.MouseEvent) {
+    e.stopPropagation();
+    setOpenIndex((i) => (i === null ? null : (i - 1 + imagenes.length) % imagenes.length));
+  }
+
+  function next(e: React.MouseEvent) {
+    e.stopPropagation();
+    setOpenIndex((i) => (i === null ? null : (i + 1) % imagenes.length));
+  }
+
+  const lensSize = 100 / ZOOM; // porcentaje del lado del recuadro principal
+  const lensLeft = Math.min(Math.max(pos.x * 100 - lensSize / 2, 0), 100 - lensSize);
+  const lensTop = Math.min(Math.max(pos.y * 100 - lensSize / 2, 0), 100 - lensSize);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[80px_1fr_1fr]">
+      {/* Miniaturas: fila horizontal en mobile, columna en desktop */}
+      <div className="flex gap-2 overflow-x-auto lg:max-h-[480px] lg:flex-col lg:overflow-x-visible lg:overflow-y-auto">
+        {imagenes.map((url, i) => (
+          <button
+            key={url + i}
+            type="button"
+            onClick={() => setSelected(i)}
+            className={`shrink-0 overflow-hidden rounded border-2 transition ${
+              i === selected ? "border-car-gold" : "border-transparent opacity-70 hover:opacity-100"
+            }`}
+          >
+            <img src={url} alt="" className="h-16 w-20 object-cover lg:h-14 lg:w-full" />
+          </button>
+        ))}
+      </div>
+
+      {/* Foto principal */}
+      <div>
+        <div
+          ref={imageBoxRef}
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          onMouseMove={onMouseMove}
+          onClick={() => setOpenIndex(selected)}
+          className="relative aspect-[4/3] w-full cursor-zoom-in overflow-hidden rounded bg-car-gray2"
+        >
+          <img
+            src={imagenes[selected]}
+            alt={`${alt} ${selected + 1}`}
+            className="h-full w-full object-contain"
+          />
+          {hovering && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute hidden border-2 border-car-gold/70 bg-white/10 lg:block"
+              style={{
+                width: `${lensSize}%`,
+                height: `${lensSize}%`,
+                left: `${lensLeft}%`,
+                top: `${lensTop}%`,
+              }}
+            />
+          )}
+        </div>
+        <p className="mt-2 hidden text-xs text-car-muted lg:block">
+          Pasá el mouse por la foto para ampliar · Tocá para ver a pantalla completa
+        </p>
+        <p className="mt-2 text-xs text-car-muted lg:hidden">Tocá la foto para ampliarla</p>
+      </div>
+
+      {/* Panel de zoom, solo desktop */}
+      <div
+        className={`relative hidden aspect-[4/3] overflow-hidden rounded border border-white/10 bg-car-gray2 lg:block`}
+        style={
+          hovering
+            ? {
+                backgroundImage: `url(${imagenes[selected]})`,
+                backgroundSize: `${ZOOM * 100}%`,
+                backgroundPosition: `${pos.x * 100}% ${pos.y * 100}%`,
+                backgroundRepeat: "no-repeat",
+              }
+            : undefined
+        }
+      />
+
+      {/* Modal a pantalla completa (mobile: tocar la foto; desktop: click en la foto) */}
+      {openIndex !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={close}
+        >
+          <button
+            type="button"
+            onClick={close}
+            className="absolute right-4 top-4 grid size-11 place-items-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+
+          {imagenes.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={prev}
+                className="absolute left-2 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20 sm:left-6"
+                aria-label="Anterior"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={next}
+                className="absolute right-2 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20 sm:right-6"
+                aria-label="Siguiente"
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          <img
+            src={imagenes[openIndex]}
+            alt={`${alt} ${openIndex + 1}`}
+            className="max-h-[85vh] max-w-full rounded object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {imagenes.length > 1 && (
+            <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+              {openIndex + 1} / {imagenes.length}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+Notas de diseño para el implementador:
+- La lupa (`lensSize`/`lensLeft`/`lensTop`) y el panel de zoom (`backgroundSize`/`backgroundPosition`) son la técnica estándar de "zoom con background-position": el recuadro de la izquierda marca qué parte de la foto se está mirando, el panel de la derecha muestra esa parte ampliada. Ambos se ocultan en mobile (`hidden lg:block`) porque dependen de `mousemove`, que no existe con touch.
+- El modal a pantalla completa es una copia funcional del que ya existía en `image-lightbox.tsx` (mismo comportamiento: click afuera cierra, flechas prev/next, contador, `object-contain` para no recortar). Se mantiene igual a propósito para no cambiar un comportamiento que ya funcionaba bien.
+- La imagen principal usa `aspect-[4/3]` con `object-contain` (no `h-auto` como las cards de la Task 1): en una vista de detalle grande, un recuadro con letterbox es el estándar esperado (así se ve en Mercado Libre, Amazon, etc.) — la objeción original del usuario era específicamente sobre las cards chicas del catálogo con fondo borroso, no sobre este tipo de visor.
+
+- [ ] **Step 2: Reemplazar `ImageLightbox` por `GalleryZoom` en la ficha del vehículo**
+
+En `src/app/vehiculos/[slug]/page.tsx`, cambiar el import (línea 9):
+
+```tsx
+import { GalleryZoom } from "@/components/gallery-zoom";
+```
+
+Reemplazar las líneas 105-108:
+
+```tsx
+                <p className="mt-1 text-sm text-car-muted">Mirá las fotos en detalle</p>
+                <div className="mt-5">
+                  <GalleryZoom imagenes={v.imagenes} alt={v.nombre} />
+                </div>
+```
+
+- [ ] **Step 3: Eliminar el componente viejo**
+
+Confirmar que nada más importa `ImageLightbox` (`grep -r "ImageLightbox" src/` no debe encontrar nada fuera del propio archivo que se borra) y eliminar `src/components/image-lightbox.tsx`.
+
+- [ ] **Step 4: Verificar en el navegador**
+
+```bash
+npm run build
+```
+
+Expected: build sin errores de TypeScript (confirma también que no quedó ningún import roto a `ImageLightbox`).
+
+Con el dev server corriendo, abrir la ficha de un vehículo con varias fotos (`/vehiculos/<slug>`):
+1. **Desktop:** confirmar que aparece la foto grande, la columna de miniaturas a la izquierda, y que al pasar el mouse por la foto principal aparece el recuadro de la lupa siguiendo el cursor y, a la derecha, el panel con la zona ampliada. Click en una miniatura cambia la foto principal. Click en la foto principal abre el modal a pantalla completa con flechas prev/next.
+2. **Mobile** (usar `resize_window` con preset `mobile` o similar): confirmar que las miniaturas se ven en una fila horizontal debajo/arriba de la foto, que NO aparece ningún panel de zoom (no tiene sentido sin mouse), y que tocar la foto principal abre el mismo modal a pantalla completa.
+3. Confirmar que ninguna foto se ve recortada de forma rara en ninguno de los dos casos (la foto principal usa letterbox con `object-contain`, que es el comportamiento esperado en un visor grande).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/components/gallery-zoom.tsx src/app/vehiculos/\[slug\]/page.tsx
+git rm src/components/image-lightbox.tsx
+git commit -m "$(cat <<'EOF'
+feat: galeria de la ficha con zoom tipo lupa (estilo Mercado Libre)
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
