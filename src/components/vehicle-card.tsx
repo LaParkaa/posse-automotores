@@ -17,7 +17,6 @@ export function VehicleCard({ vehiculo }: { vehiculo: Vehiculo }) {
           <VehicleThumbnail
             src={vehiculo.cover_image_url}
             alt={vehiculo.nombre}
-            className="aspect-video w-full"
             loading="lazy"
           />
         ) : (
@@ -74,7 +73,6 @@ export function VehicleCardVendido({ vehiculo }: { vehiculo: Vehiculo }) {
           <VehicleThumbnail
             src={vehiculo.cover_image_url}
             alt={vehiculo.nombre}
-            className="aspect-video w-full"
             loading="lazy"
           />
         ) : (

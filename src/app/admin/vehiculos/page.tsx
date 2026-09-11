@@ -52,11 +52,7 @@ export default async function AdminVehiculosPage() {
               className="overflow-hidden rounded-lg border border-white/10 bg-car-gray"
             >
               {v.cover_image_url ? (
-                <VehicleThumbnail
-                  src={v.cover_image_url}
-                  alt={v.nombre}
-                  className="aspect-video w-full"
-                />
+                <VehicleThumbnail src={v.cover_image_url} alt={v.nombre} />
               ) : (
                 <div className="flex aspect-video w-full items-center justify-center bg-car-gray2 text-xs text-car-muted">
                   Sin foto
