@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { VehicleThumbnail } from "@/components/vehicle-thumbnail";
 
 export function ImageLightbox({ imagenes, alt }: { imagenes: string[]; alt: string }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -30,10 +31,11 @@ export function ImageLightbox({ imagenes, alt }: { imagenes: string[]; alt: stri
             onClick={() => setOpenIndex(i)}
             className="group relative cursor-zoom-in overflow-hidden rounded"
           >
-            <img
+            <VehicleThumbnail
               src={url}
               alt={`${alt} ${i + 1}`}
-              className="aspect-video w-full object-cover transition group-hover:scale-105"
+              className="aspect-video w-full"
+              imgClassName="transition group-hover:scale-105"
             />
             <span className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
               <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">

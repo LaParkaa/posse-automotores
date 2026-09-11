@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Vehiculo } from "@/lib/types";
 import { buildWhatsAppUrl } from "@/lib/utils";
+import { VehicleThumbnail } from "@/components/vehicle-thumbnail";
 
 const WaIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="size-4">
@@ -13,8 +14,12 @@ export function VehicleCard({ vehiculo }: { vehiculo: Vehiculo }) {
     <article className="overflow-hidden rounded-lg border border-white/5 bg-car-gray transition-all hover:scale-[1.02] hover:border-car-gold/40 hover:shadow-[0_12px_40px_rgba(201,162,39,0.18)]">
       <Link href={`/vehiculos/${vehiculo.slug}`} className="relative block">
         {vehiculo.cover_image_url ? (
-          <img src={vehiculo.cover_image_url} alt={vehiculo.nombre}
-            className="aspect-video w-full object-cover" loading="lazy" />
+          <VehicleThumbnail
+            src={vehiculo.cover_image_url}
+            alt={vehiculo.nombre}
+            className="aspect-video w-full"
+            loading="lazy"
+          />
         ) : (
           <div className="aspect-video w-full bg-car-gray2" />
         )}
@@ -66,8 +71,12 @@ export function VehicleCardVendido({ vehiculo }: { vehiculo: Vehiculo }) {
     <article className="overflow-hidden rounded-lg border border-white/5 bg-car-gray opacity-70 grayscale">
       <div className="relative">
         {vehiculo.cover_image_url ? (
-          <img src={vehiculo.cover_image_url} alt={vehiculo.nombre}
-            className="aspect-video w-full object-cover" loading="lazy" />
+          <VehicleThumbnail
+            src={vehiculo.cover_image_url}
+            alt={vehiculo.nombre}
+            className="aspect-video w-full"
+            loading="lazy"
+          />
         ) : (
           <div className="aspect-video w-full bg-car-gray2" />
         )}

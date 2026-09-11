@@ -1,4 +1,5 @@
 import type { EstadoVehiculo, Vehiculo } from "@/lib/types";
+import { VehicleThumbnail } from "@/components/vehicle-thumbnail";
 
 const OPCIONES: { estado: EstadoVehiculo; texto: string; activo: string }[] = [
   { estado: "disponible", texto: "Disp", activo: "bg-emerald-500 text-car-black" },
@@ -23,10 +24,10 @@ export function VehicleRow({
     >
       <div className="flex gap-3 p-3">
         {vehiculo.cover_image_url ? (
-          <img
+          <VehicleThumbnail
             src={vehiculo.cover_image_url}
             alt=""
-            className="size-16 shrink-0 rounded object-cover"
+            className="size-16 shrink-0 rounded"
           />
         ) : (
           <div className="flex size-16 shrink-0 items-center justify-center rounded bg-car-gray2 text-[10px] text-car-muted">
