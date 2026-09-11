@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Cropper from "react-easy-crop";
 import type { Area, Point } from "react-easy-crop";
 import { X } from "lucide-react";
@@ -15,7 +15,7 @@ export function CoverCropModal({
 }: {
   imageUrl: string;
   previewVehiculo: Vehiculo;
-  onConfirm: (blob: Blob) => void;
+  onConfirm: (blob: Blob) => Promise<void> | void;
   onClose: () => void;
 }) {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -24,13 +24,19 @@ export function CoverCropModal({
   const [previewUrl, setPreviewUrl] = useState(imageUrl);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
+  // Sólo trackea object URLs creadas por acá (no la imageUrl inicial, que es
+  // una URL real de Supabase) para poder revocarlas y no perder memoria.
+  const objectUrlRef = useRef<string | null>(null);
 
   const onCropComplete = useCallback(
     async (_area: Area, areaPixels: Area) => {
       setCroppedAreaPixels(areaPixels);
       try {
         const blob = await cropImageToBlob(imageUrl, areaPixels);
-        setPreviewUrl(URL.createObjectURL(blob));
+        const nuevaUrl = URL.createObjectURL(blob);
+        if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = nuevaUrl;
+        setPreviewUrl(nuevaUrl);
       } catch {
         // Si falla la generación de la vista previa se sigue mostrando la
         // última válida; el recorte final se reintenta al confirmar.
@@ -39,13 +45,19 @@ export function CoverCropModal({
     [imageUrl]
   );
 
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
+
   async function confirmar() {
     if (!croppedAreaPixels) return;
     setConfirming(true);
     setError("");
     try {
       const blob = await cropImageToBlob(imageUrl, croppedAreaPixels);
-      onConfirm(blob);
+      await onConfirm(blob);
     } catch {
       setError("No se pudo generar el recorte. Probá de nuevo.");
       setConfirming(false);

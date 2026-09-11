@@ -102,9 +102,8 @@ export function VehiculoForm({
     const { error } = await supabase.storage.from(BUCKET).upload(nombre, blob, { upsert: false });
 
     if (error) {
-      setUploadError(`Error subiendo el recorte: ${error.message}`);
       setUploading(false);
-      return;
+      throw new Error(`Error subiendo el recorte: ${error.message}`);
     }
 
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(nombre);
@@ -119,8 +118,14 @@ export function VehiculoForm({
     setUploadError("");
     const supabase = getSupabase();
     const nuevas: string[] = [];
+    const ignorados: string[] = [];
 
     for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) {
+        ignorados.push(file.name);
+        continue;
+      }
+
       const ext = file.name.split(".").pop() ?? "jpg";
       const nombre = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error } = await supabase.storage
@@ -134,6 +139,12 @@ export function VehiculoForm({
 
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(nombre);
       nuevas.push(data.publicUrl);
+    }
+
+    if (ignorados.length > 0) {
+      setUploadError(
+        `Se ignoraron ${ignorados.length} archivo(s) que no son imágenes: ${ignorados.join(", ")}`
+      );
     }
 
     setImagenes((prev) => [...prev, ...nuevas]);

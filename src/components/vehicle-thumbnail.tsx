@@ -2,6 +2,8 @@
  * Muestra la foto de un vehículo completa, sin recortar: la card toma el
  * alto real de la imagen (`h-auto`) en vez de forzar un recuadro fijo y
  * rellenarlo o recortar lo que sobre.
+ *
+ * Íconos chicos de tamaño fijo (p. ej. el thumbnail de 64px en vehicle-row.tsx) mantienen `object-cover` en vez de usar este componente, a propósito.
  */
 export function VehicleThumbnail({
   src,

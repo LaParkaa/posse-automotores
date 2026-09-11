@@ -21,53 +21,50 @@
 
 ### Task 1: Ninguna imagen se muestra recortada (componente `VehicleThumbnail` + aplicarlo en cards, listado admin y galería)
 
+> **Nota (revisión post-implementación):** el diseño original de este Step 1 ("letterbox" con fondo de la misma foto desenfocada, `object-contain` dentro de un recuadro `aspect-video` fijo) fue el que efectivamente se implementó primero, pero el usuario lo rechazó al verlo en vivo — los bordes rellenos con la foto borrosa no gustaron. Se reemplazó por el enfoque más simple documentado abajo: cada card toma el alto real de su imagen (`h-auto`), sin recortar ni rellenar nada. Este documento fue actualizado para reflejar lo que efectivamente se shippeó; ver el commit `b1e4796` para el diff completo de esa revisión.
+
 **Files:**
 - Create: `src/components/vehicle-thumbnail.tsx`
 - Modify: `src/components/vehicle-card.tsx:15-20,68-73`
 - Modify: `src/app/admin/vehiculos/page.tsx:53-63`
-- Modify: `src/components/panel/vehicle-row.tsx:25-35`
-- Modify: `src/components/image-lightbox.tsx:33-37`
+- Modify: `src/components/image-lightbox.tsx:33-37` (nota: `vehicle-row.tsx` deliberadamente NO se modifica — ver Step 4)
 
 **Interfaces:**
-- Produces: `VehicleThumbnail({ src: string; alt: string; className?: string; imgClassName?: string; loading?: "lazy" | "eager" })` — componente exportado desde `src/components/vehicle-thumbnail.tsx`, usado por las Tasks siguientes indirectamente (Task 3 lo usa vía `VehicleCard`, que a su vez lo usa desde esta Task).
+- Produces: `VehicleThumbnail({ src: string; alt: string; className?: string; loading?: "lazy" | "eager" })` — componente exportado desde `src/components/vehicle-thumbnail.tsx`, usado por las Tasks siguientes indirectamente (Task 3 lo usa vía `VehicleCard`, que a su vez lo usa desde esta Task).
 
 - [ ] **Step 1: Crear el componente `VehicleThumbnail`**
 
 Crear `src/components/vehicle-thumbnail.tsx`:
 
 ```tsx
+/**
+ * Muestra la foto de un vehículo completa, sin recortar: la card toma el
+ * alto real de la imagen (`h-auto`) en vez de forzar un recuadro fijo y
+ * rellenarlo o recortar lo que sobre.
+ */
 export function VehicleThumbnail({
   src,
   alt,
-  className = "aspect-video w-full",
-  imgClassName = "",
+  className = "",
   loading,
 }: {
   src: string;
   alt: string;
   className?: string;
-  imgClassName?: string;
   loading?: "lazy" | "eager";
 }) {
   return (
-    <div className={`relative overflow-hidden bg-car-gray2 ${className}`}>
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 scale-110 bg-cover bg-center opacity-60 blur-xl"
-        style={{ backgroundImage: `url(${src})` }}
-      />
-      <img
-        src={src}
-        alt={alt}
-        loading={loading}
-        className={`relative h-full w-full object-contain ${imgClassName}`}
-      />
-    </div>
+    <img
+      src={src}
+      alt={alt}
+      loading={loading}
+      className={`block w-full h-auto ${className}`}
+    />
   );
 }
 ```
 
-Esto muestra la imagen completa (`object-contain`) centrada, con un fondo relleno con la misma imagen desenfocada y oscurecida para que no queden franjas vacías feas cuando la proporción de la foto no coincide con la de la card.
+Esto muestra la imagen completa a su relación de aspecto real (la card crece o se achica según la foto), sin recortar ni rellenar nada.
 
 - [ ] **Step 2: Usar `VehicleThumbnail` en `vehicle-card.tsx`**
 
@@ -84,7 +81,6 @@ Reemplazar las líneas 15-20 (dentro de `VehicleCard`):
           <VehicleThumbnail
             src={vehiculo.cover_image_url}
             alt={vehiculo.nombre}
-            className="aspect-video w-full"
             loading="lazy"
           />
         ) : (
@@ -99,7 +95,6 @@ Reemplazar las líneas 68-73 (dentro de `VehicleCardVendido`):
           <VehicleThumbnail
             src={vehiculo.cover_image_url}
             alt={vehiculo.nombre}
-            className="aspect-video w-full"
             loading="lazy"
           />
         ) : (
@@ -119,11 +114,7 @@ Reemplazar las líneas 53-63:
 
 ```tsx
               {v.cover_image_url ? (
-                <VehicleThumbnail
-                  src={v.cover_image_url}
-                  alt={v.nombre}
-                  className="aspect-video w-full"
-                />
+                <VehicleThumbnail src={v.cover_image_url} alt={v.nombre} />
               ) : (
                 <div className="flex aspect-video w-full items-center justify-center bg-car-gray2 text-xs text-car-muted">
                   Sin foto
@@ -131,29 +122,9 @@ Reemplazar las líneas 53-63:
               )}
 ```
 
-- [ ] **Step 4: Usar `VehicleThumbnail` en `vehicle-row.tsx` (panel móvil)**
+- [ ] **Step 4: `vehicle-row.tsx` (panel móvil) queda sin cambios a propósito**
 
-En `src/components/panel/vehicle-row.tsx`, agregar el import (después de la línea 1):
-
-```tsx
-import { VehicleThumbnail } from "@/components/vehicle-thumbnail";
-```
-
-Reemplazar las líneas 25-35:
-
-```tsx
-        {vehiculo.cover_image_url ? (
-          <VehicleThumbnail
-            src={vehiculo.cover_image_url}
-            alt=""
-            className="size-16 shrink-0 rounded"
-          />
-        ) : (
-          <div className="flex size-16 shrink-0 items-center justify-center rounded bg-car-gray2 text-[10px] text-car-muted">
-            Sin foto
-          </div>
-        )}
-```
+`src/components/panel/vehicle-row.tsx` NO usa `VehicleThumbnail` y sigue con un `<img>` simple y `object-cover`. Es un ícono cuadrado fijo de 64px en una lista (identificador, no una "card"): letterboxear ahí una foto en formato retrato dejaría una franja casi invisible del auto. El criterio de "sin recorte" de esta Task aplica a contextos pensados para mostrar el vehículo completo (cards del catálogo, listado admin, galería), no a íconos chicos de tamaño fijo.
 
 - [ ] **Step 5: Usar `VehicleThumbnail` en la grilla de miniaturas del lightbox**
 
@@ -169,10 +140,11 @@ Reemplazar las líneas 33-37 (la miniatura dentro del `<button>` del grid; el `<
             <VehicleThumbnail
               src={url}
               alt={`${alt} ${i + 1}`}
-              className="aspect-video w-full"
-              imgClassName="transition group-hover:scale-105"
+              className="transition group-hover:scale-105"
             />
 ```
+
+(Nota: `image-lightbox.tsx` fue reemplazado por completo en la Task 5 por `gallery-zoom.tsx`; este Step documenta el estado en el que quedó tras esta Task, previo a esa Task 5.)
 
 - [ ] **Step 6: Verificar en el navegador**
 
