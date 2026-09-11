@@ -86,6 +86,7 @@ export function VehiculoForm({
       videos: [],
       estado: (datos.get("estado") as Vehiculo["estado"]) || "disponible",
       badge: (datos.get("badge") as string) || null,
+      promocionado_reel: datos.get("promocionado_reel") === "on",
       created_at: "",
       deleted_at: null,
       sold_at: null,
@@ -323,6 +324,15 @@ export function VehiculoForm({
             </select>
           </div>
         </div>
+        <label className="flex items-center gap-2 text-sm text-car-white">
+          <input
+            type="checkbox"
+            name="promocionado_reel"
+            defaultChecked={vehiculo?.promocionado_reel ?? false}
+            className="size-4 rounded border-white/20 bg-car-gray2 accent-car-gold"
+          />
+          🎥 Promocionado en Reel
+        </label>
       </div>
 
       {/* ── Fotos y video ──────────────────────────────────────────────── */}

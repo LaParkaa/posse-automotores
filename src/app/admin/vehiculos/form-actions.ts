@@ -121,6 +121,7 @@ export async function createVehiculo(formData: FormData) {
     estado,
     ...camposDeVenta(estado, null),
     badge: (formData.get("badge") as string) || null,
+    promocionado_reel: formData.get("promocionado_reel") === "on",
   });
 
   if (error) {
@@ -195,6 +196,7 @@ export async function updateVehiculo(id: string, formData: FormData) {
       estado,
       ...camposDeVenta(estado, filaActual?.sold_at ?? null),
       badge: (formData.get("badge") as string) || null,
+      promocionado_reel: formData.get("promocionado_reel") === "on",
     })
     .eq("id", id);
 
