@@ -18,6 +18,7 @@ create table if not exists public.vehiculos_posse (
   videos text[] default '{}',
   estado text not null default 'disponible' check (estado in ('disponible', 'vendido')),
   badge text,
+  promocionado_reel boolean not null default false,
   created_at timestamptz default now(),
   deleted_at timestamptz
 );

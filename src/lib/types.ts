@@ -19,6 +19,7 @@ export type Vehiculo = {
   videos: string[];
   estado: EstadoVehiculo;
   badge: string | null;
+  promocionado_reel: boolean;
   created_at: string;
   deleted_at: string | null;
   sold_at: string | null;
