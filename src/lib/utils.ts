@@ -1,13 +1,19 @@
+import type { Vehiculo } from "@/lib/types";
+
 export function formatPrice(precioTexto: string): string {
   return precioTexto;
 }
 
-export function buildWhatsAppUrl(nombre: string, anio: number, context: "card" | "ficha" = "card"): string {
+export function buildWhatsAppUrl(
+  vehiculo: Pick<Vehiculo, "nombre" | "tipo" | "promocionado_reel">
+): string {
   const base = "https://wa.me/5493537662444?text=";
-  const msg =
-    context === "ficha"
-      ? `Hola, me interesa el ${nombre} ${anio}, ¿está disponible?`
-      : `Hola, quiero consultar el ${nombre} ${anio}`;
+  const esMoto = vehiculo.tipo === "Moto";
+  const articulo = esMoto ? "la" : "el";
+  const emoji = esMoto ? "🏍️" : "🚗";
+  const msg = vehiculo.promocionado_reel
+    ? `Hola, vi el Reel de ${articulo} ${vehiculo.nombre} ${emoji}🎥 y entré a la web. ¡Quiero más info!`
+    : `Hola, vengo desde el catálogo web 💻. Me interesa ${articulo} ${vehiculo.nombre} ${emoji}. ¿Sigue disponible?`;
   return base + encodeURIComponent(msg);
 }
 

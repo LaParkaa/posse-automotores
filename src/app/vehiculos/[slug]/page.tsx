@@ -34,7 +34,7 @@ export default async function VehiculoPage({ params }: { params: Promise<{ slug:
   const v = await getVehiculoBySlug(slug);
   if (!v) notFound();
 
-  const whatsappUrl = buildWhatsAppUrl(v.nombre, v.anio, "ficha");
+  const whatsappUrl = buildWhatsAppUrl(v);
   const specs = [
     ["Año", String(v.anio)],
     ["Kilometraje", v.kilometraje],
