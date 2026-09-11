@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { X, ImagePlus, VideoIcon, Loader2 } from "lucide-react";
 import type { Vehiculo } from "@/lib/types";
+import { CoverCropModal } from "./cover-crop-modal";
 
 const BUCKET = "vehiculos-posse";
 
@@ -44,6 +45,72 @@ export function VehiculoForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [recortando, setRecortando] = useState(false);
+
+  const [arrastrando, setArrastrando] = useState(false);
+
+  function onDragOverFotos(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    setArrastrando(true);
+  }
+
+  function onDragLeaveFotos(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    setArrastrando(false);
+  }
+
+  function onDropFotos(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    setArrastrando(false);
+    handleFiles(e.dataTransfer.files);
+  }
+
+  function construirVehiculoDeVistaPrevia(): Vehiculo {
+    const datos = formRef.current ? new FormData(formRef.current) : new FormData();
+    return {
+      id: "preview",
+      slug: "preview",
+      nombre: (datos.get("nombre") as string) || "",
+      marca: (datos.get("marca") as string) || "",
+      modelo: (datos.get("modelo") as string) || "",
+      anio: Number(datos.get("anio")) || new Date().getFullYear(),
+      kilometraje: (datos.get("kilometraje") as string) || "Consultá km",
+      combustible: (datos.get("combustible") as string) || "Nafta",
+      transmision: (datos.get("transmision") as string) || "Manual",
+      motor: null,
+      tipo: (datos.get("tipo") as string) || null,
+      descripcion: null,
+      precio_texto: (datos.get("precio_texto") as string) || "Consultá precio",
+      cover_image_url: imagenes[0] ?? null,
+      imagenes: [],
+      videos: [],
+      estado: (datos.get("estado") as Vehiculo["estado"]) || "disponible",
+      badge: (datos.get("badge") as string) || null,
+      created_at: "",
+      deleted_at: null,
+      sold_at: null,
+      sale_price: null,
+      sale_notes: null,
+    };
+  }
+
+  async function subirPortadaRecortada(blob: Blob) {
+    setUploading(true);
+    setUploadError("");
+    const supabase = getSupabase();
+    const nombre = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    const { error } = await supabase.storage.from(BUCKET).upload(nombre, blob, { upsert: false });
+
+    if (error) {
+      setUploading(false);
+      throw new Error(`Error subiendo el recorte: ${error.message}`);
+    }
+
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(nombre);
+    setImagenes((prev) => [data.publicUrl, ...prev]);
+    setUploading(false);
+    setRecortando(false);
+  }
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -51,8 +118,14 @@ export function VehiculoForm({
     setUploadError("");
     const supabase = getSupabase();
     const nuevas: string[] = [];
+    const ignorados: string[] = [];
 
     for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) {
+        ignorados.push(file.name);
+        continue;
+      }
+
       const ext = file.name.split(".").pop() ?? "jpg";
       const nombre = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error } = await supabase.storage
@@ -66,6 +139,12 @@ export function VehiculoForm({
 
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(nombre);
       nuevas.push(data.publicUrl);
+    }
+
+    if (ignorados.length > 0) {
+      setUploadError(
+        `Se ignoraron ${ignorados.length} archivo(s) que no son imágenes: ${ignorados.join(", ")}`
+      );
     }
 
     setImagenes((prev) => [...prev, ...nuevas]);
@@ -151,6 +230,14 @@ export function VehiculoForm({
       onSubmit={handleSubmit}
       className="max-w-2xl space-y-6 rounded-lg border border-white/10 bg-car-gray p-5 sm:p-8"
     >
+      {recortando && imagenes[0] && (
+        <CoverCropModal
+          imageUrl={imagenes[0]}
+          previewVehiculo={construirVehiculoDeVistaPrevia()}
+          onConfirm={subirPortadaRecortada}
+          onClose={() => setRecortando(false)}
+        />
+      )}
       {/* ── Datos del vehículo ─────────────────────────────────────────── */}
       <div className="space-y-3">
         <h2 className={sectionTitleClass}>Datos del vehículo</h2>
@@ -261,6 +348,15 @@ export function VehiculoForm({
                   </span>
                 )}
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded bg-black/60 opacity-0 transition group-hover:opacity-100">
+                  {i === 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setRecortando(true)}
+                      className="rounded bg-car-gold px-2 py-0.5 text-[10px] font-bold text-car-black"
+                    >
+                      Recortar
+                    </button>
+                  )}
                   {i !== 0 && (
                     <button
                       type="button"
@@ -294,18 +390,28 @@ export function VehiculoForm({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
+          onDragOver={onDragOverFotos}
+          onDragLeave={onDragLeaveFotos}
+          onDrop={onDropFotos}
           disabled={uploading}
-          className="flex w-full items-center justify-center gap-2 rounded border border-dashed border-white/20 py-4 text-sm text-car-muted transition hover:border-car-gold hover:text-car-gold disabled:opacity-50"
+          className={`flex w-full items-center justify-center gap-2 rounded border border-dashed py-4 text-sm transition disabled:opacity-50 ${
+            arrastrando
+              ? "border-car-gold bg-car-gold/10 text-car-gold"
+              : "border-white/20 text-car-muted hover:border-car-gold hover:text-car-gold"
+          }`}
         >
           {uploading ? (
             <><Loader2 size={16} className="animate-spin" /> Subiendo...</>
+          ) : arrastrando ? (
+            <><ImagePlus size={16} /> Soltá las fotos acá</>
           ) : (
             <><ImagePlus size={16} /> Agregar fotos</>
           )}
         </button>
 
         <p className="mt-1.5 text-xs text-car-muted">
-          Podés elegir varias fotos a la vez, desde la galería o la cámara.
+          Podés elegir varias fotos a la vez, desde la galería o la cámara, o arrastrarlas
+          directamente acá (por ejemplo, desde una carpeta de Windows).
         </p>
       </div>
 

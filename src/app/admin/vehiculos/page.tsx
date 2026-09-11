@@ -4,6 +4,7 @@ import { getAllVehiculos } from "@/lib/data";
 import { AdminShell } from "@/components/admin-shell";
 import { toggleEstado } from "./actions";
 import { DeleteButton } from "./delete-button";
+import { VehicleThumbnail } from "@/components/vehicle-thumbnail";
 
 export const dynamic = "force-dynamic";
 
@@ -51,11 +52,7 @@ export default async function AdminVehiculosPage() {
               className="overflow-hidden rounded-lg border border-white/10 bg-car-gray"
             >
               {v.cover_image_url ? (
-                <img
-                  src={v.cover_image_url}
-                  alt={v.nombre}
-                  className="aspect-video w-full object-cover"
-                />
+                <VehicleThumbnail src={v.cover_image_url} alt={v.nombre} />
               ) : (
                 <div className="flex aspect-video w-full items-center justify-center bg-car-gray2 text-xs text-car-muted">
                   Sin foto
