@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { FloatingWhatsApp } from "@/components/floating-whatsapp";
 import { getVehiculoBySlug, getVehiculosDisponibles } from "@/lib/data";
 import { buildWhatsAppUrl } from "@/lib/utils";
-import { ImageLightbox } from "@/components/image-lightbox";
+import { GalleryZoom } from "@/components/gallery-zoom";
 
 export async function generateStaticParams() {
   const vehiculos = await getVehiculosDisponibles();
@@ -102,9 +102,9 @@ export default async function VehiculoPage({ params }: { params: Promise<{ slug:
                 <h2 className="font-condensed text-2xl font-black italic text-car-white">
                   Galería
                 </h2>
-                <p className="mt-1 text-sm text-car-muted">Tocá una foto para ampliarla</p>
+                <p className="mt-1 text-sm text-car-muted">Mirá las fotos en detalle</p>
                 <div className="mt-5">
-                  <ImageLightbox imagenes={v.imagenes} alt={v.nombre} />
+                  <GalleryZoom imagenes={v.imagenes} alt={v.nombre} />
                 </div>
               </div>
             )}
