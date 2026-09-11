@@ -47,6 +47,24 @@ export function VehiculoForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [recortando, setRecortando] = useState(false);
 
+  const [arrastrando, setArrastrando] = useState(false);
+
+  function onDragOverFotos(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    setArrastrando(true);
+  }
+
+  function onDragLeaveFotos(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    setArrastrando(false);
+  }
+
+  function onDropFotos(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    setArrastrando(false);
+    handleFiles(e.dataTransfer.files);
+  }
+
   function construirVehiculoDeVistaPrevia(): Vehiculo {
     const datos = formRef.current ? new FormData(formRef.current) : new FormData();
     return {
@@ -361,18 +379,28 @@ export function VehiculoForm({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
+          onDragOver={onDragOverFotos}
+          onDragLeave={onDragLeaveFotos}
+          onDrop={onDropFotos}
           disabled={uploading}
-          className="flex w-full items-center justify-center gap-2 rounded border border-dashed border-white/20 py-4 text-sm text-car-muted transition hover:border-car-gold hover:text-car-gold disabled:opacity-50"
+          className={`flex w-full items-center justify-center gap-2 rounded border border-dashed py-4 text-sm transition disabled:opacity-50 ${
+            arrastrando
+              ? "border-car-gold bg-car-gold/10 text-car-gold"
+              : "border-white/20 text-car-muted hover:border-car-gold hover:text-car-gold"
+          }`}
         >
           {uploading ? (
             <><Loader2 size={16} className="animate-spin" /> Subiendo...</>
+          ) : arrastrando ? (
+            <><ImagePlus size={16} /> Soltá las fotos acá</>
           ) : (
             <><ImagePlus size={16} /> Agregar fotos</>
           )}
         </button>
 
         <p className="mt-1.5 text-xs text-car-muted">
-          Podés elegir varias fotos a la vez, desde la galería o la cámara.
+          Podés elegir varias fotos a la vez, desde la galería o la cámara, o arrastrarlas
+          directamente acá (por ejemplo, desde una carpeta de Windows).
         </p>
       </div>
 
