@@ -53,7 +53,7 @@ export function VehicleCard({ vehiculo }: { vehiculo: Vehiculo }) {
           </p>
         ) : (
           <Link
-            href={buildWhatsAppUrl(vehiculo.nombre, vehiculo.anio, "card")}
+            href={buildWhatsAppUrl(vehiculo)}
             target="_blank" rel="noopener"
             className="flex w-full items-center justify-center gap-2 rounded bg-[#25D366] py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#1da851]"
           >
