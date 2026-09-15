@@ -8,7 +8,7 @@ function v(id: string, parcial: Partial<Vehiculo> = {}): Vehiculo {
     anio: 2020, kilometraje: "0 km", combustible: "Nafta", transmision: "Manual",
     motor: null, tipo: null, descripcion: null, precio_texto: "Consultar",
     cover_image_url: null, imagenes: [], videos: [], estado: "disponible",
-    badge: null, created_at: "2026-01-01T12:00:00Z", deleted_at: null,
+    badge: null, promocionado_reel: false, created_at: "2026-01-01T12:00:00Z", deleted_at: null,
     sold_at: null, sale_price: null, sale_notes: null,
     ...parcial,
   };
