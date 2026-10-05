@@ -4,14 +4,13 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FloatingWhatsApp } from "@/components/floating-whatsapp";
-import { getVehiculoBySlug, getVehiculosDisponibles } from "@/lib/data";
+import { getVehiculoBySlug } from "@/lib/data";
 import { buildWhatsAppUrl } from "@/lib/utils";
 import { GalleryZoom } from "@/components/gallery-zoom";
 
-export async function generateStaticParams() {
-  const vehiculos = await getVehiculosDisponibles();
-  return vehiculos.map((v) => ({ slug: v.slug }));
-}
+// Igual que el catálogo: la ficha se arma en cada visita. Si se genera estática,
+// los cambios del admin (estado, Reel → mensaje de WhatsApp) nunca llegan acá.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

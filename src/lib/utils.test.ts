@@ -34,7 +34,7 @@ describe("buildWhatsAppUrl", () => {
     });
     const texto = decodeURIComponent(url.split("text=")[1]);
     expect(texto).toBe(
-      "Hola, vi el Reel de el Chevrolet Agile 1.4 LS 🚗🎥 y entré a la web. ¡Quiero más info!"
+      "Hola, vi el Reel del Chevrolet Agile 1.4 LS 🚗🎥 y entré a la web. ¡Quiero más info!"
     );
   });
 

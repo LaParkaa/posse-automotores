@@ -12,7 +12,7 @@ export function buildWhatsAppUrl(
   const articulo = esMoto ? "la" : "el";
   const emoji = esMoto ? "🏍️" : "🚗";
   const msg = vehiculo.promocionado_reel
-    ? `Hola, vi el Reel de ${articulo} ${vehiculo.nombre} ${emoji}🎥 y entré a la web. ¡Quiero más info!`
+    ? `Hola, vi el Reel ${esMoto ? "de la" : "del"} ${vehiculo.nombre} ${emoji}🎥 y entré a la web. ¡Quiero más info!`
     : `Hola, vengo desde el catálogo web 💻. Me interesa ${articulo} ${vehiculo.nombre} ${emoji}. ¿Sigue disponible?`;
   return base + encodeURIComponent(msg);
 }
