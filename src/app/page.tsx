@@ -24,7 +24,7 @@ export default async function Home() {
   const destacados = disponibles.filter((v) => v.badge === "Destacado").slice(0, 3);
   const featured = destacados.length >= 3 ? destacados : disponibles.slice(0, 3);
 
-  const waUrl = `https://wa.me/5493537662444?text=${encodeURIComponent("Hola, quiero consultar un vehículo")}`;
+  const waUrl = `https://wa.me/5493537558947?text=${encodeURIComponent("Hola, quiero consultar un vehículo")}`;
 
   return (
     <>
@@ -223,7 +223,7 @@ export default async function Home() {
               <div className="mt-8 flex flex-col gap-4">
                 <Link href={waUrl} target="_blank" rel="noopener" className="flex items-center gap-3 text-car-white/70 transition hover:text-car-white">
                   <span className="grid size-11 place-items-center rounded-lg border border-car-gold/20 bg-car-gray2 text-xl">📱</span>
-                  +54 9 3537 66-2444
+                  +54 9 3537 55-8947
                 </Link>
                 <Link href="https://maps.google.com/?q=Justiniano+Posse+Córdoba" target="_blank" rel="noopener" className="flex items-center gap-3 text-car-white/70 transition hover:text-car-white">
                   <span className="grid size-11 place-items-center rounded-lg border border-car-gold/20 bg-car-gray2 text-xl">📍</span>

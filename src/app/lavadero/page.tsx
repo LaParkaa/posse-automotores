@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "Lavadero de autos de Posse Automotores. Lavado exterior, interior, encerado, motor y detailing.",
 };
 
-const waUrl = `https://wa.me/5493537662444?text=${encodeURIComponent("Hola, quiero consultar por el lavadero de Posse Automotores")}`;
+const waUrl = `https://wa.me/5493537558947?text=${encodeURIComponent("Hola, quiero consultar por el lavadero de Posse Automotores")}`;
 
 const services = [
   {

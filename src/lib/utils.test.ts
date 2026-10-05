@@ -40,6 +40,6 @@ describe("buildWhatsAppUrl", () => {
 
   it("apunta siempre al mismo numero de WhatsApp", () => {
     const url = buildWhatsAppUrl({ nombre: "X", tipo: null, promocionado_reel: false });
-    expect(url.startsWith("https://wa.me/5493537662444?text=")).toBe(true);
+    expect(url.startsWith("https://wa.me/5493537558947?text=")).toBe(true);
   });
 });

@@ -7,7 +7,7 @@ export function formatPrice(precioTexto: string): string {
 export function buildWhatsAppUrl(
   vehiculo: Pick<Vehiculo, "nombre" | "tipo" | "promocionado_reel">
 ): string {
-  const base = "https://wa.me/5493537662444?text=";
+  const base = "https://wa.me/5493537558947?text=";
   const esMoto = vehiculo.tipo === "Moto";
   const articulo = esMoto ? "la" : "el";
   const emoji = esMoto ? "🏍️" : "🚗";

@@ -24,7 +24,7 @@ export function SiteHeader() {
             </Link>
           ))}
           <Link
-            href={`https://wa.me/5493537662444?text=${encodeURIComponent("Hola, quiero consultar un vehículo")}`}
+            href={`https://wa.me/5493537558947?text=${encodeURIComponent("Hola, quiero consultar un vehículo")}`}
             target="_blank" rel="noopener"
             className="rounded bg-car-gold px-4 py-2 text-sm font-bold uppercase tracking-wide text-car-black transition hover:bg-car-gold-dark"
           >

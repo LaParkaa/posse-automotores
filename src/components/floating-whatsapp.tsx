@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export function FloatingWhatsApp() {
-  const url = `https://wa.me/5493537662444?text=${encodeURIComponent("Hola, quiero consultar un vehículo")}`;
+  const url = `https://wa.me/5493537558947?text=${encodeURIComponent("Hola, quiero consultar un vehículo")}`;
   return (
     <Link href={url} target="_blank" rel="noopener"
       className="group fixed bottom-7 right-7 z-50 flex size-15 items-center justify-center rounded-full bg-[#25D366] shadow-[0_4px_20px_rgba(37,211,102,0.4)] transition-transform hover:scale-110"
