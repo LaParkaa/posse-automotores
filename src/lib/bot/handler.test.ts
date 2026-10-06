@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MensajeEntrante } from "../instagram/payload";
-import { type DepsBot, MENSAJE_ADJUNTO, MENSAJE_ERROR_TECNICO, procesarMensajes } from "./handler";
+import { type DepsBot, MENSAJE_ADJUNTO, MENSAJE_ERROR_TECNICO, MENSAJE_LEAD_FALLIDO, procesarMensajes } from "./handler";
+import { EMPRESA } from "./prompt";
 
 function crearDeps(sobrescribir: Partial<DepsBot> = {}): DepsBot {
   return {
@@ -74,7 +75,7 @@ describe("procesarMensajes", () => {
     expect(deps.enviar).toHaveBeenCalledWith("111", "¡Listo, Juan!");
   });
 
-  it("si falla el guardado del lead, la respuesta al cliente sale igual", async () => {
+  it("si falla el guardado del lead, no le confirma al cliente y lo deriva al WhatsApp", async () => {
     const deps = crearDeps({
       responderIA: vi.fn(async () => ({
         texto: "¡Listo!",
@@ -87,7 +88,14 @@ describe("procesarMensajes", () => {
 
     await procesarMensajes([mensaje], deps);
 
-    expect(deps.enviar).toHaveBeenCalledWith("111", "¡Listo!");
+    expect(deps.enviar).toHaveBeenCalledOnce();
+    expect(deps.enviar).toHaveBeenCalledWith("111", MENSAJE_LEAD_FALLIDO);
+    expect(deps.enviar).not.toHaveBeenCalledWith("111", "¡Listo!");
+    expect(deps.guardarRespuesta).toHaveBeenCalledWith("111", MENSAJE_LEAD_FALLIDO);
+  });
+
+  it("el mensaje de lead fallido incluye el WhatsApp del local", async () => {
+    expect(MENSAJE_LEAD_FALLIDO).toContain(EMPRESA.whatsapp);
   });
 
   it("si falla la IA, le avisa al cliente del problema tecnico y no lanza", async () => {

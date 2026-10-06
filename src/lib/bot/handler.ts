@@ -5,6 +5,7 @@ import type { LeadInput, RespuestaIA, TurnoHistorial } from "./types";
 export const MENSAJE_ADJUNTO =
   "¡Gracias por escribirnos! 😊 Por ahora solo puedo leer mensajes de texto. Contame qué vehículo estás buscando y te ayudo.";
 export const MENSAJE_ERROR_TECNICO = `😔 Tuve un problema técnico. Probá de nuevo en un momento o escribinos por WhatsApp al ${EMPRESA.whatsapp}.`;
+export const MENSAJE_LEAD_FALLIDO = `Perdón, no pude registrar tus datos. Escribinos por WhatsApp al ${EMPRESA.whatsapp} y te atiende un vendedor.`;
 
 // El turno del adjunto nunca lo responde la IA, pero este texto queda guardado y mas adelante
 // le llega al modelo como parte del historial; por eso tiene que leerse como un turno de usuario natural.
@@ -53,16 +54,19 @@ async function procesarMensaje({ senderId, mid, texto }: MensajeEntrante, deps: 
 
   const respuesta = await deps.responderIA({ stockTexto, historial });
 
+  let textoRespuesta = respuesta.texto;
+
   if (respuesta.lead) {
     try {
       await deps.guardarLead(senderId, respuesta.lead);
     } catch (err) {
-      // El cliente igual recibe su respuesta; el lead fallido queda en los logs.
       console.error(`[bot] No se pudo guardar el lead de ${senderId}:`, err);
+      // El texto de la IA confirmaria que un vendedor lo va a llamar; si el lead no quedo guardado seria mentira.
+      textoRespuesta = MENSAJE_LEAD_FALLIDO;
     }
   }
 
-  await responder(senderId, respuesta.texto, deps);
+  await responder(senderId, textoRespuesta, deps);
 }
 
 async function responder(senderId: string, texto: string, deps: DepsBot): Promise<void> {
