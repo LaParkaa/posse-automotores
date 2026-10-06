@@ -67,9 +67,12 @@ let cliente: Anthropic | null = null;
 function getCliente(): Anthropic {
   cliente ??= new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
-    // En serverless no podemos esperar los 10 minutos por defecto del SDK.
-    timeout: 15_000,
-    maxRetries: 1,
+    // El webhook ya reclamo el id del mensaje: si la plataforma mata la funcion a mitad de
+    // camino, ese mensaje se pierde para siempre (el reintento de Meta se deduplica). Por eso
+    // el peor caso (llamada a Claude + envio por Graph) tiene que terminar con la respuesta o
+    // con la disculpa dentro de la ventana de ~20 s de Meta: 10 s sin reintentos para Claude.
+    timeout: 10_000,
+    maxRetries: 0,
   });
   return cliente;
 }

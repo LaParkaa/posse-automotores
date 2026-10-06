@@ -63,8 +63,12 @@ describe("obtenerStockTexto", () => {
   it("consulta solo vehiculos_posse disponibles y no borrados", async () => {
     const filtros: Array<[string, unknown]> = [];
     let tabla = "";
+    let columnas = "";
     const consulta: Record<string, (...args: unknown[]) => unknown> = {
-      select: () => consulta,
+      select: (arg) => {
+        columnas = String(arg);
+        return consulta;
+      },
       eq: (columna, valor) => {
         filtros.push([columna as string, valor]);
         return consulta;
@@ -88,6 +92,12 @@ describe("obtenerStockTexto", () => {
     expect(tabla).toBe("vehiculos_posse");
     expect(filtros).toContainEqual(["estado", "disponible"]);
     expect(filtros).toContainEqual(["deleted_at", null]);
+    expect(columnas).toContain("slug");
+    expect(columnas).toContain("precio_texto");
+    // Los datos privados de la venta nunca pueden llegar al prompt.
+    expect(columnas).not.toContain("sale_price");
+    expect(columnas).not.toContain("sale_notes");
+    expect(columnas).not.toContain("sold_at");
     expect(texto).toContain("Toyota Corolla XEI");
   });
 

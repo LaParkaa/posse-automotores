@@ -6,7 +6,8 @@ export const MENSAJE_ADJUNTO =
   "¡Gracias por escribirnos! 😊 Por ahora solo puedo leer mensajes de texto. Contame qué vehículo estás buscando y te ayudo.";
 export const MENSAJE_ERROR_TECNICO = `😔 Tuve un problema técnico. Probá de nuevo en un momento o escribinos por WhatsApp al ${EMPRESA.whatsapp}.`;
 
-// Queda en el historial para que se entienda el turno, pero no se le manda a la IA como consulta.
+// El turno del adjunto nunca lo responde la IA, pero este texto queda guardado y mas adelante
+// le llega al modelo como parte del historial; por eso tiene que leerse como un turno de usuario natural.
 const CONTENIDO_ADJUNTO = "[El cliente envió un adjunto]";
 
 /** Todo lo que toca red o base de datos entra por aca, asi el flujo se testea sin ninguna de las dos. */

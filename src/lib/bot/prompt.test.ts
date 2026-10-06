@@ -33,4 +33,10 @@ describe("buildSystemBlocks", () => {
     expect(instrucciones.text).toContain("INVENTARIO DISPONIBLE");
     expect(instrucciones.text).toMatch(/Nunca inventes/);
   });
+
+  it("le prohibe inventar links de vehiculos", () => {
+    const [instrucciones] = buildSystemBlocks(stock);
+
+    expect(instrucciones.text).toMatch(/Nunca inventes links/);
+  });
 });

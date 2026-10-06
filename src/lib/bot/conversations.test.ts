@@ -89,26 +89,50 @@ describe("reclamarMensaje", () => {
 
 describe("obtenerHistorial", () => {
   it("devuelve los turnos en orden cronologico aunque la base los traiga del mas nuevo al mas viejo", async () => {
+    // Se registran las llamadas para vigilar la privacidad: sin el filtro por usuario,
+    // el historial mezclaria conversaciones de otros clientes.
+    let tabla = "";
+    const eqs: unknown[][] = [];
+    const orders: unknown[][] = [];
+    const limits: unknown[] = [];
     const consulta: Record<string, (...args: unknown[]) => unknown> = {
       select: () => consulta,
-      eq: () => consulta,
-      order: () => consulta,
-      limit: async () => ({
-        data: [
-          { role: "user", content: "tercero" },
-          { role: "assistant", content: "segundo" },
-          { role: "user", content: "primero" },
-        ],
-        error: null,
-      }),
+      eq: (...args) => {
+        eqs.push(args);
+        return consulta;
+      },
+      order: (...args) => {
+        orders.push(args);
+        return consulta;
+      },
+      limit: async (n) => {
+        limits.push(n);
+        return {
+          data: [
+            { role: "user", content: "tercero" },
+            { role: "assistant", content: "segundo" },
+            { role: "user", content: "primero" },
+          ],
+          error: null,
+        };
+      },
     };
-    const db = { from: () => consulta } as unknown as SupabaseClient;
+    const db = {
+      from: (nombre: string) => {
+        tabla = nombre;
+        return consulta;
+      },
+    } as unknown as SupabaseClient;
 
     expect(await obtenerHistorial(db, "123")).toEqual([
       { role: "user", content: "primero" },
       { role: "assistant", content: "segundo" },
       { role: "user", content: "tercero" },
     ]);
+    expect(tabla).toBe("ig_mensajes");
+    expect(eqs).toContainEqual(["ig_user_id", "123"]);
+    expect(orders).toContainEqual(["created_at", { ascending: false }]);
+    expect(limits).toEqual([10]);
   });
 
   it("lanza si la consulta falla", async () => {

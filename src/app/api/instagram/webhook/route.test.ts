@@ -1,10 +1,12 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { crearDeps } from "@/lib/bot/deps";
 import { procesarMensajes } from "@/lib/bot/handler";
 import { GET, POST } from "./route";
 
 vi.mock("@/lib/bot/handler", () => ({ procesarMensajes: vi.fn(async () => {}) }));
-vi.mock("@/lib/bot/deps", () => ({ crearDeps: vi.fn(() => ({})) }));
+const DEPS_CENTINELA = { centinela: true };
+vi.mock("@/lib/bot/deps", () => ({ crearDeps: vi.fn(() => DEPS_CENTINELA) }));
 
 const URL_WEBHOOK = "http://localhost:3000/api/instagram/webhook";
 const APP_SECRET = "secret-de-prueba";
@@ -117,6 +119,7 @@ describe("POST /api/instagram/webhook", () => {
     const respuesta = await POST(postFirmado("esto no es json"));
 
     expect(respuesta.status).toBe(400);
+    expect(procesarMensajes).not.toHaveBeenCalled();
   });
 
   it("extrae los mensajes y los procesa cuando la firma es valida", async () => {
@@ -127,6 +130,18 @@ describe("POST /api/instagram/webhook", () => {
     expect(vi.mocked(procesarMensajes).mock.calls[0][0]).toEqual([
       { senderId: "1234567890", mid: "mid.abc", texto: "Hola" },
     ]);
+    expect(vi.mocked(procesarMensajes).mock.calls[0][1]).toBe(DEPS_CENTINELA);
+  });
+
+  it("responde 200 y no procesa nada si no se pueden crear las dependencias (p. ej. sin Supabase)", async () => {
+    vi.mocked(crearDeps).mockImplementationOnce(() => {
+      throw new Error("sin supabase");
+    });
+
+    const respuesta = await POST(postFirmado(JSON.stringify(payload)));
+
+    expect(respuesta.status).toBe(200);
+    expect(procesarMensajes).not.toHaveBeenCalled();
   });
 
   it("responde 200 aunque el procesamiento falle (para que Meta no reintente en bucle)", async () => {

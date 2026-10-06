@@ -1,5 +1,7 @@
 const GRAPH_URL = "https://graph.facebook.com/v21.0/me/messages";
-const TIMEOUT_MS = 8000;
+// Corto a proposito: el envio comparte con la llamada a Claude la ventana de ~20 s de Meta,
+// y si se pasa, el mensaje ya reclamado no se reintenta.
+const TIMEOUT_MS = 5000;
 
 /** Instagram rechaza textos de mas de 1000 bytes (no caracteres). */
 export const MAX_BYTES_MENSAJE = 1000;

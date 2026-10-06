@@ -5,7 +5,8 @@ import { verificarFirma } from "@/lib/instagram/signature";
 
 export const runtime = "nodejs"; // usa node:crypto
 export const dynamic = "force-dynamic";
-// Una llamada a Claude + la Graph API tarda unos segundos; el tope lo fija la plataforma.
+// Es solo una sugerencia: que se respete depende de la plataforma de despliegue. El limite real
+// en Netlify es el timeout de funciones configurado para el sitio (verificarlo en los ajustes de Netlify).
 export const maxDuration = 25;
 
 /**

@@ -45,6 +45,8 @@ describe("procesarMensajes", () => {
 
     expect(deps.responderIA).not.toHaveBeenCalled();
     expect(deps.enviar).not.toHaveBeenCalled();
+    expect(deps.obtenerHistorial).not.toHaveBeenCalled();
+    expect(deps.obtenerStockTexto).not.toHaveBeenCalled();
   });
 
   it("responde un adjunto con un texto fijo y sin llamar a la IA", async () => {
@@ -54,6 +56,8 @@ describe("procesarMensajes", () => {
 
     expect(deps.reclamarMensaje).toHaveBeenCalledWith("111", "mid.foto", "[El cliente envió un adjunto]");
     expect(deps.responderIA).not.toHaveBeenCalled();
+    expect(deps.obtenerHistorial).not.toHaveBeenCalled();
+    expect(deps.obtenerStockTexto).not.toHaveBeenCalled();
     expect(deps.enviar).toHaveBeenCalledWith("111", MENSAJE_ADJUNTO);
     expect(deps.guardarRespuesta).toHaveBeenCalledWith("111", MENSAJE_ADJUNTO);
   });
