@@ -26,6 +26,11 @@ Reemplazar el bot de `whatsapp-web.js` (`whatsapp-bot/`) por un webhook serverle
 | `src/lib/bot/stock.ts` (nuevo) | Lee y compacta vehículos disponibles |
 | `src/lib/bot/ai.ts` (nuevo) | Prompt de ventas, llamada única a Haiku 4.5, herramienta `guardar_lead` |
 | `src/lib/bot/conversations.ts` (nuevo) | Historial (~10 mensajes) y dedupe por `mid` |
+| `src/lib/bot/types.ts` (nuevo) | Tipos compartidos del bot |
+| `src/lib/bot/prompt.ts` (nuevo) | Datos de la empresa y system prompt en bloques cacheables |
+| `src/lib/bot/leads.ts` (nuevo) | Guardado de leads de Instagram (evita duplicados) |
+| `src/lib/bot/handler.ts` (nuevo) | Orquestación del flujo por mensaje, con dependencias inyectadas (testeable) |
+| `src/lib/bot/deps.ts` (nuevo) | Cableado real de dependencias (Supabase, Claude, Graph API) |
 | `supabase/schema-instagram.sql` (nuevo) | Tabla `ig_mensajes`; `leads` + `origen`, `instagram_id`; `whatsapp` nullable |
 | `src/app/admin/leads/page.tsx` (modif.) | Mostrar origen/ID para leads de Instagram |
 | `package.json`, `.env.example` (modif.) | `@anthropic-ai/sdk`; `IG_VERIFY_TOKEN`, `IG_APP_SECRET`, `PAGE_ACCESS_TOKEN`, `ANTHROPIC_API_KEY` |
