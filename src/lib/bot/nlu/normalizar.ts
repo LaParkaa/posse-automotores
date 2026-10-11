@@ -1,5 +1,6 @@
 // Marcas temporales para proteger el punto y la coma que van entre digitos (1.6, 177.000, 9,5)
-// mientras se limpia el resto de la puntuacion. No pueden aparecer en un mensaje real.
+// mientras se limpia el resto de la puntuacion. Un mensaje real podria traerlos crudos (cualquier
+// cliente puede mandar un caracter de control crudo), por eso se descartan al empezar, antes de proteger nada.
 const PUNTO_PROTEGIDO = "\u0001";
 const COMA_PROTEGIDA = "\u0002";
 
@@ -9,6 +10,8 @@ const COMA_PROTEGIDA = "\u0002";
  */
 export function normalizar(texto: string): string {
   const sinTildes = texto
+    // Si quedaran, se confundirian con los separadores protegidos y saldria un "." o "," de la nada.
+    .replace(/[\u0001\u0002]/g, " ")
     .normalize("NFD")
     // Despues de NFD la "ñ" es "n" + tilde combinante: borrar la tilde la deja en "n" (como se tipea en el celu).
     .replace(/[\u0300-\u036f]/g, "")
@@ -37,9 +40,12 @@ export function tokenizar(texto: string): string[] {
   return normalizado === "" ? [] : normalizado.split(" ");
 }
 
-/** True si el mensaje es solo emojis (un "👍" o un "❤️"): sin letras ni numeros, pero con algun emoji. */
+/**
+ * True si el mensaje es solo emojis (un "👍" o un "❤️"): sin letras ni numeros, pero con algun emoji.
+ * Las banderas ("🇦🇷") son indicadores regionales, no pictogramas, por eso se cuentan aparte.
+ */
 export function esSoloEmojis(texto: string): boolean {
-  return !/[\p{L}\p{N}]/u.test(texto) && /\p{Extended_Pictographic}/u.test(texto);
+  return !/[\p{L}\p{N}]/u.test(texto) && /[\p{Extended_Pictographic}\p{Regional_Indicator}]/u.test(texto);
 }
 
 /** Distancia de Levenshtein (ediciones de a un caracter), con dos filas para no gastar memoria de mas. */
@@ -61,15 +67,19 @@ export function distancia(a: string, b: string): number {
 }
 
 /**
- * Coincidencia tolerante a errores de tipeo. La tolerancia crece con el largo de la palabra:
- * en las cortas un error ya es otra palabra ("hola"/"ola"), y en los numeros 206 y 208 son autos distintos.
+ * Coincidencia tolerante a errores de tipeo. El primer argumento es lo que escribio el cliente y el segundo
+ * la palabra del diccionario o del catalogo: la tolerancia se mide por esta ultima, porque si dependiera de
+ * la mas larga "motor" (5) pasaria por "moto". En las palabras cortas un error ya es otra palabra
+ * ("hola"/"ola") y en los numeros 206 y 208 son autos distintos.
  */
 export function coincideAprox(token: string, objetivo: string): boolean {
   if (token === objetivo) return true;
   if (/\d/.test(token) || /\d/.test(objetivo)) return false;
 
-  const largo = Math.max(token.length, objetivo.length);
+  const largo = objetivo.length;
   if (largo <= 4) return false;
-  if (largo <= 7) return distancia(token, objetivo) <= 1;
-  return distancia(token, objetivo) <= 2;
+  const tolerancia = largo <= 7 ? 1 : 2;
+  // Con otro largo la distancia ya supera la tolerancia: se evita calcularla.
+  if (Math.abs(token.length - largo) > tolerancia) return false;
+  return distancia(token, objetivo) <= tolerancia;
 }

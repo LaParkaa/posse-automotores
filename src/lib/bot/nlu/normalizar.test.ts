@@ -20,6 +20,23 @@ describe("normalizar", () => {
   });
 });
 
+describe("normalizar: casos de endurecimiento", () => {
+  it("un marcador de control crudo en el mensaje pasa a espacio", () => {
+    expect(normalizar("hola\u0001mundo")).toBe("hola mundo");
+    expect(normalizar("hola\u0002mundo")).toBe("hola mundo");
+  });
+
+  it.each([
+    ["1.2.3", "1.2.3"],
+    ["10,5", "10,5"],
+    ["1.6.", "1.6"],
+    ["Ñandú Üla", "nandu ula"],
+    ["2000", "2000"],
+  ])("normaliza %j → %j", (entrada, esperado) => {
+    expect(normalizar(entrada)).toBe(esperado);
+  });
+});
+
 describe("tokenizar", () => {
   it("separa en palabras ya normalizadas", () => {
     expect(tokenizar("me pasas más info del 206?")).toEqual(["me", "pasas", "mas", "info", "del", "206"]);
@@ -35,6 +52,11 @@ describe("esSoloEmojis", () => {
   it("es true si hay emojis y ninguna letra ni numero", () => {
     expect(esSoloEmojis("👍")).toBe(true);
     expect(esSoloEmojis("👍👍 ❤️")).toBe(true);
+  });
+
+  it("toma las banderas (indicadores regionales) como emoji", () => {
+    expect(esSoloEmojis("🇦🇷")).toBe(true);
+    expect(esSoloEmojis("🇦🇷 hola")).toBe(false);
   });
 
   it("es false si hay texto, esta vacio o no hay emojis", () => {
@@ -72,5 +94,11 @@ describe("coincideAprox", () => {
     expect(coincideAprox("financiacon", "financiacion")).toBe(true);
     expect(coincideAprox("financiasion", "financiacion")).toBe(true);
     expect(coincideAprox("documentos", "documentacion")).toBe(false);
+  });
+
+  it("la tolerancia depende de la palabra del diccionario, no de la mas larga", () => {
+    expect(coincideAprox("motor", "moto")).toBe(false);
+    expect(coincideAprox("torre", "toro")).toBe(false);
+    expect(coincideAprox("amarrok", "amarok")).toBe(true);
   });
 });

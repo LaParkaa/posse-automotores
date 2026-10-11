@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { normalizar } from "./normalizar";
 import {
   ALIAS_MARCA,
   aplicarFrases,
@@ -25,6 +26,21 @@ describe("aplicarFrases", () => {
     expect(aplicarFrases("busco una pick up nafta")).toBe("busco una pickup nafta");
     expect(aplicarFrases("quiero gas oil")).toBe("quiero gasoil");
     expect(aplicarFrases("un cero km")).toBe("un 0km");
+  });
+
+  it("unifica todas las formas de 'cero kilometros' en 0km", () => {
+    expect(aplicarFrases("un 0 km")).toBe("un 0km");
+    expect(aplicarFrases("auto okm")).toBe("auto 0km");
+    expect(aplicarFrases("un 0km")).toBe("un 0km");
+    expect(aplicarFrases("cero kms")).toBe("0km");
+    expect(aplicarFrases("cero kilometro")).toBe("0km");
+    expect(aplicarFrases("cero kilometros")).toBe("0km");
+  });
+
+  it("no toca un kilometraje comun", () => {
+    expect(aplicarFrases("tiene 120 km")).toBe("tiene 120 km");
+    expect(aplicarFrases("tiene 10 km")).toBe("tiene 10 km");
+    expect(aplicarFrases("tiene 1.0 km")).toBe("tiene 1.0 km");
   });
 });
 
@@ -69,5 +85,45 @@ describe("combustible, transmision y marcas", () => {
   it("resuelve alias de marca", () => {
     expect(ALIAS_MARCA["vw"]).toBe("volkswagen");
     expect(ALIAS_MARCA["chevy"]).toBe("chevrolet");
+  });
+});
+
+describe("diccionarios sin prototipo", () => {
+  it.each([
+    ["SINONIMOS_TIPO", SINONIMOS_TIPO],
+    ["SINONIMOS_COMBUSTIBLE", SINONIMOS_COMBUSTIBLE],
+    ["SINONIMOS_TRANSMISION", SINONIMOS_TRANSMISION],
+    ["ALIAS_MARCA", ALIAS_MARCA],
+  ])("%s no hereda de Object.prototype", (_nombre, dic) => {
+    expect(dic["constructor"]).toBeUndefined();
+    expect(dic["toString"]).toBeUndefined();
+  });
+});
+
+describe("alias de marca de Mercedes", () => {
+  it("resuelve mercedes, merce y benz", () => {
+    expect(ALIAS_MARCA["mercedes"]).toBe("mercedes");
+    expect(ALIAS_MARCA["merce"]).toBe("mercedes");
+    expect(ALIAS_MARCA["benz"]).toBe("mercedes");
+  });
+});
+
+describe("invariantes de los diccionarios", () => {
+  const diccionarios = [SINONIMOS_TIPO, SINONIMOS_COMBUSTIBLE, SINONIMOS_TRANSMISION, ALIAS_MARCA];
+
+  it("toda clave ya esta normalizada (si no, el token del usuario nunca la encontraria)", () => {
+    for (const dic of diccionarios) {
+      for (const clave of Object.keys(dic)) {
+        expect(normalizar(clave)).toBe(clave);
+      }
+    }
+  });
+
+  it("todo valor de SINONIMOS_TIPO es una clave de claveTipo", () => {
+    for (const valores of Object.values(SINONIMOS_TIPO)) {
+      for (const valor of valores) {
+        expect(claveTipo(valor)).toBe(valor);
+      }
+    }
   });
 });

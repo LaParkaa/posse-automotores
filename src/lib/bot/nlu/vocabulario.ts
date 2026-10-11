@@ -9,8 +9,10 @@ export function claveTipo(tipo: string): string {
 const FRASES: Array<[RegExp, string]> = [
   [/\bpick up\b/g, "pickup"],
   [/\bgas oil\b/g, "gasoil"],
-  [/\bcero kilometros?\b/g, "0km"],
-  [/\bcero km\b/g, "0km"],
+  // "0 km", "okm", "cero kms" y "cero kilometros" son todos "0km". El lookbehind evita tocar un
+  // kilometraje que termina en 0 ("10 km", "1.0 km"): solo vale un 0 que no sigue a un digito ni a un separador.
+  [/(?<![\d.,])(?:0\s*|cero\s+)(?:km|kms|kilometros?)\b/g, "0km"],
+  [/\bokm\b/g, "0km"],
 ];
 
 /** Recibe texto ya normalizado y junta las expresiones de varias palabras en una sola. */
@@ -24,7 +26,12 @@ function porTipo(clave: string, palabras: string[]): Record<string, string[]> {
   return Object.fromEntries(palabras.map((palabra) => [palabra, [clave]]));
 }
 
-export const SINONIMOS_TIPO: Record<string, string[]> = {
+// Los diccionarios no tienen prototipo: un token como "constructor" o "toString" no debe encontrar nada.
+function sinPrototipo<T>(entradas: Record<string, T>): Record<string, T> {
+  return Object.assign(Object.create(null) as Record<string, T>, entradas);
+}
+
+export const SINONIMOS_TIPO: Record<string, string[]> = sinPrototipo({
   ...porTipo("hatchback", ["hatch", "hatchback", "hatchbacks"]),
   ...porTipo("sedan", ["sedan", "sedanes"]),
   ...porTipo("suv", ["suv", "suvs", "todoterreno", "4x4"]),
@@ -62,9 +69,9 @@ export const SINONIMOS_TIPO: Record<string, string[]> = {
     "combi",
   ]),
   ...porTipo("moto", ["moto", "motos", "motocicleta", "motito", "scooter"]),
-};
+});
 
-export const SINONIMOS_COMBUSTIBLE: Record<string, string> = {
+export const SINONIMOS_COMBUSTIBLE: Record<string, string> = sinPrototipo({
   nafta: "nafta",
   naftero: "nafta",
   naftera: "nafta",
@@ -77,9 +84,9 @@ export const SINONIMOS_COMBUSTIBLE: Record<string, string> = {
   hibrida: "hibrido",
   electrico: "electrico",
   electrica: "electrico",
-};
+});
 
-export const SINONIMOS_TRANSMISION: Record<string, string> = {
+export const SINONIMOS_TRANSMISION: Record<string, string> = sinPrototipo({
   automatico: "automatico",
   automatica: "automatico",
   automaticos: "automatico",
@@ -91,12 +98,14 @@ export const SINONIMOS_TRANSMISION: Record<string, string> = {
   mecanico: "manual",
   mecanica: "manual",
   mt: "manual",
-};
+});
 
-export const ALIAS_MARCA: Record<string, string> = {
+export const ALIAS_MARCA: Record<string, string> = sinPrototipo({
   vw: "volkswagen",
   chevy: "chevrolet",
   merce: "mercedes",
+  mercedes: "mercedes",
+  benz: "mercedes",
   fiat: "fiat",
   ford: "ford",
   renault: "renault",
@@ -107,4 +116,4 @@ export const ALIAS_MARCA: Record<string, string> = {
   nissan: "nissan",
   volkswagen: "volkswagen",
   chevrolet: "chevrolet",
-};
+});
