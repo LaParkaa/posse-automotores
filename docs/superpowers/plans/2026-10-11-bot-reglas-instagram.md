@@ -1317,7 +1317,7 @@ export function detectarIntenciones(texto: string): Intencion[];
 
 **Reglas de diseno (el test es el contrato):**
 - Prioridad = el orden del tipo `Intencion` de arriba. Se devuelven **todas** las que coinciden en ese orden (ej. "hola, tienen alguna pickup?" → `["catalogo", "saludo"]`).
-- Frases/palabras por intencion (en forma normalizada; las palabras sueltas de 5+ letras admiten error de tipeo con `coincideAprox`). Son la base y se pueden ampliar:
+- Frases/palabras por intencion (en forma normalizada; las palabras sueltas de **6+ letras** admiten error de tipeo con `coincideAprox(tokenDelUsuario, palabraDelDiccionario)`; las mas cortas, igualdad exacta). Son la base y se pueden ampliar:
   - `saludo`: hola, ola, buenas, "buen dia", "buenos dias", "buenas tardes", "buenas noches", "que tal", epa, "buen dia".
   - `cortesia`: "como estas", "como andas", "como va", "todo bien", "como te va", "que tal estas".
   - `gracias`: gracias, "mil gracias", genial, joya, "muy amable".
@@ -1498,6 +1498,7 @@ export function extraerEntidades(texto: string, catalogo: VehiculoCatalogo[]): E
 - **Deictico**: tokens `ese`, `esa`, `eso`, `mismo`, `misma` (con ≤ 5 tokens).
 - **Tipos**: unir las claves de `SINONIMOS_TIPO` de todos los tokens (sin repetir); `auto/autos` no restringen. **Combustible/transmision**: primer token que figure en el diccionario.
 - Siempre aplicar `aplicarFrases(normalizar(texto))` antes.
+- **Diccionarios cerrados por igualdad EXACTA del token** (`SINONIMOS_TIPO`, `SINONIMOS_COMBUSTIBLE`, `SINONIMOS_TRANSMISION`, `ALIAS_MARCA`): nunca con `coincideAprox` ("Manuel" ≈ "manual", "motor" ≈ "moto"). `coincideAprox(token, palabra)` solo contra los tokens de modelo y las marcas **del catalogo**.
 
 - [ ] **Step 1: Tests (fallan)**
 
@@ -1559,6 +1560,12 @@ describe("tipo, combustible, transmision y año", () => {
     expect(e("automatico por favor").transmision).toBe("automatico");
     expect(e("que sea manual").transmision).toBe("manual");
     expect(e("hola").combustible).toBeNull();
+  });
+
+  it("no confunde palabras comunes con los diccionarios (no hay tolerancia a typos en ellos)", () => {
+    expect(e("soy Manuel").transmision).toBeNull();
+    expect(e("motor 1.6").tipos).toEqual([]);
+    expect(e("mucho trafico").tipos).toEqual([]);
   });
 
   it("año de 4 digitos, sin confundirlo con precios, km o modelos", () => {
