@@ -42,8 +42,8 @@ Si preguntan algo ajeno a vehículos, financiación o la concesionaria, respond�
 
 /**
  * Un unico mensaje de sistema: primero las instrucciones (fijas) y despues el inventario,
- * que cambia cuando se vende o se carga un auto. Los nulos del inventario van como "-" para
- * que las columnas no se corran.
+ * que cambia cuando se vende o se carga un auto. El inventario llega ya formateado (un auto por
+ * linea, columnas en orden fijo); ver stock.ts.
  */
 export function buildSystemPrompt(stockTexto: string): string {
   return `${instrucciones()}\n\nINVENTARIO DISPONIBLE (formato: nombre | año | km | combustible | transmisión | motor | tipo | precio | link)\n${stockTexto}`;

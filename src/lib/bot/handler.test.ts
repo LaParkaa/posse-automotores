@@ -101,7 +101,7 @@ describe("procesarMensajes", () => {
   it("si falla la IA, le avisa al cliente del problema tecnico y no lanza", async () => {
     const deps = crearDeps({
       responderIA: vi.fn(async () => {
-        throw new Error("Anthropic caido");
+        throw new Error("modelo caido");
       }),
     });
 
