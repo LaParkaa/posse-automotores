@@ -37,14 +37,40 @@ function masNuevoPrimero(a: VehiculoCatalogo, b: VehiculoCatalogo): number {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
+// El combustible se carga a mano en el panel: "Nafta/GNC", "Nafta + GNC", "Diésel", "Gasoil"... Se compara
+// por palabra (un auto bicombustible aparece al buscar nafta y al buscar gnc) y con los sinonimos comunes.
+const SINONIMOS_COMBUSTIBLE: Record<string, string> = { gasoil: "diesel", gasolina: "nafta" };
+
+function palabrasCombustible(texto: string): string[] {
+  return normalizar(texto)
+    .split(/[^a-z]+/)
+    .filter((p) => p !== "")
+    .map((p) => SINONIMOS_COMBUSTIBLE[p] ?? p);
+}
+
+// La transmision tambien es texto libre: "CVT", "DSG", "Tiptronic" y "Mecánica" son formas de decir
+// automatico o manual. Lo que no se reconoce no matchea ninguno de los dos filtros.
+const PALABRAS_AUTOMATICO = ["cvt", "dsg", "tiptronic", "secuencial", "semiautomatico", "semiautomatica", "at"];
+
+function transmisionCanonica(texto: string): "automatico" | "manual" | null {
+  const normalizado = normalizar(texto);
+  const palabras = normalizado.split(/[^a-z]+/);
+  if (normalizado.startsWith("automa") || palabras.some((p) => PALABRAS_AUTOMATICO.includes(p))) return "automatico";
+  if (normalizado.startsWith("manual") || normalizado.includes("mecanic")) return "manual";
+  return null;
+}
+
 function cumple(v: VehiculoCatalogo, f: Filtros): boolean {
   if (f.marca !== undefined && normalizar(v.marca) !== normalizar(f.marca)) return false;
   // Un auto sin tipo cargado nunca matchea un filtro de tipo (claveTipo("") no esta en ninguna lista).
   if (f.tipos !== undefined && f.tipos.length > 0 && !f.tipos.includes(claveTipo(v.tipo ?? ""))) return false;
-  if (f.combustible !== undefined && normalizar(v.combustible) !== normalizar(f.combustible)) return false;
-  // "Automatico" y "Automatica" (o "Automático") son lo mismo: alcanza con el prefijo de 6 letras.
-  if (f.transmision !== undefined && normalizar(v.transmision).slice(0, 6) !== normalizar(f.transmision).slice(0, 6)) {
-    return false;
+  if (f.combustible !== undefined) {
+    const buscado = palabrasCombustible(f.combustible)[0];
+    if (buscado === undefined || !palabrasCombustible(v.combustible).includes(buscado)) return false;
+  }
+  if (f.transmision !== undefined) {
+    const buscada = transmisionCanonica(f.transmision);
+    if (buscada === null || transmisionCanonica(v.transmision) !== buscada) return false;
   }
   if (f.anio !== undefined && v.anio !== f.anio) return false;
   return true;
@@ -84,10 +110,11 @@ export function similares(catalogo: VehiculoCatalogo[], de: VehiculoCatalogo, ma
   // modelos de la marca (ej. un hatchback al ver una utilitaria) le mostraria al cliente algo distinto de lo que mira.
   const base =
     mismoTipo.length > 0 ? mismoTipo : candidatos.filter((v) => normalizar(v.marca) === normalizar(de.marca));
-  return base.sort(porCercania).slice(0, max);
+  // Math.max: un limite negativo haria slice(0, -1), que devuelve casi todo en vez de nada.
+  return base.sort(porCercania).slice(0, Math.max(0, max));
 }
 
 /** Los ultimos cargados, de cualquier estado (se usa cuando no se identifica la historia). */
 export function recientes(catalogo: VehiculoCatalogo[], cantidad: number): VehiculoCatalogo[] {
-  return [...catalogo].sort(masNuevoPrimero).slice(0, cantidad);
+  return [...catalogo].sort(masNuevoPrimero).slice(0, Math.max(0, cantidad));
 }
