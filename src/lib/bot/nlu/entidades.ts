@@ -43,6 +43,26 @@ const ORDINALES = new Map<string, number>([
 
 const DEICTICOS = new Set(["ese", "esa", "eso", "mismo", "misma"]);
 
+// La tolerancia a typos solo rige para palabras largas que empiezan igual que el modelo/marca: con menos, una
+// palabra comun del castellano rioplatense queda a una edicion de un nombre ("venta" → Vento, "onda" → Honda).
+const MIN_LETRAS_MODELO_APROX = 5;
+const MIN_LETRAS_MARCA_APROX = 6;
+
+// Palabras comunes que estan a una o dos ediciones de un modelo y nunca deben nombrarlo por tolerancia
+// ("esta en venta?" no es el Vento). Igualdad exacta sigue valiendo: si existiera un modelo "Rango", "rango" lo nombra.
+const NO_APROXIMAR_A_MODELO = new Set([
+  "venta", "ventas", "vendo", "vendes", "vender", "vendi", "viento", "vientos",
+  "cosa", "cosas", "casa", "casas", "foco", "focos", "siesta", "fiestas", "patio", "rango", "danger",
+]);
+
+// Palabras tan comunes que, solas, no nombran un auto: "uno" aparece en "tenes uno de nafta?".
+const MODELOS_QUE_PIDEN_MARCA = new Set(["uno"]);
+
+// Cifras que, pegadas a un numero de 4 digitos, lo vuelven km o precio y no un año ("2000 km", "usd 2000").
+// "u$s" queda como "us" porque normalizar() borra el "$".
+const SIGUE_A_UN_NUMERO_QUE_NO_ES_ANIO = new Set(["km", "kms", "kilometros", "kilometro", "pesos", "dolares", "usd", "mil"]);
+const ANTECEDE_A_UN_NUMERO_QUE_NO_ES_ANIO = new Set(["mil", "usd", "u$s", "us"]);
+
 /** Un vehiculo se nombra por el primer token de su modelo ("Amarok V6 Extreme" → "amarok", "XR 150" → "xr"). */
 function primerTokenModelo(v: VehiculoCatalogo): string {
   return normalizar(v.modelo).split(" ")[0] ?? "";
@@ -54,6 +74,42 @@ function primerTokenModelo(v: VehiculoCatalogo): string {
  */
 function primerTokenMarca(v: VehiculoCatalogo): string {
   return normalizar(v.marca).split(" ")[0] ?? "";
+}
+
+/** Segundo token del modelo ("A 200" → "200", "T-Cross" → "cross"), o null si el modelo es de un solo token. */
+function segundoTokenModelo(v: VehiculoCatalogo): string | null {
+  return normalizar(v.modelo).split(" ")[1] ?? null;
+}
+
+/** Tolerancia a typos para el nombre de un modelo o marca: solo palabras largas, con la misma inicial. */
+function aproximaNombre(token: string, nombre: string, minLetras: number): boolean {
+  return token.length >= minLetras && token[0] === nombre[0] && coincideAprox(token, nombre);
+}
+
+/**
+ * Posiciones de los tokens del texto que nombran el modelo del vehiculo. Un modelo de una letra ("A 200",
+ * "T-Cross") solo cuenta junto a su segundo token, porque la letra suelta es una palabra cualquiera ("a cuanto esta?").
+ */
+function posicionesQueNombran(v: VehiculoCatalogo, modelo: string, tokens: string[]): number[] {
+  const posiciones: number[] = [];
+  const segundo = segundoTokenModelo(v);
+
+  tokens.forEach((token, i) => {
+    if (modelo.length === 1) {
+      if (token === modelo && segundo !== null && tokens[i + 1] === segundo) posiciones.push(i, i + 1);
+      return;
+    }
+    // coincideAprox exige igualdad exacta cuando hay digitos, asi que 206 y 208 nunca se confunden.
+    const coincide = token === modelo || (!NO_APROXIMAR_A_MODELO.has(token) && aproximaNombre(token, modelo, MIN_LETRAS_MODELO_APROX));
+    if (coincide) posiciones.push(i);
+  });
+
+  // "uno" solo se nombra si tambien aparece la marca ("fiat uno"), sea escrita o como alias.
+  if (posiciones.length > 0 && MODELOS_QUE_PIDEN_MARCA.has(modelo)) {
+    const marca = primerTokenMarca(v);
+    if (!tokens.some((token) => token === marca || ALIAS_MARCA[token] === marca)) return [];
+  }
+  return posiciones;
 }
 
 function primeroEnDiccionario(tokens: string[], diccionario: Record<string, string>): string | null {
@@ -75,11 +131,10 @@ export function extraerEntidades(texto: string, catalogo: VehiculoCatalogo[]): E
   for (const v of catalogo) {
     const modelo = primerTokenModelo(v);
     if (modelo === "") continue;
-    // coincideAprox exige igualdad exacta cuando hay digitos, asi que 206 y 208 nunca se confunden.
-    const nombrado = tokens.filter((token) => coincideAprox(token, modelo));
-    if (nombrado.length === 0) continue;
+    const posiciones = posicionesQueNombran(v, modelo, tokens);
+    if (posiciones.length === 0) continue;
     vehiculoIds.push(v.id);
-    nombrado.forEach((token) => tokensDeModelo.add(token));
+    posiciones.forEach((i) => tokensDeModelo.add(tokens[i]));
   }
 
   // Marca: solo si no se nombro un auto concreto (con "peugeot 208" interesa el 208, no toda la marca).
@@ -90,7 +145,7 @@ export function extraerEntidades(texto: string, catalogo: VehiculoCatalogo[]): E
       const alias = ALIAS_MARCA[token];
       const encontrada = catalogo.find((v) => {
         const nombre = primerTokenMarca(v);
-        return nombre !== "" && (token === nombre || alias === nombre || coincideAprox(token, nombre));
+        return nombre !== "" && (token === nombre || alias === nombre || aproximaNombre(token, nombre, MIN_LETRAS_MARCA_APROX));
       });
       if (encontrada) {
         marca = encontrada.marca;
@@ -110,8 +165,10 @@ export function extraerEntidades(texto: string, catalogo: VehiculoCatalogo[]): E
   // Año: token completo de 4 digitos. "9.500.000" y "177.000" son un solo token con puntos, y "1999999"
   // tiene mas de 4 digitos, asi que ninguno pasa el patron.
   let anio: number | null = null;
-  for (const token of tokens) {
+  for (const [i, token] of tokens.entries()) {
     if (!/^\d{4}$/.test(token) || tokensDeModelo.has(token)) continue;
+    // "2000 km", "2000 dolares", "mil 2000", "usd 2000": es kilometraje o precio, no un año.
+    if (SIGUE_A_UN_NUMERO_QUE_NO_ES_ANIO.has(tokens[i + 1] ?? "") || ANTECEDE_A_UN_NUMERO_QUE_NO_ES_ANIO.has(tokens[i - 1] ?? "")) continue;
     const valor = Number(token);
     if (valor >= ANIO_MIN && valor <= ANIO_MAX) {
       anio = valor;
