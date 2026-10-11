@@ -21,6 +21,8 @@ export function crearDeps(): DepsBot {
     responderIA,
     guardarLead: (senderId, lead) => guardarLeadInstagram(db, senderId, lead),
     guardarRespuesta: (senderId, texto) => guardarRespuesta(db, senderId, texto),
-    enviar: enviarMensajeInstagram,
+    enviar: async (senderId, texto) => {
+      await enviarMensajeInstagram(senderId, texto);
+    },
   };
 }

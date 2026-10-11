@@ -1,3 +1,5 @@
+import type { Perfil, Tarjeta } from "../bot/types";
+
 const GRAPH_URL = "https://graph.facebook.com/v21.0/me/messages";
 // Corto a proposito: el envio comparte con la llamada al modelo de IA la ventana de ~20 s de Meta,
 // y si se pasa, el mensaje ya reclamado no se reintenta.
@@ -50,26 +52,94 @@ export function partirTexto(texto: string, maxBytes = MAX_BYTES_MENSAJE): string
   return partes;
 }
 
-/** Envia un mensaje de texto al usuario de Instagram. Lanza si la Graph API falla. */
-export async function enviarMensajeInstagram(destinatarioId: string, texto: string): Promise<void> {
+/** POST al endpoint de mensajes. Devuelve el message_id si Meta lo informa. Lanza si la API rechaza. */
+async function postMensajes(cuerpo: unknown): Promise<string | null> {
   const token = process.env.PAGE_ACCESS_TOKEN;
   if (!token) throw new Error("Falta la variable de entorno PAGE_ACCESS_TOKEN");
 
+  const respuesta = await fetch(GRAPH_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(cuerpo),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+
+  if (!respuesta.ok) {
+    const detalle = await respuesta.text().catch(() => "");
+    throw new Error(`Graph API ${respuesta.status}: ${detalle.slice(0, 300)}`);
+  }
+
+  const datos = (await respuesta.json().catch(() => null)) as { message_id?: unknown } | null;
+  return typeof datos?.message_id === "string" ? datos.message_id : null;
+}
+
+/**
+ * Envia un texto. Devuelve los message_id de cada parte: el bot los guarda para reconocer sus
+ * propios mensajes cuando Meta los devuelve como "eco" (y no confundirlos con una persona).
+ */
+export async function enviarMensajeInstagram(destinatarioId: string, texto: string): Promise<string[]> {
+  const ids: string[] = [];
+
   // En orden y de a uno: si se mandaran en paralelo podrian llegar desordenados.
   for (const parte of partirTexto(texto)) {
-    const respuesta = await fetch(GRAPH_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ recipient: { id: destinatarioId }, message: { text: parte } }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    const id = await postMensajes({ recipient: { id: destinatarioId }, message: { text: parte } });
+    if (id) ids.push(id);
+  }
 
-    if (!respuesta.ok) {
-      const detalle = await respuesta.text().catch(() => "");
-      throw new Error(`Graph API ${respuesta.status}: ${detalle.slice(0, 300)}`);
-    }
+  return ids;
+}
+
+function recortar(texto: string, max: number): string {
+  return texto.length <= max ? texto : `${texto.slice(0, max - 1).trimEnd()}…`;
+}
+
+/** Tarjetas (plantilla generica): hasta 10 con imagen, titulo, subtitulo y 3 botones de enlace. */
+export async function enviarTarjetas(destinatarioId: string, tarjetas: Tarjeta[]): Promise<string[]> {
+  const elementos = tarjetas.slice(0, 10).map((t) => ({
+    title: recortar(t.titulo, 80),
+    subtitle: recortar(t.subtitulo, 80),
+    ...(t.imagenUrl ? { image_url: t.imagenUrl } : {}),
+    buttons: t.botones.slice(0, 3).map((b) => ({ type: "web_url", url: b.url, title: recortar(b.titulo, 20) })),
+  }));
+  if (elementos.length === 0) return [];
+
+  const id = await postMensajes({
+    recipient: { id: destinatarioId },
+    message: { attachment: { type: "template", payload: { template_type: "generic", elements: elementos } } },
+  });
+  return id ? [id] : [];
+}
+
+/** "Visto" y "escribiendo...": son un detalle de trato, nunca deben romper la respuesta. */
+export async function enviarAccion(destinatarioId: string, accion: "mark_seen" | "typing_on"): Promise<boolean> {
+  try {
+    await postMensajes({ recipient: { id: destinatarioId }, sender_action: accion });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Nombre y @usuario del cliente (mejor esfuerzo: sin permiso o con error, el bot sigue sin nombre). */
+export async function obtenerPerfil(igsid: string): Promise<Perfil | null> {
+  const token = process.env.PAGE_ACCESS_TOKEN;
+  if (!token) return null;
+
+  try {
+    const respuesta = await fetch(
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(igsid)}?fields=name,username`,
+      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(3000) },
+    );
+    if (!respuesta.ok) return null;
+
+    const datos = (await respuesta.json()) as { name?: unknown; username?: unknown };
+    const nombre = typeof datos.name === "string" && datos.name.trim() !== "" ? datos.name.trim() : undefined;
+    const usuario = typeof datos.username === "string" && datos.username.trim() !== "" ? datos.username.trim() : undefined;
+    return nombre || usuario ? { nombre, usuario } : null;
+  } catch {
+    return null;
   }
 }
