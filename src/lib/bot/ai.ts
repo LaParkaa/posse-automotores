@@ -2,8 +2,9 @@ import { buildSystemPrompt } from "./prompt";
 import type { LeadInput, RespuestaIA, TurnoHistorial } from "./types";
 
 const BASE_URL_POR_DEFECTO = "https://api.groq.com/openai/v1";
-// Los DMs son cortos; limitar la salida tambien ahorra cuota.
-const MAX_TOKENS = 500;
+// Los DMs son cortos (el prompt lo pide), pero los modelos de razonamiento gastan parte de este tope pensando antes de responder: con 500 podian quedar sin respuesta o cortados. Es un techo, no un gasto fijo.
+const MAX_TOKENS = 1000;
+const ESFUERZOS_VALIDOS = ["low", "medium", "high"];
 // Una vez reclamado el mensaje, una funcion que el hosting corta se lo come para siempre
 // (el reintento de Meta se descarta como duplicado): el peor caso (modelo + envio por Graph)
 // tiene que terminar con la respuesta o con la disculpa dentro de la ventana de ~20 s de Meta.
@@ -94,6 +95,11 @@ export async function responderIA(entrada: {
   if (!apiKey) throw new Error("Falta la variable de entorno LLM_API_KEY");
   if (!modelo) throw new Error("Falta la variable de entorno LLM_MODEL");
 
+  const esfuerzo = process.env.LLM_REASONING_EFFORT?.trim();
+  if (esfuerzo && !ESFUERZOS_VALIDOS.includes(esfuerzo)) {
+    throw new Error(`LLM_REASONING_EFFORT invalido: usa ${ESFUERZOS_VALIDOS.join(", ")}`);
+  }
+
   const baseUrl = (process.env.LLM_BASE_URL?.trim() || BASE_URL_POR_DEFECTO).replace(/\/+$/, "");
 
   const respuesta = await fetch(`${baseUrl}/chat/completions`, {
@@ -108,6 +114,9 @@ export async function responderIA(entrada: {
       messages: [{ role: "system", content: buildSystemPrompt(entrada.stockTexto) }, ...entrada.historial],
       tools: [TOOL_GUARDAR_LEAD],
       tool_choice: "auto",
+      // Parametros de los modelos de razonamiento de Groq (GPT OSS). Otros proveedores compatibles
+      // pueden rechazarlos, por eso solo se mandan si se configura la variable.
+      ...(esfuerzo ? { reasoning_effort: esfuerzo, include_reasoning: false } : {}),
     }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });

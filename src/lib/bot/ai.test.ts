@@ -114,6 +114,7 @@ describe("responderIA", () => {
     vi.stubEnv("LLM_API_KEY", "clave-de-prueba");
     vi.stubEnv("LLM_MODEL", "modelo-de-prueba");
     vi.stubEnv("LLM_BASE_URL", "");
+    vi.stubEnv("LLM_REASONING_EFFORT", "");
     fetchMock.mockReset();
     fetchMock.mockImplementation(async () => respuestaOk({ content: "¡Hola!" }));
     vi.stubGlobal("fetch", fetchMock);
@@ -147,7 +148,7 @@ describe("responderIA", () => {
 
     const cuerpo = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(cuerpo.model).toBe("modelo-de-prueba");
-    expect(cuerpo.max_tokens).toBe(500);
+    expect(cuerpo.max_tokens).toBe(1000);
     expect(cuerpo.messages[0].role).toBe("system");
     expect(cuerpo.messages[0].content).toContain("- Toyota Corolla XEI | 2011");
     expect(cuerpo.messages.slice(1)).toEqual(entrada.historial);
@@ -202,6 +203,31 @@ describe("responderIA", () => {
     vi.stubEnv("LLM_MODEL", "");
 
     await expect(responderIA(entrada)).rejects.toThrow(/LLM_MODEL/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("no manda parametros de razonamiento si LLM_REASONING_EFFORT no esta definida", async () => {
+    await responderIA(entrada);
+
+    const cuerpo = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(cuerpo).not.toHaveProperty("reasoning_effort");
+    expect(cuerpo).not.toHaveProperty("include_reasoning");
+  });
+
+  it("manda reasoning_effort e include_reasoning:false cuando se configura", async () => {
+    vi.stubEnv("LLM_REASONING_EFFORT", "low");
+
+    await responderIA(entrada);
+
+    const cuerpo = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(cuerpo.reasoning_effort).toBe("low");
+    expect(cuerpo.include_reasoning).toBe(false);
+  });
+
+  it("lanza si LLM_REASONING_EFFORT tiene un valor invalido y no llama a la red", async () => {
+    vi.stubEnv("LLM_REASONING_EFFORT", "ultra");
+
+    await expect(responderIA(entrada)).rejects.toThrow(/LLM_REASONING_EFFORT/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
