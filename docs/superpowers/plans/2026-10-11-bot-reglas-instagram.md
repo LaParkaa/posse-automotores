@@ -2034,6 +2034,17 @@ export function conversar(e: EntradaMotor): ResultadoMotor;
 10. **Invariantes**: ≤ 3 mensajes por turno; cada texto cumple `violacionesDeTono(...) === []` (incluida `alternativaTexto` de cada tarjeta); sin markdown; nunca afirmar datos que no esten en el catalogo/negocio; emojis con naturalidad.
 11. **Estilo** (para escribir las variantes con `elegir(variantes, e.mid + <clave>)`): coloquial rioplatense como escribe el equipo ("¡Hola Juanma! 👋", "Dale, te cuento 😊", "Sii, esa es de las que más preguntan 😉", "Uh, esa ya se vendió 😕 pero mirá estas que tengo parecidas 👇", "¿Querés que Nati te pase el precio por WhatsApp? 💬"); 2 a 4 variantes por situacion; frases cortas.
 
+12. **Notas de integracion (salen de las revisiones de las tareas anteriores; el motor es quien las resuelve):**
+    - `detectarIntenciones` devuelve varias intenciones. **`precio` + `financiacion` juntas** ("cuanto es el anticipo", "cuanto sale la cuota") son una pregunta de **financiacion**.
+    - **`afirmacion` suele venir primera** ("ok gracias", "me interesa el vento", "quiero ver el vento"): antes de tratarla como un "si" a la ultima oferta, mirar si el texto **nombra un auto** (entonces se presenta ese auto) o si trae `gracias`/`despedida` (cierre amable, no un "si").
+    - `negacion` solo viene sola (ya no por primer token si hay otra intencion de contenido); "no, ese no es" corrige la historia.
+    - `ordinal` y `deictico` de `extraerEntidades` **solo se usan si hay una lista mostrada (`mostradosIds`) o un auto en contexto** ("dame 2 fotos" daria ordinal 2; "el mismo precio?" daria deictico).
+    - `similares` ya devuelve disponibles del **mismo tipo** (y la misma marca solo si no hay ninguno del tipo); `buscar` solo trabaja con disponibles; `recientes` incluye todos los estados.
+    - **Filtrar por estado antes de armar tarjetas**: nunca mostrar tarjeta de un auto vendido como si se pudiera comprar; para un vendido se muestran `similares`. `alternativaTexto([])` devuelve `""`: no enviar un texto vacio.
+    - Cada tarjeta ya garantiza ≥ 1 boton, links https y subtitulo ≤ 80; con `siteUrl` vacio la tarjeta lleva solo el boton de Nati.
+    - `tarjetaContacto` tiene una redaccion provisoria ("Escribile a Nati y te cuenta todo"): ajustarla si el motor necesita otro texto.
+    - Un nombre de perfil con digitos o emojis ya no se usa para saludar (`primerNombre` devuelve `null`).
+
 - [ ] **Step 1: Tests (fallan)**
 
 Create `src/lib/bot/motor.test.ts`:
