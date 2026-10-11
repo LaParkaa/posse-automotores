@@ -174,6 +174,44 @@ export function alternativaTexto(vehiculos: VehiculoCatalogo[], ctx: Contexto): 
   return lineas.join("\n");
 }
 
+const ESTADO_NO_DISPONIBLE = { vendido: "vendido", reservado: "reservado" } as const;
+
+/**
+ * Tarjeta de una lista numerada para que el cliente identifique un auto (ej. de que auto era la
+ * historia). Un disponible es su tarjeta normal con el numero adelante; uno vendido o reservado
+ * NO se ofrece como compra: sin precio ni "Ver en la web", con su estado, y solo el boton de la
+ * secretaria (Instagram exige al menos un boton).
+ */
+export function tarjetaEleccion(v: VehiculoCatalogo, numero: number, ctx: Contexto): Tarjeta {
+  if (v.estado === "disponible") {
+    const t = tarjetaDe(v, ctx);
+    return { ...t, titulo: recortar(`${numero}) ${v.nombre} ${v.anio}`, MAX_TITULO) };
+  }
+  const estado = v.estado === "vendido" ? "Ya se vendió" : "Reservado";
+  const datos = [kmDe(v), v.combustible].filter((p): p is string => !!p && p.trim() !== "").join(" · ");
+  return {
+    titulo: recortar(`${numero}) ${v.nombre} ${v.anio}`, MAX_TITULO),
+    // El estado va primero: si el subtitulo se recorta, se pierde el km y no el aviso de que no esta a la venta.
+    subtitulo: recortar(datos === "" ? estado : `${estado} · ${datos}`, MAX_SUBTITULO),
+    imagenUrl: urlImagen(v, ctx.siteUrl),
+    botones: [botonNati(v, ctx.negocio)],
+  };
+}
+
+/**
+ * Respaldo en texto de una lista para elegir: "1) Peugeot 206 1.6 2011", una linea por auto y
+ * como maximo 5 (regla de tono). Sin precios: solo sirve para reconocer el auto, y un vendido
+ * lleva su estado para que nadie lo lea como una oferta.
+ */
+export function listaNumerada(vehiculos: VehiculoCatalogo[]): string {
+  const lineas = vehiculos.slice(0, MAX_AUTOS_EN_TEXTO).map((v, i) => {
+    const estado = v.estado === "disponible" ? "" : ` (${ESTADO_NO_DISPONIBLE[v.estado]})`;
+    return `${i + 1}) ${v.nombre} ${v.anio}${estado}`;
+  });
+  while (lineas.length > 0 && bytesDe(lineas.join("\n")) > MAX_BYTES_TEXTO) lineas.pop();
+  return lineas.join("\n");
+}
+
 /**
  * "Juan Perez" → "Juan"; null si el perfil no trae nombre o la primera palabra no parece uno
  * (un usuario como "juan94" o un emoji suenan raro en un saludo). Si viene todo en mayusculas

@@ -8,10 +8,12 @@ import {
   datosVehiculo,
   elegir,
   linkFicha,
+  listaNumerada,
   precioDe,
   primerNombre,
   tarjetaContacto,
   tarjetaDe,
+  tarjetaEleccion,
   urlImagen,
 } from "./respuestas";
 
@@ -347,5 +349,58 @@ describe("primerNombre: solo nombres que parezcan un nombre", () => {
   it("no toca los nombres normales", () => {
     expect(primerNombre({ nombre: "juan perez" })).toBe("juan");
     expect(primerNombre({ nombre: "McDonald" })).toBe("McDonald");
+  });
+});
+
+describe("tarjetaEleccion: lista numerada para identificar un auto (historias)", () => {
+  it("un disponible es su tarjeta normal con el numero adelante del titulo", () => {
+    const t = tarjetaEleccion(por("v-206"), 2, ctx);
+
+    expect(t.titulo).toBe("2) Peugeot 206 1.6 2011");
+    expect(t.subtitulo).toBe(tarjetaDe(por("v-206"), ctx).subtitulo);
+    expect(t.botones).toEqual(tarjetaDe(por("v-206"), ctx).botones);
+  });
+
+  it("un vendido o reservado no se ofrece como compra: sin precio, con su estado y solo el boton de la secretaria", () => {
+    const vendido = tarjetaEleccion(por("v-partner"), 1, ctx);
+    const reservado = tarjetaEleccion(por("v-xr150"), 3, ctx);
+
+    expect(vendido.titulo).toBe("1) Peugeot Partner 2014");
+    expect(vendido.subtitulo).toMatch(/vendi/i);
+    expect(vendido.botones).toEqual([botonNati(por("v-partner"), NEGOCIO)]);
+    expect(reservado.subtitulo).toMatch(/reservad/i);
+    expect(reservado.subtitulo).not.toContain("3.200.000");
+    expect(reservado.imagenUrl).toBe("https://img.example/honda-xr-150-2022.jpg");
+  });
+
+  it("respeta los limites de Instagram con nombres muy largos", () => {
+    const largo = { ...por("v-partner"), nombre: "X".repeat(200), kilometraje: "9".repeat(200) };
+    const t = tarjetaEleccion(largo, 5, ctx);
+
+    expect(Array.from(t.titulo).length).toBeLessThanOrEqual(80);
+    expect(Array.from(t.subtitulo).length).toBeLessThanOrEqual(80);
+  });
+});
+
+describe("listaNumerada", () => {
+  it("una linea por auto, numerada, con el estado si no esta disponible y sin precios", () => {
+    const texto = listaNumerada([por("v-amarok"), por("v-partner"), por("v-xr150")]);
+
+    expect(texto.split("\n")).toEqual([
+      "1) Volkswagen Amarok V6 Extreme 2025",
+      "2) Peugeot Partner 2014 (vendido)",
+      "3) Honda XR 150 2022 (reservado)",
+    ]);
+  });
+
+  it("como maximo 5 autos y cumple las reglas de tono", () => {
+    const texto = listaNumerada([...CATALOGO, ...CATALOGO]);
+
+    expect(texto.split("\n")).toHaveLength(5);
+    expect(violacionesDeTono(texto)).toEqual([]);
+  });
+
+  it("sin autos devuelve vacio", () => {
+    expect(listaNumerada([])).toBe("");
   });
 });
