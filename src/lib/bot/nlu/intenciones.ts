@@ -32,6 +32,8 @@ interface Contexto {
   tokens: string[];
   /** Mensaje tal cual lo escribio el cliente, para detectar emojis (la normalizacion los borra). */
   original: string;
+  /** True si el mensaje ya trae una intencion de contenido (precio, ubicacion, etc.): ahi un "no" inicial no es una negativa. */
+  hayContenido: boolean;
 }
 
 interface Regla {
@@ -53,6 +55,47 @@ const LARGO_MINIMO_APROX = 6;
 const NEGACION_PRIMER_TOKEN = new Set(["no", "nop", "nah", "nada"]);
 const NEGACION_MAX_TOKENS = 5;
 
+// Intenciones que son una pregunta o pedido concreto. Si alguna aparece, "no tienen financiacion?" es
+// una pregunta con un "no" delante y no un rechazo: la negacion por primer token no corre.
+const INTENCIONES_CONTENIDO = new Set<Intencion>([
+  "precio",
+  "financiacion",
+  "permuta",
+  "pagos",
+  "horarios",
+  "ubicacion",
+  "garantia",
+  "documentacion",
+  "disponibilidad",
+  "info",
+  "ver_mas",
+  "catalogo",
+  "avisame",
+  "humano",
+  "identidad",
+]);
+
+// "mis datos", "tu numero": con un posesivo delante, "datos" es lo que el cliente ofrece y no lo que pide.
+const POSESIVOS = new Set(["mis", "tus", "sus", "mi", "tu"]);
+
+// Marcas de que "dueno" habla del historial del vehiculo ("es primer dueno?", "tuvo un solo dueno?")
+// y no de querer hablar con el dueno de la agencia.
+const DUENO_HISTORIAL = new Set(["primer", "segundo", "anterior", "unico", "solo", "tuvo", "tiene"]);
+const DUENO_MAX_TOKENS = 4;
+
+/** "dueno" en un mensaje cortito y sin marcas de historial: "el dueno?" pide hablar con el dueno. */
+function pideAlDueno(tokens: string[]): boolean {
+  return (
+    tokens.length <= DUENO_MAX_TOKENS &&
+    (tokens.includes("dueno") || tokens.includes("duenio")) &&
+    !tokens.some((token) => DUENO_HISTORIAL.has(token))
+  );
+}
+
+/** "numero" pide un contacto ("me pasas un numero?"), pero "numero de patente/motor/chasis" es un dato del auto. */
+function pideNumero(tokens: string[]): boolean {
+  return tokens.some((token, i) => token === "numero" && tokens[i + 1] !== "de");
+}
 const AFIRMACION_PRIMER_TOKEN = new Set([
   "si",
   "sii",
@@ -74,8 +117,9 @@ const AFIRMACION_PREFIJOS = ["de una", "me interesa"];
 // Con 5 tokens ya es una frase con otro contenido ("si tienen financiacion me interesa").
 const AFIRMACION_MAX_TOKENS = 4;
 const EMOJIS_AFIRMACION = new Set(["👍", "👌", "🙌", "✅", "🙏", "💪"]);
-// Selector de variante, union de secuencias y tonos de piel: acompanan al emoji pero no lo cambian.
-const ADORNOS_EMOJI = /[️‍\s\u{1F3FB}-\u{1F3FF}]/gu;
+// Selector de variante (\uFE0F), union de secuencias (\u200D) y tonos de piel: acompanan al emoji pero no lo cambian.
+// Van como escapes y no literales porque son invisibles y eslint los marcaria como caracteres enganosos.
+const ADORNOS_EMOJI = /[\uFE0F\u200D\s\u{1F3FB}-\u{1F3FF}]/gu;
 
 /** True si el mensaje es solo emojis de afirmacion ("👍", "👍🏽", "👌👌"). */
 function esEmojiAfirmativo(original: string): boolean {
@@ -94,6 +138,7 @@ const REGLAS: Regla[] = [
   {
     intencion: "humano",
     // "persona" y "humano" sueltas NO van: "es una persona la que me atiende?" pregunta por la identidad.
+    // "numero" y "dueno" tampoco van sueltas: ver `pideNumero` y `pideAlDueno`.
     frases: [
       "hablar con alguien",
       "con una persona",
@@ -103,9 +148,15 @@ const REGLAS: Regla[] = [
       "me llaman",
       "pasame con",
       "pasame el contacto",
+      "con el dueno",
+      "con el duenio",
+      "numero de telefono",
+      "numero de whatsapp",
+      "numero de contacto",
     ],
-    palabras: ["dueno", "duenio", "vendedor", "vendedora", "asesor", "asesora", "secretaria", "telefono", "whatsapp", "llamame"],
-    exactas: ["nati", "numero", "wsp", "wasap", "cel"],
+    palabras: ["vendedor", "vendedora", "asesor", "asesora", "secretaria", "telefono", "whatsapp", "llamame"],
+    exactas: ["nati", "wsp", "wasap", "cel"],
+    extra: ({ tokens }) => pideNumero(tokens) || pideAlDueno(tokens),
   },
   {
     intencion: "identidad",
@@ -147,8 +198,10 @@ const REGLAS: Regla[] = [
     intencion: "negacion",
     frases: ["ese no", "esa no", "no es ese", "no es esa", "no gracias"],
     // Un "no" al principio de un mensaje corto es una negativa; en una frase larga
-    // ("no se si tienen alguna pickup nafta") es solo una palabra mas.
-    extra: ({ tokens }) => tokens.length > 0 && tokens.length <= NEGACION_MAX_TOKENS && NEGACION_PRIMER_TOKEN.has(tokens[0]),
+    // ("no se si tienen alguna pickup nafta") es solo una palabra mas. Tampoco lo es si el mensaje
+    // ya pregunta algo ("no tienen financiacion?", "no me pasas el precio?").
+    extra: ({ tokens, hayContenido }) =>
+      !hayContenido && tokens.length > 0 && tokens.length <= NEGACION_MAX_TOKENS && NEGACION_PRIMER_TOKEN.has(tokens[0]),
   },
   {
     intencion: "precio",
@@ -169,7 +222,7 @@ const REGLAS: Regla[] = [
   {
     intencion: "financiacion",
     frases: ["plan de pago"],
-    palabras: ["financiacion", "financiar", "financiado", "financian", "cuotas", "credito", "prestamo", "anticipo"],
+    palabras: ["financiacion", "financiar", "financiado", "financian", "cuota", "cuotas", "credito", "prestamo", "anticipo"],
   },
   {
     intencion: "permuta",
@@ -182,6 +235,13 @@ const REGLAS: Regla[] = [
       "entrego mi auto",
       "entregar mi usado",
       "tengo un usado",
+      "por mi auto",
+      "por mi usado",
+      "por mi vehiculo",
+      "me toman",
+      "me tomas",
+      "toman mi",
+      "tomas mi",
     ],
     palabras: ["permuta", "permutan", "permutas"],
   },
@@ -227,13 +287,17 @@ const REGLAS: Regla[] = [
       "se vendio",
       "esta vendido",
       "esta vendida",
+      // "no hay mas?" pregunta si quedan unidades, no pide ver otras opciones.
+      "no hay mas",
     ],
   },
   {
     intencion: "info",
     frases: ["mas info", "cuantos km", "que motor", "que ano"],
     palabras: ["informacion", "detalles", "caracteristicas", "kilometros", "kilometraje"],
-    exactas: ["info", "datos", "ficha", "km"],
+    exactas: ["info", "ficha", "km"],
+    // "datos" solo si lo pide el cliente: "te paso mis datos" es lo que ofrece el cliente.
+    extra: ({ tokens }) => tokens.some((token, i) => token === "datos" && !POSESIVOS.has(tokens[i - 1])),
   },
   {
     intencion: "ver_mas",
@@ -270,9 +334,13 @@ const REGLAS: Regla[] = [
       "quiero una",
       "me interesa un",
       "me interesa una",
+      // "lista" suelta es tambien "esta lista para transferir": solo cuenta como pedido de lista.
+      "la lista",
+      "lista de",
+      "una lista",
     ],
     palabras: ["catalogo", "mostrame", "muestrame"],
-    exactas: ["stock", "lista", "busco"],
+    exactas: ["stock", "busco"],
   },
   {
     intencion: "afirmacion",
@@ -331,12 +399,20 @@ function coincide(
 /** Intenciones detectadas, de mas a menos prioritaria (el orden del tipo). Nunca vacia: "desconocida" si no hay ninguna. */
 export function detectarIntenciones(texto: string): Intencion[] {
   const normalizado = aplicarFrases(normalizar(texto));
-  const contexto: Contexto = {
+  const base: Contexto = {
     tokens: normalizado === "" ? [] : normalizado.split(" "),
     original: texto,
+    hayContenido: false,
   };
   // Los espacios de los bordes hacen que una frase solo coincida con palabras enteras ("si entra" no esta en "casi entrar").
   const conBordes = ` ${normalizado} `;
+  // Primero las intenciones de contenido: la negacion por primer token depende de si hay alguna.
+  const contexto: Contexto = {
+    ...base,
+    hayContenido: REGLAS_COMPILADAS.some(
+      (compilada) => INTENCIONES_CONTENIDO.has(compilada.regla.intencion) && coincide(compilada, base, conBordes),
+    ),
+  };
 
   const detectadas = REGLAS_COMPILADAS.filter((compilada) => coincide(compilada, contexto, conBordes)).map(
     ({ regla }) => regla.intencion,

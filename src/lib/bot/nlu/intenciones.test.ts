@@ -93,3 +93,107 @@ describe("detectarIntenciones — sin coincidencias", () => {
     expect(detectarIntenciones("???")).toEqual(["desconocida"]);
   });
 });
+
+describe("detectarIntenciones — humano no se lleva las preguntas por el vehiculo", () => {
+  it.each([
+    "numero de patente",
+    "numero de motor",
+    "numero de chasis",
+    "me das el numero de la hilux",
+    "es primer dueño?",
+    "tuvo un solo dueño?",
+    "el dueño anterior",
+  ])("%j no es humano", (texto) => {
+    expect(detectarIntenciones(texto)).not.toContain("humano");
+  });
+
+  it.each([
+    "me pasas un numero?",
+    "me das el numero?",
+    "me das el numero de telefono",
+    "pasame el numero de whatsapp",
+    "me das un numero de contacto",
+    "quiero hablar con el dueño",
+    "pasame con el dueño",
+    "el dueño?",
+  ])("%j es humano", (texto) => {
+    expect(detectarIntenciones(texto)[0]).toBe("humano");
+  });
+});
+
+describe("detectarIntenciones — la negacion por primer token no se come las preguntas", () => {
+  it("no tienen financiacion? es financiacion y no negacion", () => {
+    const intenciones = detectarIntenciones("no tienen financiacion?");
+    expect(intenciones[0]).toBe("financiacion");
+    expect(intenciones).not.toContain("negacion");
+  });
+
+  it.each([
+    ["no hay mas fotos?", "disponibilidad"],
+    ["no se vendio?", "disponibilidad"],
+    ["no me pasas el precio?", "precio"],
+  ])("%j → %s", (texto, esperada) => {
+    const intenciones = detectarIntenciones(texto);
+    expect(intenciones[0]).toBe(esperada);
+    expect(intenciones).not.toContain("negacion");
+  });
+
+  it("las negativas sueltas siguen siendo negacion", () => {
+    expect(detectarIntenciones("no")[0]).toBe("negacion");
+    expect(detectarIntenciones("nop")[0]).toBe("negacion");
+    expect(detectarIntenciones("no, ese no es")[0]).toBe("negacion");
+    expect(detectarIntenciones("no gracias")[0]).toBe("negacion");
+  });
+});
+
+describe("detectarIntenciones — las palabras exactas no se aproximan", () => {
+  it("'atiende' no es 'atienden' (horarios)", () => {
+    expect(detectarIntenciones("es una persona la que me atiende?")).not.toContain("horarios");
+  });
+
+  it("'bueno' no es 'buenas' (saludo)", () => {
+    expect(detectarIntenciones("bueno dale")).not.toContain("saludo");
+  });
+
+  it("'saludo' no es 'saludos' (despedida)", () => {
+    expect(detectarIntenciones("saludo")).not.toContain("despedida");
+  });
+
+  it("valores y costos siguen siendo precio, cheques sigue siendo pagos", () => {
+    expect(detectarIntenciones("valores")).toContain("precio");
+    expect(detectarIntenciones("costos")).toContain("precio");
+    expect(detectarIntenciones("cheques")).toContain("pagos");
+  });
+});
+
+describe("detectarIntenciones — palabras sueltas que daban falsos positivos", () => {
+  it("'lista' como adjetivo no es catalogo", () => {
+    expect(detectarIntenciones("esta lista para transferir?")).not.toContain("catalogo");
+  });
+
+  it("'la lista' si es catalogo", () => {
+    expect(detectarIntenciones("pasame la lista")).toContain("catalogo");
+  });
+
+  it("'mis datos' no es info", () => {
+    expect(detectarIntenciones("te paso mis datos")).not.toContain("info");
+  });
+
+  it("'datos' a secas sigue siendo info", () => {
+    expect(detectarIntenciones("me pasas los datos?")).toContain("info");
+  });
+});
+
+describe("detectarIntenciones — permuta y cuota", () => {
+  it.each([
+    "cuanto me das por mi auto",
+    "me toman mi auto?",
+    "me tomas mi usado?",
+  ])("%j → permuta", (texto) => {
+    expect(detectarIntenciones(texto)[0]).toBe("permuta");
+  });
+
+  it("'cuota' en singular es financiacion", () => {
+    expect(detectarIntenciones("tienen una cuota?")).toContain("financiacion");
+  });
+});
