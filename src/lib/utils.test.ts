@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWhatsAppUrl } from "./utils";
+import { buildWhatsAppUrl, buildWhatsAppUrlInstagram, WHATSAPP_LOCAL } from "./utils";
 
 describe("buildWhatsAppUrl", () => {
   it("arma el mensaje de catalogo web para un auto (no reel, no moto)", () => {
@@ -41,5 +41,36 @@ describe("buildWhatsAppUrl", () => {
   it("apunta siempre al mismo numero de WhatsApp", () => {
     const url = buildWhatsAppUrl({ nombre: "X", tipo: null, promocionado_reel: false });
     expect(url.startsWith("https://wa.me/5493537558947?text=")).toBe(true);
+  });
+});
+
+describe("buildWhatsAppUrlInstagram", () => {
+  it("arma el link al WhatsApp del local con el mensaje de un auto desde Instagram", () => {
+    const url = buildWhatsAppUrlInstagram({ nombre: "Peugeot 206 1.6", tipo: "Hatchback" });
+
+    expect(url.startsWith(`https://wa.me/${WHATSAPP_LOCAL}?text=`)).toBe(true);
+    expect(decodeURIComponent(url.split("?text=")[1])).toBe(
+      "Hola, te escribo desde Instagram 📲. Me interesa el Peugeot 206 1.6 🚗. ¿Sigue disponible?",
+    );
+  });
+
+  it("usa 'la' y la moto para las motos", () => {
+    const url = buildWhatsAppUrlInstagram({ nombre: "Honda XR 150", tipo: "Moto" });
+
+    expect(decodeURIComponent(url.split("?text=")[1])).toBe(
+      "Hola, te escribo desde Instagram 📲. Me interesa la Honda XR 150 🏍️. ¿Sigue disponible?",
+    );
+  });
+
+  it("sin auto manda una consulta general", () => {
+    const url = buildWhatsAppUrlInstagram(null);
+
+    expect(decodeURIComponent(url.split("?text=")[1])).toBe(
+      "Hola, te escribo desde Instagram 📲. Quiero consultar por un vehículo.",
+    );
+  });
+
+  it("el numero compartido es el de Nati", () => {
+    expect(WHATSAPP_LOCAL).toBe("5493537558947");
   });
 });
