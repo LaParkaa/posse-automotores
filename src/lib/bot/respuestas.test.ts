@@ -211,3 +211,141 @@ describe("primerNombre", () => {
     expect(primerNombre({ nombre: "   " })).toBeNull();
   });
 });
+
+describe("URLs validas para Instagram (boton y link en texto)", () => {
+  const sinHttps = [
+    ["siteUrl vacio", ""],
+    ["siteUrl http de desarrollo", "http://localhost:3000"],
+  ] as const;
+
+  for (const [caso, siteUrl] of sinHttps) {
+    it(`tarjetaDe con ${caso} deja solo el boton de Nati`, () => {
+      const t = tarjetaDe(por("v-206"), { negocio: NEGOCIO, siteUrl });
+
+      expect(t.botones).toHaveLength(1);
+      expect(t.botones[0].titulo).toBe("Hablar con Nati");
+      expect(t.botones[0].url.startsWith("https://")).toBe(true);
+    });
+
+    it(`alternativaTexto con ${caso} no incluye link a la ficha`, () => {
+      const t = alternativaTexto([por("v-206"), por("v-208")], { negocio: NEGOCIO, siteUrl });
+
+      expect(t).not.toContain("/vehiculos/");
+      expect(t.split("\n")).toEqual(["• Peugeot 206 1.6 2011 · $9.500.000", "• Peugeot 208 Style 2023 · precio con Nati"]);
+    });
+  }
+
+  it("con https la tarjeta sigue llevando 'Ver en la web'", () => {
+    expect(tarjetaDe(por("v-206"), ctx).botones).toHaveLength(2);
+  });
+});
+
+describe("urlImagen: URL absoluta https valida y codificada", () => {
+  const img = (cover: string | null, siteUrl = "https://posse.example/") => urlImagen({ ...por("v-206"), cover_image_url: cover }, siteUrl);
+
+  it("codifica espacios en rutas del sitio y en URLs absolutas", () => {
+    expect(img("/img/frente local.jpg")).toBe("https://posse.example/img/frente%20local.jpg");
+    expect(img("https://xyz.supabase.co/storage/a b.webp")).toBe("https://xyz.supabase.co/storage/a%20b.webp");
+  });
+
+  it("normaliza el esquema y el host a minusculas", () => {
+    expect(img("HTTPS://X/y.jpg")).toBe("https://x/y.jpg");
+  });
+
+  it("resuelve rutas relativas sin barra inicial contra siteUrl https", () => {
+    expect(img("img/a.jpg")).toBe("https://posse.example/img/a.jpg");
+    expect(img("img/a.jpg", "")).toBeNull();
+    expect(img("img/a.jpg", "http://localhost:3000")).toBeNull();
+  });
+
+  it("rechaza protocolo relativo, otros protocolos y valores vacios", () => {
+    expect(img("//cdn/x.jpg")).toBeNull();
+    // Una barra invertida no puede sacar la URL del sitio hacia otro host.
+    expect(img("/\evil.example/x.jpg")?.startsWith("https://posse.example/") ?? true).toBe(true);
+    expect(img("javascript:alert(1)")).toBeNull();
+    expect(img("ftp://x/y.jpg")).toBeNull();
+    expect(img("   ")).toBeNull();
+    expect(img("")).toBeNull();
+  });
+});
+
+describe("precioDe y km: 'sin datos' no es un dato", () => {
+  const conPrecio = (precio_texto: string) => precioDe({ ...por("v-206"), precio_texto });
+  const conKm = (kilometraje: string) => datosVehiculo({ ...por("v-206"), kilometraje });
+
+  it("precioDe devuelve null para placeholders sin cifra", () => {
+    for (const p of ["Consultá precio", "Consulte", "A convenir", "Sin datos", "   "]) expect(conPrecio(p)).toBeNull();
+  });
+
+  it("precioDe conserva el precio cuando el texto trae una cifra", () => {
+    expect(conPrecio("$9.500.000 (consultar financiación)")).toBe("$9.500.000 (consultar financiación)");
+    expect(conPrecio("USD 9500 negociable")).toBe("USD 9500 negociable");
+  });
+
+  it("el km 'Sin datos' o 'Consultá km' no se muestra, pero '0 km' y '177.000 km' si", () => {
+    expect(conKm("Sin datos")).toBe("2011 · Nafta · Manual");
+    expect(conKm("Consultá km")).toBe("2011 · Nafta · Manual");
+    expect(conKm("0 km")).toBe("2011 · 0 km · Nafta · Manual");
+    expect(conKm("177.000 km")).toBe("2011 · 177.000 km · Nafta · Manual");
+  });
+
+  it("la tarjeta tampoco muestra un km sin datos", () => {
+    const t = tarjetaDe({ ...por("v-206"), kilometraje: "Sin datos" }, ctx);
+
+    expect(t.subtitulo).toBe("Nafta · $9.500.000");
+  });
+});
+
+describe("subtitulo de la tarjeta: nunca se corta el precio", () => {
+  const cp = (s: string) => Array.from(s).length;
+
+  it("recorta km y combustible primero y deja el precio entero", () => {
+    const t = tarjetaDe({ ...por("v-vento"), kilometraje: "9".repeat(60) + " km", combustible: "C".repeat(60) }, ctx);
+
+    expect(cp(t.subtitulo)).toBeLessThanOrEqual(80);
+    expect(t.subtitulo).toContain("USD 14.500");
+    expect(t.subtitulo).toContain("…");
+  });
+
+  it("si el precio solo supera 80 caracteres, recien ahi se recorta", () => {
+    const t = tarjetaDe({ ...por("v-206"), precio_texto: "$" + "9".repeat(100) }, ctx);
+
+    expect(cp(t.subtitulo)).toBe(80);
+    expect(t.subtitulo.endsWith("…")).toBe(true);
+  });
+});
+
+describe("alternativaTexto: tope de 1000 bytes", () => {
+  const bytes = (s: string) => new TextEncoder().encode(s).length;
+
+  it("sin autos devuelve cadena vacia", () => {
+    expect(alternativaTexto([], ctx)).toBe("");
+  });
+
+  it("descarta autos del final hasta entrar en 1000 bytes", () => {
+    const largos = CATALOGO.slice(0, 5).map((v, i) => ({ ...v, nombre: `Modelo ${i} ` + "ñ".repeat(60), slug: "s".repeat(80) + i }));
+    const t = alternativaTexto(largos, ctx);
+
+    expect(bytes(t)).toBeLessThanOrEqual(1000);
+    expect(t).not.toBe("");
+    expect(t.split("\n").length).toBeLessThan(5);
+    expect(t).toContain("Modelo 0");
+    expect(violacionesDeTono(t)).toEqual([]);
+  });
+});
+
+describe("primerNombre: solo nombres que parezcan un nombre", () => {
+  it("devuelve null si la primera palabra no tiene letras o trae digitos", () => {
+    for (const n of ["juan94", "🚗", "1234", "🚗 Juan"]) expect(primerNombre({ nombre: n })).toBeNull();
+  });
+
+  it("pasa a minuscula con inicial mayuscula un nombre todo en mayusculas", () => {
+    expect(primerNombre({ nombre: "JUAN" })).toBe("Juan");
+    expect(primerNombre({ nombre: "MARÍA JOSÉ" })).toBe("María");
+  });
+
+  it("no toca los nombres normales", () => {
+    expect(primerNombre({ nombre: "juan perez" })).toBe("juan");
+    expect(primerNombre({ nombre: "McDonald" })).toBe("McDonald");
+  });
+});

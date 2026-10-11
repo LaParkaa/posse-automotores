@@ -32,11 +32,23 @@ export function elegir(variantes: readonly string[], semilla: string): string {
   return variantes[suma % variantes.length];
 }
 
-/** Precio listo para decir, o null si no esta cargado o dice "Consulta..." (ahi manda Nati). */
-export function precioDe(v: VehiculoCatalogo): string | null {
-  const texto = (v.precio_texto ?? "").trim();
-  if (texto === "" || /consult/i.test(texto)) return null;
+const PLACEHOLDER = /consult|a convenir|sin dato/i;
+
+/**
+ * Un texto de catalogo es un dato real salvo que este vacio o sea un placeholder ("Consultá",
+ * "A convenir", "Sin datos"). Si trae una cifra ("$9.500.000 (consultar financiación)") se
+ * conserva aunque nombre una palabra de placeholder: ahi hay un precio o km de verdad.
+ */
+function datoReal(valor: string | null | undefined): string | null {
+  const texto = (valor ?? "").trim();
+  if (texto === "") return null;
+  if (PLACEHOLDER.test(texto) && !/\d/.test(texto)) return null;
   return texto;
+}
+
+/** Precio listo para decir, o null si no esta cargado o es un placeholder (ahi manda Nati). */
+export function precioDe(v: VehiculoCatalogo): string | null {
+  return datoReal(v.precio_texto);
 }
 
 /** Link publico a la ficha del auto; sin siteUrl queda la ruta relativa. */
@@ -44,23 +56,39 @@ export function linkFicha(v: VehiculoCatalogo, siteUrl: string): string {
   return `${siteUrl.replace(/\/+$/, "")}/vehiculos/${v.slug}`;
 }
 
-/**
- * Foto de portada para la tarjeta. Instagram solo acepta URLs https absolutas: las rutas del
- * propio sitio se completan con siteUrl (si es https) y todo lo demas devuelve null.
- */
-export function urlImagen(v: VehiculoCatalogo, siteUrl: string): string | null {
-  const url = v.cover_image_url?.trim();
-  if (!url) return null;
-  if (url.startsWith("https://")) return url;
-  const base = siteUrl.replace(/\/+$/, "");
-  if (url.startsWith("/") && base.startsWith("https://")) return base + url;
-  return null;
+/** True si el link sirve para un boton o texto de Instagram: solo https absoluto. */
+function esHttps(url: string): boolean {
+  return url.startsWith("https://");
 }
 
-/** El km "Consultá km" es un placeholder del catalogo, no un dato: no se muestra. */
+/**
+ * Foto de portada para la tarjeta. Instagram rechaza TODO el carrusel si una imagen no se puede
+ * bajar, asi que solo se devuelve una URL https absoluta, ya codificada (espacios, acentos).
+ * Las rutas del propio sitio se completan con siteUrl, y solo si ese siteUrl es https.
+ */
+export function urlImagen(v: VehiculoCatalogo, siteUrl: string): string | null {
+  const crudo = v.cover_image_url?.trim();
+  if (!crudo) return null;
+  try {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(crudo)) {
+      const absoluta = new URL(crudo);
+      return absoluta.protocol === "https:" ? absoluta.href : null;
+    }
+    // "//host/x" es protocolo relativo: apunta a un host ajeno, no al sitio.
+    if (crudo.startsWith("//")) return null;
+    const base = new URL(siteUrl.trim().replace(/\/+$/, "") + "/");
+    if (base.protocol !== "https:") return null;
+    const resuelta = new URL(crudo.replace(/^\//, ""), base);
+    // Defensa extra: si por cualquier razon el origen cambio (otro host), se descarta.
+    return resuelta.origin === base.origin ? resuelta.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/** El km "Consultá km" o "Sin datos" es un placeholder del catalogo, no un dato: no se muestra. */
 function kmDe(v: VehiculoCatalogo): string | null {
-  const km = (v.kilometraje ?? "").trim();
-  return km === "" || /consult/i.test(km) ? null : km;
+  return datoReal(v.kilometraje);
 }
 
 /** "2011 · 177.000 km · Nafta · Manual" (sin km si no esta cargado). */
@@ -78,18 +106,37 @@ export function botonNati(v: VehiculoCatalogo | null, negocio: Negocio): Boton {
   };
 }
 
-/** Tarjeta de un auto: foto, datos y precio, con link a la web y a la secretaria. */
+/**
+ * Subtitulo "km · combustible · precio". Si no entra en 80, lo que se recorta es km y
+ * combustible, nunca el precio: un precio cortado a la mitad es peor que no mostrarlo. Al
+ * recortar, el precio pasa adelante para que el "…" quede al final del texto sacrificado.
+ */
+function subtituloDe(v: VehiculoCatalogo, precio: string): string {
+  const datos = [kmDe(v), v.combustible].filter((p): p is string => !!p && p.trim() !== "").join(" · ");
+  const completo = datos === "" ? precio : `${datos} · ${precio}`;
+  if (Array.from(completo).length <= MAX_SUBTITULO) return completo;
+
+  const lugar = MAX_SUBTITULO - Array.from(precio).length - Array.from(" · ").length;
+  // Con menos de 2 code points libres el recorte solo dejaria un "…" suelto: queda el precio.
+  if (datos === "" || lugar < 2) return recortar(precio, MAX_SUBTITULO);
+  return `${precio} · ${recortar(datos, lugar)}`;
+}
+
+/**
+ * Tarjeta de un auto: foto, datos y precio. El boton "Ver en la web" solo va si el link es
+ * https absoluto (Instagram rechaza el carrusel entero con una URL relativa); el de la
+ * secretaria siempre va, asi que nunca queda una tarjeta sin botones.
+ */
 export function tarjetaDe(v: VehiculoCatalogo, ctx: Contexto): Tarjeta {
   const precio = precioDe(v) ?? `precio con ${ctx.negocio.secretaria}`;
-  const subtitulo = [kmDe(v), v.combustible, precio].filter((p): p is string => !!p && p.trim() !== "").join(" · ");
+  const link = linkFicha(v, ctx.siteUrl);
+  const botones: Boton[] = [botonNati(v, ctx.negocio)];
+  if (esHttps(link)) botones.unshift({ titulo: "Ver en la web", url: link });
   return {
     titulo: recortar(`${v.nombre} ${v.anio}`, MAX_TITULO),
-    subtitulo: recortar(subtitulo, MAX_SUBTITULO),
+    subtitulo: subtituloDe(v, precio),
     imagenUrl: urlImagen(v, ctx.siteUrl),
-    botones: [
-      { titulo: "Ver en la web", url: linkFicha(v, ctx.siteUrl) },
-      botonNati(v, ctx.negocio),
-    ],
+    botones,
   };
 }
 
@@ -107,23 +154,39 @@ export function tarjetaContacto(v: VehiculoCatalogo | null, ctx: Contexto): Tarj
   };
 }
 
+const MAX_BYTES_TEXTO = 1000;
+const bytesDe = (texto: string) => new TextEncoder().encode(texto).length;
+
 /**
  * Respaldo en texto de las tarjetas (si Instagram las rechaza): una linea por auto, sin
  * encabezado y como maximo 5, para cumplir las reglas de tono (<= 5 lineas, <= 1000 bytes).
+ * El link se omite si no es https absoluto, y si el texto pasa de 1000 bytes se descartan
+ * autos del final (mejor menos autos que un mensaje que Instagram no acepta).
  */
 export function alternativaTexto(vehiculos: VehiculoCatalogo[], ctx: Contexto): string {
-  return vehiculos
-    .slice(0, MAX_AUTOS_EN_TEXTO)
-    .map((v) => {
-      const precio = precioDe(v) ?? `precio con ${ctx.negocio.secretaria}`;
-      return `• ${v.nombre} ${v.anio} · ${precio} · ${linkFicha(v, ctx.siteUrl)}`;
-    })
-    .join("\n");
+  const lineas = vehiculos.slice(0, MAX_AUTOS_EN_TEXTO).map((v) => {
+    const precio = precioDe(v) ?? `precio con ${ctx.negocio.secretaria}`;
+    const link = linkFicha(v, ctx.siteUrl);
+    const base = `• ${v.nombre} ${v.anio} · ${precio}`;
+    return esHttps(link) ? `${base} · ${link}` : base;
+  });
+  while (lineas.length > 0 && bytesDe(lineas.join("\n")) > MAX_BYTES_TEXTO) lineas.pop();
+  return lineas.join("\n");
 }
 
-/** "Juan Perez" → "Juan"; null si el perfil no trae nombre. */
+/**
+ * "Juan Perez" → "Juan"; null si el perfil no trae nombre o la primera palabra no parece uno
+ * (un usuario como "juan94" o un emoji suenan raro en un saludo). Si viene todo en mayusculas
+ * ("JUAN") se pasa a "Juan"; los nombres normales no se tocan.
+ */
 export function primerNombre(perfil: Perfil | null): string | null {
   const nombre = perfil?.nombre?.trim();
   if (!nombre) return null;
-  return nombre.split(/\s+/)[0];
+  const palabra = nombre.split(/\s+/)[0];
+  if (!/\p{L}/u.test(palabra) || /\d/.test(palabra)) return null;
+  if (palabra === palabra.toUpperCase()) {
+    const [inicial, ...resto] = Array.from(palabra.toLowerCase());
+    return inicial.toUpperCase() + resto.join("");
+  }
+  return palabra;
 }
