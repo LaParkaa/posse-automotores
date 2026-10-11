@@ -7,7 +7,7 @@ const LIMITE_HISTORIAL = 10;
 const VIOLACION_UNICA = "23505";
 
 /**
- * Deja el historial en la forma que exige la API de Claude: empieza con un turno
+ * Deja el historial en la forma que esperan las APIs de chat: empieza con un turno
  * del usuario y no repite rol seguido. Al cortar los ultimos N mensajes puede
  * quedar una respuesta del bot al principio, o dos mensajes del cliente juntos.
  */

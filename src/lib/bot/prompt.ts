@@ -4,12 +4,6 @@ export const EMPRESA = {
   whatsapp: "+54 9 3537 55-8947",
 } as const;
 
-export type BloqueSistema = {
-  type: "text";
-  text: string;
-  cache_control?: { type: "ephemeral" };
-};
-
 function instrucciones(): string {
   const horario = process.env.BOT_HORARIO?.trim() || `consultá los horarios por WhatsApp al ${EMPRESA.whatsapp}`;
 
@@ -47,18 +41,10 @@ Si preguntan algo ajeno a vehículos, financiación o la concesionaria, respond�
 }
 
 /**
- * Prompt dividido en dos bloques: las instrucciones (fijas) y el inventario (cambia
- * cuando se vende o se carga un auto). cache_control va en el ultimo bloque para que
- * Anthropic reutilice todo el prefijo entre mensajes. El cache solo se activa si el
- * prefijo supera el minimo del modelo; si es mas corto simplemente no se aplica.
+ * Un unico mensaje de sistema: primero las instrucciones (fijas) y despues el inventario,
+ * que cambia cuando se vende o se carga un auto. Los nulos del inventario van como "-" para
+ * que las columnas no se corran.
  */
-export function buildSystemBlocks(stockTexto: string): BloqueSistema[] {
-  return [
-    { type: "text", text: instrucciones() },
-    {
-      type: "text",
-      text: `INVENTARIO DISPONIBLE (formato: nombre | año | km | combustible | transmisión | motor | tipo | precio | link)\n${stockTexto}`,
-      cache_control: { type: "ephemeral" },
-    },
-  ];
+export function buildSystemPrompt(stockTexto: string): string {
+  return `${instrucciones()}\n\nINVENTARIO DISPONIBLE (formato: nombre | año | km | combustible | transmisión | motor | tipo | precio | link)\n${stockTexto}`;
 }

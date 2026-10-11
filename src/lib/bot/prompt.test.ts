@@ -1,42 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { buildSystemBlocks, EMPRESA } from "./prompt";
+import { buildSystemPrompt, EMPRESA } from "./prompt";
 
-describe("buildSystemBlocks", () => {
+describe("buildSystemPrompt", () => {
   const stock = "- Toyota Corolla XEI | 2011 | 180.000 km | Nafta | Manual | 1.8 | Sedán | USD 9.500";
 
-  it("devuelve instrucciones + inventario, y marca el cache solo en el ultimo bloque", () => {
-    const [instrucciones, inventario] = buildSystemBlocks(stock);
-
-    expect(buildSystemBlocks(stock)).toHaveLength(2);
-    expect(instrucciones.cache_control).toBeUndefined();
-    // El cache de Anthropic cubre todo el prefijo hasta el bloque marcado.
-    expect(inventario.cache_control).toEqual({ type: "ephemeral" });
+  it("incluye el stock tal cual", () => {
+    expect(buildSystemPrompt(stock)).toContain(stock);
   });
 
-  it("incluye el stock tal cual en el bloque de inventario", () => {
-    const [, inventario] = buildSystemBlocks(stock);
+  it("pone el inventario despues de las instrucciones", () => {
+    const prompt = buildSystemPrompt(stock);
 
-    expect(inventario.text).toContain(stock);
+    expect(prompt.indexOf("INVENTARIO DISPONIBLE (formato")).toBeGreaterThan(
+      prompt.indexOf("Sos el asistente"),
+    );
+    expect(prompt.indexOf(stock)).toBeGreaterThan(prompt.indexOf("INVENTARIO DISPONIBLE (formato"));
   });
 
-  it("las instrucciones nombran la empresa, el WhatsApp para derivar y la herramienta de leads", () => {
-    const [instrucciones] = buildSystemBlocks(stock);
+  it("nombra la empresa, el WhatsApp para derivar y la herramienta de leads", () => {
+    const prompt = buildSystemPrompt(stock);
 
-    expect(instrucciones.text).toContain(EMPRESA.nombre);
-    expect(instrucciones.text).toContain(EMPRESA.whatsapp);
-    expect(instrucciones.text).toContain("guardar_lead");
+    expect(prompt).toContain(EMPRESA.nombre);
+    expect(prompt).toContain(EMPRESA.whatsapp);
+    expect(prompt).toContain("guardar_lead");
   });
 
-  it("le prohibe al modelo ofrecer autos fuera de la lista", () => {
-    const [instrucciones] = buildSystemBlocks(stock);
+  it("le prohibe al modelo ofrecer autos fuera de la lista y inventar datos", () => {
+    const prompt = buildSystemPrompt(stock);
 
-    expect(instrucciones.text).toContain("INVENTARIO DISPONIBLE");
-    expect(instrucciones.text).toMatch(/Nunca inventes/);
+    expect(prompt).toContain("INVENTARIO DISPONIBLE");
+    expect(prompt).toMatch(/Nunca inventes precios/);
   });
 
-  it("le prohibe inventar links de vehiculos", () => {
-    const [instrucciones] = buildSystemBlocks(stock);
-
-    expect(instrucciones.text).toMatch(/Nunca inventes links/);
+  it("le prohibe inventar links", () => {
+    expect(buildSystemPrompt(stock)).toMatch(/Nunca inventes links/);
   });
 });
