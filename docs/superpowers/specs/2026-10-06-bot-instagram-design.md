@@ -4,11 +4,11 @@ Fecha: 2026-10-06
 
 ## Objetivo
 
-Reemplazar el bot de `whatsapp-web.js` (`whatsapp-bot/`) por un webhook serverless de Instagram DM dentro del Next.js existente (Netlify). El bot responde consultas, consulta el stock real y capta leads, gastando la menor cantidad de tokens posible.
+Reemplazar el bot de `whatsapp-web.js` (`whatsapp-bot/`) por un webhook serverless de Instagram DM dentro del Next.js existente (Vercel). El bot responde consultas, consulta el stock real y capta leads, gastando la menor cantidad de tokens posible.
 
 ## Decisiones
 
-- **Hosting:** ruta de App Router en el Next.js actual (`@netlify/plugin-nextjs`). No se crea otro servicio.
+- **Hosting:** ruta de App Router en el Next.js actual, desplegado en Vercel. No se crea otro servicio.
 - **Stock:** estado `'disponible'` de `vehiculos_posse` (no existe `'DISP'`; el bot viejo leía la tabla equivocada, `vehiculos`). Se inyecta compacto en el system prompt con prompt caching. **Una sola llamada a Claude por mensaje**, sin loop de herramientas.
 - **Leads:** herramienta `guardar_lead`, ejecutada sin segunda llamada a Claude. Se guardan en `leads` con `origen = 'instagram'` y se ven en `/admin/leads`. Sin aviso externo (decisión del usuario).
 - **Derivación a humano:** el bot entrega el WhatsApp del local (+54 9 3537 55-8947).

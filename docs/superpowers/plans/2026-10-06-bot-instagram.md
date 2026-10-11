@@ -112,7 +112,7 @@ PAGE_ACCESS_TOKEN=YOUR_PAGE_ACCESS_TOKEN
 # https://console.anthropic.com/
 ANTHROPIC_API_KEY=sk-ant-...
 # URL publica del sitio, para los links a las fichas que manda el bot (sin barra final).
-SITE_URL=https://tu-sitio.netlify.app
+SITE_URL=https://tu-sitio.vercel.app
 # Opcional: horarios que cuenta el bot. Si no esta, deriva al WhatsApp.
 # BOT_HORARIO=Lunes a Viernes 9 a 13 y 16 a 20 | Sabados 9 a 13
 ```
@@ -2452,7 +2452,7 @@ Los nombres exactos de los menús de Meta cambian con frecuencia; si algo no coi
 3. Generar el **token de acceso de la página** (`PAGE_ACCESS_TOKEN`) con permiso `instagram_manage_messages`. Conviene uno de larga duración.
 4. Copiar el **App Secret** (Configuración de la app → Básica) a `IG_APP_SECRET`.
 5. En el producto Instagram → Webhooks: URL de devolución `https://TU-SITIO/api/instagram/webhook`, token de verificación = `IG_VERIFY_TOKEN`, y suscribirse al campo **`messages`**. Meta hace el `GET` en ese momento: tiene que responder 200.
-6. Cargar las 5 variables (`IG_VERIFY_TOKEN`, `IG_APP_SECRET`, `PAGE_ACCESS_TOKEN`, `ANTHROPIC_API_KEY`, `SITE_URL`) en Netlify (Site configuration → Environment variables) y **volver a desplegar** (el sitio ya usa `SUPABASE_SERVICE_ROLE_KEY` y `NEXT_PUBLIC_SUPABASE_URL`).
+6. Cargar las 5 variables (`IG_VERIFY_TOKEN`, `IG_APP_SECRET`, `PAGE_ACCESS_TOKEN`, `ANTHROPIC_API_KEY`, `SITE_URL`) en Vercel (Project Settings → Environment Variables) y **volver a desplegar** (el sitio ya usa `SUPABASE_SERVICE_ROLE_KEY` y `NEXT_PUBLIC_SUPABASE_URL`).
 7. Probar escribiéndole a la cuenta desde un usuario con **rol en la app** (administrador, desarrollador o tester). Sin App Review aprobada, el bot **no responde a cuentas ajenas**; para público general hay que pedir la revisión del permiso `instagram_manage_messages`.
 8. Recordar la regla de Meta: solo se puede responder dentro de las 24 h posteriores al último mensaje del cliente.
 
@@ -2470,7 +2470,7 @@ En la consola de Anthropic (Usage), comprobar tokens por mensaje. Si el prompt s
 
 - `whatsapp-bot/` está **sin versionar en git**: borrarlo no se puede deshacer con `git`.
 - Contiene `.env` con claves reales (`ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) y `data/solicitudes.jsonl` con solicitudes locales. Si quiere conservar algo, que lo copie fuera del proyecto primero.
-- Las claves de ese `.env` ya viven (o deben vivir) en las variables de entorno de Netlify.
+- Las claves de ese `.env` ya viven (o deben vivir) en las variables de entorno de Vercel.
 
 Con la confirmación, ejecutar: `rm -rf whatsapp-bot` y comprobar con `git status --short` que ya no aparece `?? whatsapp-bot/`. No hay nada que commitear porque nunca estuvo versionado.
 

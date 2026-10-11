@@ -5,8 +5,8 @@ import { verificarFirma } from "@/lib/instagram/signature";
 
 export const runtime = "nodejs"; // usa node:crypto
 export const dynamic = "force-dynamic";
-// Es solo una sugerencia: que se respete depende de la plataforma de despliegue. El limite real
-// en Netlify es el timeout de funciones configurado para el sitio (verificarlo en los ajustes de Netlify).
+// Tope de duracion de la funcion en Vercel. El maximo permitido depende del plan del proyecto
+// (verificarlo en los ajustes de Vercel): si el plan permite menos de 25 s, rige el del plan.
 export const maxDuration = 25;
 
 /**
