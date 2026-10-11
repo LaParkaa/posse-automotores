@@ -38,10 +38,12 @@ Capturas de conversaciones de la cuenta (septiembre-octubre 2026):
 
 1. **Sin IA con modelo**: motor de reglas (palabras clave + estado de conversacion).
 2. **Historias**: si el cliente nombra el auto, se toma directo; si no, **se pregunta una vez cual es y se recuerda** la respuesta para esa historia (los siguientes clientes de la misma historia se resuelven solos).
-3. **Precios**: se informa lo que este en el campo precio del auto. Si dice "Consulta..." o esta vacio: lo confirma un vendedor, se pide nombre y telefono y queda en Leads.
-4. **Derivacion a una persona**: se da el WhatsApp del local (+54 9 3537 55-8947).
-5. **Aviso de leads**: solo panel `/admin/leads` (sin notificacion externa).
+3. **Precios**: se informa lo que este en el campo precio del auto. Si dice "Consulta..." o esta vacio, **Nati lo pasa por WhatsApp** (boton con el mensaje ya escrito).
+4. **Cierre por WhatsApp con Nati** (la secretaria): es el destino principal. El cliente toca "Hablar con Nati" y WhatsApp se abre con un mensaje prearmado que dice que viene de Instagram y por que auto (ella ve el numero y todo en un solo lugar y no tiene que mirar Instagram de noche). Numero: el del local, +54 9 3537 55-8947.
+5. **Captacion de datos en Instagram**: secundaria. Solo si el cliente prefiere que lo llamen, pide "avisame cuando entre", o da su telefono por su cuenta. Queda en `/admin/leads`.
 6. Hosting Vercel, base Supabase (sin cambios).
+7. **Presentacion con imagenes**: el bot **lee el catalogo de la web** y muestra los autos como **tarjetas** (foto, año/km/combustible/precio y botones "Ver en la web" y "Hablar con Nati"): un auto detallado o un carrusel de hasta 5. Si Instagram rechaza la tarjeta, cae a texto con el link de la ficha.
+8. **Tono humano y honesto**: mensajes cortos, coloquiales, con emojis (como escribe el equipo), con "visto" y "escribiendo..." antes de contestar. **No finge ser una persona**: si le preguntan si es un bot o una persona, lo dice con naturalidad y ofrece pasar con Nati.
 
 ## 4. Flujo
 
@@ -56,7 +58,8 @@ Con firma valida siempre se responde 200. No hay llamadas a modelos: la respuest
 
 **Modificar**
 - `src/lib/instagram/payload.ts`: devuelve eventos tipados: `mensaje` (`senderId`, `mid`, `texto|null`, `historiaId?`, `adjuntos: string[]` con los `type`) y `eco` (`destinatarioId`, `mid`). Hoy descarta los ecos; pasan a conservarse. Historia: `message.reply_to.story.id`.
-- `src/lib/instagram/graph.ts`: `enviarMensajeInstagram` devuelve los `message_id` de cada parte enviada; nueva `obtenerPerfil(igsid)` → `{ nombre?, usuario? }` (mejor esfuerzo; si falla, el bot sigue sin nombre).
+- `src/lib/instagram/graph.ts`: `enviarMensajeInstagram` devuelve los `message_id` de cada parte enviada; nuevas `enviarTarjetas()` (plantilla generica: hasta 10 elementos con imagen, titulo, subtitulo y hasta 3 botones de enlace), `enviarAccion()` (`mark_seen`, `typing_on`) y `obtenerPerfil(igsid)` → `{ nombre?, usuario? }` (mejor esfuerzo; si falla, el bot sigue sin nombre).
+- `src/lib/utils.ts`: nueva variante de `buildWhatsAppUrl` con origen Instagram ("Hola, te escribo desde Instagram 📲. Me interesa el ... ¿Sigue disponible?") y constante compartida del numero de WhatsApp.
 - `src/lib/bot/handler.ts`, `deps.ts`: reescritos para el flujo de arriba (siguen con dependencias inyectadas y testeables).
 - `src/lib/bot/conversations.ts`: queda la deduplicacion y el registro; se agrega guardar mensajes del bot **con su `mid`** y `esMensajePropio(mid)`. El historial para el modelo deja de usarse.
 - `src/lib/bot/stock.ts`: pasa a `obtenerCatalogo(db)`: vehiculos `disponible`, `reservado` y `vendido` (ultimos ~60 vendidos), solo columnas publicas, sin precios de venta ni notas internas.
@@ -95,21 +98,24 @@ Forma de `estado` (sesion): `filtros`, `vehiculoActual`, `mostrados[]` (para "el
 
 **Precio / info**: usa `vehiculoActual`; sin auto en contexto, pregunta cual. Precio vacio o "Consulta" → vendedor + captacion de lead.
 
-**Captacion de lead**: ante interes (quiere verlo, financiacion, precio sin cargar, "avisame") pide nombre y luego telefono (valida largo y digitos; "cancelar" sale), guarda en `leads` (origen instagram, con `@usuario` cuando se pudo obtener el perfil) y confirma. Si falla el guardado, **no confirma**: deriva al WhatsApp del local.
+**Cierre por WhatsApp (principal)**: ante interes real (precio sin cargar, "quiero verlo", financiacion, permuta, "hablo con alguien") el bot manda el boton "Hablar con Nati 💬" con el mensaje prearmado (origen Instagram + auto). **Captacion de datos (secundaria)**: si el cliente prefiere que lo llamen o pide "avisame cuando entre", se piden nombre y telefono (valida largo y digitos; "cancelar" sale), se guardan en `leads` (origen instagram, con `@usuario` si se obtuvo el perfil) y se confirma. Si falla el guardado, **no confirma**: manda el boton de WhatsApp.
 
-**Derivacion**: "dueño/vendedor/persona" → WhatsApp del local y ofrece dejar datos.
+**Derivacion**: "dueño/vendedor/persona/secretaria/Nati" → boton de WhatsApp con Nati y ofrece dejar datos.
+
+**Identidad**: "¿sos un bot?", "¿sos una persona?" → respuesta honesta y natural ("Soy el asistente virtual de Posse 😊 Si preferis hablar con una persona, Nati te atiende por WhatsApp") con el boton.
 
 **No entendido**: una vez, repregunta con ejemplos; dos seguidas, ofrece menu corto y el WhatsApp. Se marca `nota = no_entendido`.
 
 **No texto**: audio → "no puedo escuchar audios por aca, ¿me lo escribis?"; foto/adjunto → pide que cuente que auto busca. Solo emojis sin contexto (por ejemplo una reaccion a una historia) → **no se responde**; dentro de una conversacion un 👍 cuenta como afirmacion.
 
-**Tono**: español rioplatense, calido, 1-2 emojis, maximo 4-5 lineas por mensaje, saluda por el nombre si el perfil lo trae. Las variantes de texto se eligen de forma determinista (semilla = `mid`) para que los tests sean estables.
+**Tono**: español rioplatense, calido y coloquial como escribe el equipo ("Hola Juanma!", "sii te paso..."), emojis con naturalidad (1-3 por mensaje), mensajes cortos (maximo 4-5 lineas), sin formulas corporativas ("estimado", "le informamos", "a la brevedad"), sin markdown. Saluda por el nombre si el perfil lo trae. Antes de contestar marca "visto" y muestra "escribiendo..." una fracción de segundo acorde al largo (tope ~2,5 s). Las variantes de texto se eligen de forma determinista (semilla = `mid`) para que los tests sean estables.
 
 ## 8. Pruebas
 
 - **Unitarias** de normalizar, vocabulario, intenciones, entidades, busqueda y respuestas.
 - **Conversaciones doradas** (tabla de escenarios: mensajes del cliente → respuesta esperada y sesion resultante) sobre un catalogo de ejemplo, **incluyendo los chats reales**: Partner vendida + "algun utilitario asi?", historia 208 + "me decis el precio?", Vento + "que valor tiene?", 206 + "me pasas mas info del 206", "hablo con el dueño?", audio, foto, "chatita".
 - Handler con dependencias falsas: dedupe, pausa por eco propio vs. humano, fallos de Supabase/Graph (siempre 200), lead que falla → no confirma.
+- Tono: tests que verifican limites (≤1000 bytes, ≤5 lineas, sin formulas corporativas, sin markdown) y la respuesta honesta a "¿sos un bot?".
 - Manual: `curl` firmado contra `next dev` y una prueba real con una cuenta con rol en la app.
 
 ## 9. Operacion y supuestos a validar con trafico real
@@ -122,7 +128,9 @@ Forma de `estado` (sesion): `filtros`, `vehiculoActual`, `mostrados[]` (para "el
 
 **Verificado en la documentacion de Meta**: las respuestas a historias traen `message.reply_to.story.{id,url}` dentro de `entry[].messaging[]`; los adjuntos traen `type` (`audio`, `image`, `share`, `ig_post`, `ig_reel`, `story_mention`...); los mensajes enviados desde la cuenta llegan con `is_echo: true`.
 
-**A validar en las primeras pruebas reales** (no pude confirmarlo en la documentacion): que los ecos llegan por el campo `messages` y si traen `app_id`; que la API de perfil devuelve `name` y `username` con el permiso actual; como llega la reaccion a una historia; que el tiempo de espera de ~3 s para clasificar un eco alcanza. El motor registra los tipos de evento desconocidos en los logs para ajustar rapido.
+**Verificado tambien**: la API de envio admite plantillas genericas (carrusel de hasta 10 elementos con imagen, titulo, subtitulo y hasta 3 botones `web_url`/`postback`) y las acciones `mark_seen` y `typing_on`.
+
+**A validar en las primeras pruebas reales** (no pude confirmarlo en la documentacion): que las tarjetas se ven bien en tu cuenta y en el inbox web, que las imagenes del catalogo tienen un formato aceptado por Instagram (si no, cae al texto con link), que los ecos llegan por el campo `messages` y si traen `app_id`; que la API de perfil devuelve `name` y `username` con el permiso actual; como llega la reaccion a una historia; que el tiempo de espera de ~3 s para clasificar un eco alcanza. El motor registra los tipos de evento desconocidos en los logs para ajustar rapido.
 
 ## 10. Riesgos y limites
 
