@@ -128,8 +128,11 @@ describe("detectarIntenciones — la negacion por primer token no se come las pr
     expect(intenciones).not.toContain("negacion");
   });
 
+  it("\"no hay mas fotos?\" no se confunde con una pregunta de disponibilidad", () => {
+    expect(detectarIntenciones("no hay mas fotos?")).not.toContain("disponibilidad");
+  });
+
   it.each([
-    ["no hay mas fotos?", "disponibilidad"],
     ["no se vendio?", "disponibilidad"],
     ["no me pasas el precio?", "precio"],
   ])("%j → %s", (texto, esperada) => {

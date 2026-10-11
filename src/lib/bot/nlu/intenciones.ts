@@ -287,8 +287,6 @@ const REGLAS: Regla[] = [
       "se vendio",
       "esta vendido",
       "esta vendida",
-      // "no hay mas?" pregunta si quedan unidades, no pide ver otras opciones.
-      "no hay mas",
     ],
   },
   {
