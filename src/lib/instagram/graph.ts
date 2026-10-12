@@ -1,9 +1,26 @@
 import type { Perfil, Tarjeta } from "../bot/types";
 
 const GRAPH_URL = "https://graph.facebook.com/v21.0/me/messages";
-// Corto a proposito: el envio comparte con la llamada al modelo de IA la ventana de ~20 s de Meta,
-// y si se pasa, el mensaje ya reclamado no se reintenta.
+// Corto a proposito: el envio comparte con el resto del turno (base de datos, demoras de
+// "escribiendo...") la ventana de ~20 s de Meta, y si se pasa, el mensaje ya reclamado no se reintenta.
 const TIMEOUT_MS = 5000;
+// "Visto" y "escribiendo..." son un adorno: si Meta tarda, mejor perderlos que gastar la ventana.
+const TIMEOUT_ACCION_MS = 1500;
+
+/**
+ * Un texto largo se manda en varias partes. Si una falla despues de que otras ya se entregaron,
+ * este error lleva sus ids: el bot los necesita para reconocer sus ecos y no tomarlos por una persona.
+ */
+export class ErrorEnvioParcial extends Error {
+  constructor(
+    mensaje: string,
+    readonly ids: string[],
+    opciones?: { cause?: unknown },
+  ) {
+    super(mensaje, opciones);
+    this.name = "ErrorEnvioParcial";
+  }
+}
 
 /** Instagram rechaza textos de mas de 1000 bytes (no caracteres). */
 export const MAX_BYTES_MENSAJE = 1000;
@@ -53,7 +70,7 @@ export function partirTexto(texto: string, maxBytes = MAX_BYTES_MENSAJE): string
 }
 
 /** POST al endpoint de mensajes. Devuelve el message_id si Meta lo informa. Lanza si la API rechaza. */
-async function postMensajes(cuerpo: unknown): Promise<string | null> {
+async function postMensajes(cuerpo: unknown, timeoutMs = TIMEOUT_MS): Promise<string | null> {
   const token = process.env.PAGE_ACCESS_TOKEN;
   if (!token) throw new Error("Falta la variable de entorno PAGE_ACCESS_TOKEN");
 
@@ -64,7 +81,7 @@ async function postMensajes(cuerpo: unknown): Promise<string | null> {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(cuerpo),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!respuesta.ok) {
@@ -85,8 +102,14 @@ export async function enviarMensajeInstagram(destinatarioId: string, texto: stri
 
   // En orden y de a uno: si se mandaran en paralelo podrian llegar desordenados.
   for (const parte of partirTexto(texto)) {
-    const id = await postMensajes({ recipient: { id: destinatarioId }, message: { text: parte } });
-    if (id) ids.push(id);
+    try {
+      const id = await postMensajes({ recipient: { id: destinatarioId }, message: { text: parte } });
+      if (id) ids.push(id);
+    } catch (err) {
+      if (ids.length === 0) throw err;
+      const mensaje = err instanceof Error ? err.message : String(err);
+      throw new ErrorEnvioParcial(mensaje, ids, { cause: err });
+    }
   }
 
   return ids;
@@ -116,7 +139,7 @@ export async function enviarTarjetas(destinatarioId: string, tarjetas: Tarjeta[]
 /** "Visto" y "escribiendo...": son un detalle de trato, nunca deben romper la respuesta. */
 export async function enviarAccion(destinatarioId: string, accion: "mark_seen" | "typing_on"): Promise<boolean> {
   try {
-    await postMensajes({ recipient: { id: destinatarioId }, sender_action: accion });
+    await postMensajes({ recipient: { id: destinatarioId }, sender_action: accion }, TIMEOUT_ACCION_MS);
     return true;
   } catch {
     return false;

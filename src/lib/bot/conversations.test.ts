@@ -121,10 +121,8 @@ describe("esMidPropio", () => {
     expect(await esMidPropio(dbConLectura({ data: [], error: null }).db, "mid.x")).toBe(false);
   });
 
-  it("es false (sin lanzar) si la base falla", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(await esMidPropio(dbConLectura({ data: null, error: { message: "caido" } }).db, "mid.x")).toBe(false);
-    vi.restoreAllMocks();
+  it("lanza si la base falla: un error transitorio no prueba que el mensaje sea de una persona", async () => {
+    await expect(esMidPropio(dbConLectura({ data: null, error: { message: "caido" } }).db, "mid.x")).rejects.toThrow(/caido/);
   });
 });
 

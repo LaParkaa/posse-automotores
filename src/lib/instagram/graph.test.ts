@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { enviarAccion, enviarMensajeInstagram, enviarTarjetas, MAX_BYTES_MENSAJE, obtenerPerfil, partirTexto } from "./graph";
+import {
+  enviarAccion,
+  enviarMensajeInstagram,
+  enviarTarjetas,
+  ErrorEnvioParcial,
+  MAX_BYTES_MENSAJE,
+  obtenerPerfil,
+  partirTexto,
+} from "./graph";
 
 const bytes = (texto: string) => new TextEncoder().encode(texto).length;
 
@@ -140,6 +148,42 @@ describe("enviarMensajeInstagram devuelve los ids", () => {
   });
 });
 
+describe("enviarMensajeInstagram con envio parcial", () => {
+  const fetchMock = vi.fn();
+  beforeEach(() => {
+    vi.stubEnv("PAGE_ACCESS_TOKEN", "token-de-prueba");
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  const textoDeDosPartes = Array.from({ length: 400 }, (_, i) => `palabra${i}`).join(" ");
+
+  it("si la parte 2 falla, el error lleva los ids de lo ya enviado y el mensaje de siempre", async () => {
+    fetchMock
+      .mockImplementationOnce(async () => new Response(JSON.stringify({ message_id: "mid.1" }), { status: 200 }))
+      .mockImplementationOnce(async () => new Response("rechazado", { status: 400 }));
+
+    const error = await enviarMensajeInstagram("111", textoDeDosPartes).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ErrorEnvioParcial);
+    expect((error as ErrorEnvioParcial).ids).toEqual(["mid.1"]);
+    expect((error as Error).message).toMatch(/^Graph API 400: rechazado/);
+  });
+
+  it("si falla la primera parte lanza el error comun, sin ids parciales", async () => {
+    fetchMock.mockImplementation(async () => new Response("rechazado", { status: 500 }));
+
+    const error = await enviarMensajeInstagram("111", textoDeDosPartes).catch((e: unknown) => e);
+
+    expect(error).not.toBeInstanceOf(ErrorEnvioParcial);
+    expect((error as Error).message).toMatch(/^Graph API 500/);
+  });
+});
+
 describe("enviarTarjetas", () => {
   const fetchMock = vi.fn();
   beforeEach(() => {
@@ -243,6 +287,17 @@ describe("enviarAccion", () => {
 
     expect(await enviarAccion("111", "typing_on")).toBe(true);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ recipient: { id: "111" }, sender_action: "typing_on" });
+  });
+
+  it("usa un tope corto (1500 ms) para no gastar la ventana del turno, y 5000 ms para los mensajes", async () => {
+    fetchMock.mockImplementation(async () => new Response("{}", { status: 200 }));
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+
+    await enviarAccion("111", "typing_on");
+    await enviarTarjetas("111", [{ titulo: "t", subtitulo: "s", imagenUrl: null, botones: [{ titulo: "b", url: "https://x.example" }] }]);
+
+    expect(timeout.mock.calls.map((c) => c[0])).toEqual([1500, 5000]);
+    timeout.mockRestore();
   });
 
   it("nunca lanza: devuelve false si falla (son un adorno)", async () => {

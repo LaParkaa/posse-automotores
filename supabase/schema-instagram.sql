@@ -3,7 +3,8 @@
 
 -- Un mensaje por fila. "mid" es el id que asigna Meta a los mensajes del cliente:
 -- el unique permite descartar los reintentos del webhook (Meta reenvia si tarda).
--- Las respuestas del bot no tienen mid.
+-- Las respuestas del bot guardan el message_id que devuelve Meta al enviarlas: con el se reconoce su
+-- propio eco (si el mid no esta, el mensaje lo escribio una persona y el bot se pausa).
 create table if not exists public.ig_mensajes (
   id uuid primary key default gen_random_uuid(),
   mid text unique,

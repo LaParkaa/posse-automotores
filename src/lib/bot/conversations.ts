@@ -44,15 +44,13 @@ export async function guardarSalida(
 /**
  * Meta devuelve al webhook los mensajes que manda la propia cuenta (eco). Si el mid esta
  * guardado lo mando el bot; si no, escribio una persona y hay que pausar el bot.
- * Ante un error de la base devuelve false (y lo registra): no se puede probar que sea del bot.
+ * Ante un error de la base LANZA: devolver false pausaria el chat 6 horas por un fallo transitorio,
+ * y quien llama prefiere no decidir antes que decidir mal.
  */
 export async function esMidPropio(db: SupabaseClient, mid: string): Promise<boolean> {
   const { data, error } = await db.from("ig_mensajes").select("mid").eq("mid", mid).limit(1);
 
-  if (error) {
-    console.error("[bot] No se pudo verificar el mid propio:", error.message);
-    return false;
-  }
+  if (error) throw new Error(`No se pudo verificar el mid propio: ${error.message}`);
   return Array.isArray(data) && data.length > 0;
 }
 

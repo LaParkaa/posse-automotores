@@ -1,4 +1,4 @@
-import { createAdminSupabaseClient } from "../supabase";
+import { createBotSupabaseClient } from "../supabase";
 import { enviarAccion, enviarMensajeInstagram, enviarTarjetas, obtenerPerfil } from "../instagram/graph";
 import { obtenerCatalogo } from "./catalogo";
 import { esMidPropio, guardarSalida, marcarNoEntendido, reclamarMensaje } from "./conversations";
@@ -20,7 +20,7 @@ import {
  * no hay estado entre invocaciones, y el cliente de Supabase es barato de crear.
  */
 export function crearDeps(): DepsBot {
-  const db = createAdminSupabaseClient();
+  const db = createBotSupabaseClient();
 
   return {
     reclamarMensaje: (senderId, mid, contenido) => reclamarMensaje(db, senderId, mid, contenido),

@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventoEntrante } from "../instagram/payload";
 import { CATALOGO } from "./__fixtures__/catalogo";
 import { violacionesDeTono } from "./__fixtures__/tono";
+import { ErrorEnvioParcial } from "../instagram/graph";
 import { type DepsBot, MENSAJE_ERROR_TECNICO, MENSAJE_LEAD_FALLIDO, procesarEventos } from "./handler";
 import { conversar, type ResultadoMotor } from "./motor";
 import { NEGOCIO } from "./negocio";
 import { sesionNueva } from "./sesion";
+import { tarjetaContacto } from "./respuestas";
 import type { Tarjeta } from "./types";
 
 // El motor ya tiene sus propios tests: aca se controla lo que devuelve para probar solo el flujo del handler.
@@ -108,10 +110,9 @@ describe("procesarEventos: mensajes", () => {
     expect(deps.enviarTexto).toHaveBeenCalledWith("111", "Mirá lo que tenemos");
     expect(deps.enviarTarjetas).toHaveBeenCalledWith("111", [TARJETA]);
     expect(deps.guardarSesion).toHaveBeenCalledWith("111", SESION);
-    expect(deps.guardarSalida).toHaveBeenCalledWith("111", [
-      { texto: "Mirá lo que tenemos", mid: "mid.out.1" },
-      { texto: "Peugeot 206 1.6 · $9.500.000", mid: "mid.out.2" },
-    ]);
+    // Cada envio se registra apenas sale (ver "ids propios"), no todos juntos al final.
+    expect(deps.guardarSalida).toHaveBeenNthCalledWith(1, "111", [{ texto: "Mirá lo que tenemos", mid: "mid.out.1" }]);
+    expect(deps.guardarSalida).toHaveBeenNthCalledWith(2, "111", [{ texto: "Peugeot 206 1.6 · $9.500.000", mid: "mid.out.2" }]);
   });
 
   it("un adjunto sin texto se reclama como [adjunto]", async () => {
@@ -510,6 +511,37 @@ describe("procesarEventos: ecos", () => {
     expect(console.error).toHaveBeenCalled();
   });
 
+  it("el primer chequeo dice 'no es nuestro' y el segundo 'si': no pausa (el mid se registro tarde)", async () => {
+    const esMidPropio = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const deps = crearDeps({ esMidPropio });
+
+    await procesarEventos([eco], deps);
+
+    expect(esMidPropio).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(deps.esperar).mock.calls.map((c) => c[0])).toEqual([3000, 4000]);
+    expect(deps.pausar).not.toHaveBeenCalled();
+  });
+
+  it("dos chequeos que dicen 'no es nuestro': pausa y deja una linea sin texto del cliente", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const deps = crearDeps({ esMidPropio: vi.fn(async () => false) });
+
+    await procesarEventos([eco], deps);
+
+    expect(deps.esMidPropio).toHaveBeenCalledTimes(2);
+    expect(deps.pausar).toHaveBeenCalledWith("111", new Date(AHORA.getTime() + 6 * 60 * 60 * 1000));
+    expect(info).toHaveBeenCalledWith("[bot] Pausa por mensaje humano", { chat: "111…", mid: "mid.eco" });
+  });
+
+  it("si el segundo chequeo lanza, no pausa y no lanza", async () => {
+    const esMidPropio = vi.fn().mockResolvedValueOnce(false).mockRejectedValueOnce(new Error("db caida"));
+    const deps = crearDeps({ esMidPropio });
+
+    await expect(procesarEventos([eco], deps)).resolves.toBeUndefined();
+
+    expect(deps.pausar).not.toHaveBeenCalled();
+  });
+
   it("si pausar falla, no lanza", async () => {
     const deps = crearDeps({
       esMidPropio: vi.fn(async () => false),
@@ -525,6 +557,191 @@ describe("procesarEventos: ecos", () => {
     await procesarEventos([eco], deps);
 
     expect(deps.enviarTexto).not.toHaveBeenCalled();
+  });
+});
+
+describe("procesarEventos: ids propios, tiempos y datos del lead", () => {
+  beforeEach(() => {
+    vi.mocked(conversar).mockReset();
+    vi.mocked(conversar).mockReturnValue(resultado());
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  const tres = resultado({
+    mensajes: [
+      { tipo: "texto", texto: "Hola Juan" },
+      { tipo: "texto", texto: "Tenemos varios" },
+      { tipo: "tarjetas", tarjetas: [TARJETA], alternativaTexto: "alt" },
+    ],
+  });
+
+  it("registra los ids de cada envio ANTES del siguiente (si no, su eco se tomaria por una persona)", async () => {
+    const log: string[] = [];
+    let n = 0;
+    const deps = crearDeps({
+      enviarTexto: vi.fn(async (_s: string, t: string) => { log.push(`texto:${t}`); return [`mid.${++n}`]; }),
+      enviarTarjetas: vi.fn(async () => { log.push("tarjetas"); return [`mid.${++n}`]; }),
+      guardarSalida: vi.fn(async (_s: string, partes: Array<{ texto: string; mid: string | null }>) => { log.push(`guardar:${partes.map((p) => p.mid).join(",")}`); }),
+      escribiendo: vi.fn(async () => { log.push("escribiendo"); }),
+    });
+    vi.mocked(conversar).mockReturnValue(tres);
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(log.filter((l) => l !== "escribiendo")).toEqual([
+      "texto:Hola Juan", "guardar:mid.1", "texto:Tenemos varios", "guardar:mid.2", "tarjetas", "guardar:mid.3",
+    ]);
+    // Entre el guardado de uno y el envio del siguiente va el "escribiendo".
+    expect(log.slice(log.indexOf("guardar:mid.1") + 1, log.indexOf("texto:Tenemos varios"))).toEqual(["escribiendo"]);
+  });
+
+  it("el mensaje de error tecnico se registra apenas sale", async () => {
+    const log: string[] = [];
+    const deps = crearDeps({
+      catalogo: vi.fn(async () => null),
+      enviarTexto: vi.fn(async () => { log.push("texto"); return ["mid.t"]; }),
+      guardarSalida: vi.fn(async () => { log.push("guardar"); }),
+    });
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(log).toEqual(["texto", "guardar"]);
+  });
+
+  it("texto largo enviado a medias: registra los ids ya entregados y luego manda el mensaje tecnico", async () => {
+    const orden: string[] = [];
+    let primera = true;
+    const deps = crearDeps({
+      enviarTexto: vi.fn(async (_s: string, t: string) => {
+        if (primera) {
+          primera = false;
+          throw new ErrorEnvioParcial("Graph API 400: x", ["mid.parte1"]);
+        }
+        orden.push(`texto:${t === MENSAJE_ERROR_TECNICO ? "tecnico" : t}`);
+        return ["mid.tec"];
+      }),
+      guardarSalida: vi.fn(async (_s: string, partes: Array<{ texto: string; mid: string | null }>) => { orden.push(`guardar:${partes.map((p) => p.mid).join(",")}`); }),
+    });
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(orden).toEqual(["guardar:mid.parte1", "texto:tecnico", "guardar:mid.tec"]);
+  });
+
+  it("si el propio mensaje tecnico sale a medias, tambien registra los ids parciales", async () => {
+    const deps = crearDeps({
+      catalogo: vi.fn(async () => null),
+      enviarTexto: vi.fn(async () => { throw Object.assign(new Error("parcial"), { ids: ["mid.p1"] }); }),
+    });
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(deps.guardarSalida).toHaveBeenCalledWith("111", [{ texto: MENSAJE_ERROR_TECNICO, mid: "mid.p1" }]);
+  });
+
+  it("un 'escribiendo' que nunca responde no demora el envio mas alla de la demora", async () => {
+    const deps = crearDeps({ escribiendo: vi.fn(() => new Promise<void>(() => {})) });
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(deps.enviarTexto).toHaveBeenCalledTimes(1);
+  });
+
+  it("'escribiendo' y la demora corren en paralelo", async () => {
+    const orden: string[] = [];
+    const deps = crearDeps({
+      escribiendo: vi.fn(async () => { orden.push("escribiendo:inicio"); await Promise.resolve(); orden.push("escribiendo:fin"); }),
+      esperar: vi.fn(async () => { orden.push("esperar:inicio"); await Promise.resolve(); orden.push("esperar:fin"); }),
+    });
+
+    await procesarEventos([mensaje()], deps);
+
+    // La demora arranca antes de que termine el "escribiendo".
+    expect(orden.indexOf("esperar:inicio")).toBeLessThan(orden.indexOf("escribiendo:fin"));
+  });
+
+  it("'visto' no frena la lectura del catalogo ni al motor, pero la respuesta espera hasta 1500 ms por el", async () => {
+    vi.useFakeTimers();
+    const deps = crearDeps({ marcarVisto: vi.fn(() => new Promise<void>(() => {})) });
+
+    const turno = procesarEventos([mensaje()], deps);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(conversar).toHaveBeenCalled();
+    expect(deps.enviarTexto).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1500);
+    await turno;
+    expect(deps.enviarTexto).toHaveBeenCalledTimes(1);
+  });
+
+  it("pasados 12 s del turno se omiten 'escribiendo' y demoras, pero los mensajes se mandan igual", async () => {
+    let ms = 0;
+    const deps = crearDeps({
+      ahora: () => new Date(AHORA.getTime() + ms),
+      enviarTexto: vi.fn(async () => { ms += 13_000; return ["mid.x"]; }),
+    });
+    vi.mocked(conversar).mockReturnValue(tres);
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(deps.enviarTexto).toHaveBeenCalledTimes(2);
+    expect(deps.enviarTarjetas).toHaveBeenCalledTimes(1);
+    expect(deps.escribiendo).toHaveBeenCalledTimes(1); // solo antes del primero
+    expect(deps.esperar).toHaveBeenCalledTimes(1);
+  });
+
+  it("lead: agrega el @usuario del perfil al mensaje para encontrar a la persona en Instagram", async () => {
+    const lead = { nombre: "Juan", telefono: "3537 123456", mensaje: "Quiere verlo el sábado" };
+    const deps = crearDeps({
+      cargarChat: vi.fn(async () => ({ sesion: SESION, pausaHasta: null, perfil: { nombre: "Juan", usuario: "juan_p" } })),
+    });
+    vi.mocked(conversar).mockReturnValue(resultado({ lead }));
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(deps.guardarLead).toHaveBeenCalledWith("111", { ...lead, mensaje: "Quiere verlo el sábado (@juan_p)" });
+  });
+
+  it("lead sin mensaje: queda solo el @usuario; con perfil recien obtenido tambien", async () => {
+    const deps = crearDeps({
+      cargarChat: vi.fn(async () => ({ sesion: SESION, pausaHasta: null, perfil: null })),
+      obtenerPerfil: vi.fn(async () => ({ usuario: "maria_p" })),
+    });
+    vi.mocked(conversar).mockReturnValue(resultado({ lead: { nombre: "Maria", telefono: "3537 000000" } }));
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(deps.guardarLead).toHaveBeenCalledWith("111", { nombre: "Maria", telefono: "3537 000000", mensaje: "@maria_p" });
+  });
+
+  it("lead fallido: ademas del texto manda la tarjeta con el boton de Nati", async () => {
+    const deps = crearDeps({ guardarLead: vi.fn(async () => { throw new Error("db caida"); }) });
+    vi.mocked(conversar).mockReturnValue(resultado({ lead: { nombre: "Juan", telefono: "3537 123456" } }));
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(enviado(deps)).toEqual([MENSAJE_LEAD_FALLIDO]);
+    expect(deps.enviarTarjetas).toHaveBeenCalledWith("111", [tarjetaContacto(null, { negocio: NEGOCIO, siteUrl: "https://sitio.example" })]);
+  });
+
+  it("lead fallido con la tarjeta rechazada: cae al texto con el link de WhatsApp", async () => {
+    const deps = crearDeps({
+      guardarLead: vi.fn(async () => { throw new Error("db caida"); }),
+      enviarTarjetas: vi.fn(async () => { throw new Error("rechazada"); }),
+    });
+    vi.mocked(conversar).mockReturnValue(resultado({ lead: { nombre: "Juan", telefono: "3537 123456" } }));
+
+    await procesarEventos([mensaje()], deps);
+
+    const textos = enviado(deps);
+    expect(textos).toHaveLength(2);
+    expect(textos[0]).toBe(MENSAJE_LEAD_FALLIDO);
+    expect(textos[1]).toContain("https://wa.me/");
+    expect(violacionesDeTono(textos[1])).toEqual([]);
   });
 });
 
