@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { verificarFirma } from "./signature";
+import { verificarFirma, verificarFirmaConAlgunSecret } from "./signature";
 
 const SECRET = "app-secret-de-prueba";
 
@@ -38,5 +38,38 @@ describe("verificarFirma", () => {
   it("rechaza hex invalido o de otra longitud sin lanzar", () => {
     expect(verificarFirma(body, "sha256=zz", SECRET)).toBe(false);
     expect(verificarFirma(body, "sha256=abcd", SECRET)).toBe(false);
+  });
+});
+
+describe("verificarFirmaConAlgunSecret", () => {
+  const body = '{"object":"instagram","entry":[]}';
+
+  it("acepta una firma hecha con el primer secret", () => {
+    expect(verificarFirmaConAlgunSecret(body, firmar(body, "uno"), "uno,dos")).toBe(true);
+  });
+
+  it("acepta una firma hecha con el segundo secret", () => {
+    expect(verificarFirmaConAlgunSecret(body, firmar(body, "dos"), "uno,dos")).toBe(true);
+  });
+
+  it("rechaza si no coincide con ninguno", () => {
+    expect(verificarFirmaConAlgunSecret(body, firmar(body, "tres"), "uno,dos")).toBe(false);
+  });
+
+  it("tolera espacios alrededor de la coma y elementos vacios", () => {
+    expect(verificarFirmaConAlgunSecret(body, firmar(body, "dos"), " uno , dos ,, ")).toBe(true);
+  });
+
+  it("con un solo secret se comporta como verificarFirma", () => {
+    expect(verificarFirmaConAlgunSecret(body, firmar(body), SECRET)).toBe(true);
+  });
+
+  it("una lista vacia (o solo comas y espacios) nunca valida", () => {
+    expect(verificarFirmaConAlgunSecret(body, firmar(body, ""), "")).toBe(false);
+    expect(verificarFirmaConAlgunSecret(body, firmar(body, ""), " , ,")).toBe(false);
+  });
+
+  it("rechaza si falta el header", () => {
+    expect(verificarFirmaConAlgunSecret(body, null, "uno,dos")).toBe(false);
   });
 });
