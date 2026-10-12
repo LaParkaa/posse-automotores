@@ -352,3 +352,79 @@ describe("obtenerPerfil", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("host configurable (API setup with Instagram Login)", () => {
+  const fetchMock = vi.fn();
+  const BASE_IG = "https://graph.instagram.com/v21.0/";
+  const tarjetaMinima = { titulo: "t", subtitulo: "s", imagenUrl: null, botones: [{ titulo: "b", url: "https://x.example" }] };
+
+  beforeEach(() => {
+    vi.stubEnv("PAGE_ACCESS_TOKEN", "token-de-prueba");
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ message_id: "m1", name: "Ana" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("con IG_GRAPH_BASE, texto, tarjetas y acciones van a /me/messages de ese host (sin barra final doble)", async () => {
+    vi.stubEnv("IG_GRAPH_BASE", BASE_IG);
+
+    await enviarMensajeInstagram("111", "Hola");
+    await enviarTarjetas("111", [tarjetaMinima]);
+    await enviarAccion("111", "typing_on");
+
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
+      "https://graph.instagram.com/v21.0/me/messages",
+      "https://graph.instagram.com/v21.0/me/messages",
+      "https://graph.instagram.com/v21.0/me/messages",
+    ]);
+  });
+
+  it("con IG_ID tambien, el endpoint usa ese id en lugar de me", async () => {
+    vi.stubEnv("IG_GRAPH_BASE", BASE_IG);
+    vi.stubEnv("IG_ID", "1784140000");
+
+    await enviarMensajeInstagram("111", "Hola");
+    await enviarTarjetas("111", [tarjetaMinima]);
+    await enviarAccion("111", "mark_seen");
+
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
+      "https://graph.instagram.com/v21.0/1784140000/messages",
+      "https://graph.instagram.com/v21.0/1784140000/messages",
+      "https://graph.instagram.com/v21.0/1784140000/messages",
+    ]);
+  });
+
+  it("ignora espacios y vacios: una base en blanco vuelve al default", async () => {
+    vi.stubEnv("IG_GRAPH_BASE", "   ");
+    vi.stubEnv("IG_ID", "  ");
+
+    await enviarMensajeInstagram("111", "Hola");
+
+    expect(fetchMock.mock.calls[0][0]).toBe("https://graph.facebook.com/v21.0/me/messages");
+  });
+
+  it("obtenerPerfil usa la base configurada", async () => {
+    vi.stubEnv("IG_GRAPH_BASE", BASE_IG);
+
+    await obtenerPerfil("111");
+
+    expect(fetchMock.mock.calls[0][0]).toBe("https://graph.instagram.com/v21.0/111?fields=name,username");
+  });
+
+  it("el token sigue yendo solo en el header, nunca en la URL", async () => {
+    vi.stubEnv("IG_GRAPH_BASE", BASE_IG);
+    vi.stubEnv("IG_ID", "1784140000");
+
+    await enviarMensajeInstagram("111", "Hola");
+    await obtenerPerfil("111");
+
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(url).not.toContain("token-de-prueba");
+      expect(init.headers.Authorization).toBe("Bearer token-de-prueba");
+    }
+  });
+});

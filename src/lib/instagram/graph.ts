@@ -1,6 +1,24 @@
 import type { Perfil, Tarjeta } from "../bot/types";
 
-const GRAPH_URL = "https://graph.facebook.com/v21.0/me/messages";
+const GRAPH_BASE_POR_DEFECTO = "https://graph.facebook.com/v21.0";
+
+// Se leen del entorno en cada llamada (no al cargar el modulo) para que un cambio de configuracion
+// o un test con vi.stubEnv se note sin reiniciar nada.
+/**
+ * Con "API setup with Instagram Login" Meta usa otro host (graph.instagram.com); con Facebook Login
+ * sigue siendo graph.facebook.com. Sin barras finales para que al concatenar no queden dobles.
+ */
+function graphBase(): string {
+  const base = (process.env.IG_GRAPH_BASE ?? "").trim().replace(/\/+$/, "");
+  return base || GRAPH_BASE_POR_DEFECTO;
+}
+
+/** Con Instagram Login los mensajes salen por el id de la cuenta; "me" es el comportamiento de siempre. */
+function urlMensajes(): string {
+  const id = (process.env.IG_ID ?? "").trim();
+  return `${graphBase()}/${id || "me"}/messages`;
+}
+
 // Corto a proposito: el envio comparte con el resto del turno (base de datos, demoras de
 // "escribiendo...") la ventana de ~20 s de Meta, y si se pasa, el mensaje ya reclamado no se reintenta.
 const TIMEOUT_MS = 5000;
@@ -74,7 +92,7 @@ async function postMensajes(cuerpo: unknown, timeoutMs = TIMEOUT_MS): Promise<st
   const token = process.env.PAGE_ACCESS_TOKEN;
   if (!token) throw new Error("Falta la variable de entorno PAGE_ACCESS_TOKEN");
 
-  const respuesta = await fetch(GRAPH_URL, {
+  const respuesta = await fetch(urlMensajes(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -153,7 +171,7 @@ export async function obtenerPerfil(igsid: string): Promise<Perfil | null> {
 
   try {
     const respuesta = await fetch(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(igsid)}?fields=name,username`,
+      `${graphBase()}/${encodeURIComponent(igsid)}?fields=name,username`,
       { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(3000) },
     );
     if (!respuesta.ok) return null;

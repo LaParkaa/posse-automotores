@@ -30,8 +30,8 @@ const payload = {
   ],
 };
 
-function firmar(cuerpo: string) {
-  return `sha256=${createHmac("sha256", APP_SECRET).update(cuerpo, "utf8").digest("hex")}`;
+function firmar(cuerpo: string, secret = APP_SECRET) {
+  return `sha256=${createHmac("sha256", secret).update(cuerpo, "utf8").digest("hex")}`;
 }
 
 function postFirmado(cuerpo: string, firma = firmar(cuerpo)) {
@@ -112,6 +112,35 @@ describe("POST /api/instagram/webhook", () => {
     const respuesta = await POST(postFirmado(JSON.stringify(payload)));
 
     expect(respuesta.status).toBe(500);
+    expect(procesarEventos).not.toHaveBeenCalled();
+  });
+
+  it("responde 500 si IG_APP_SECRET son solo comas y espacios", async () => {
+    vi.stubEnv("IG_APP_SECRET", " , ,");
+
+    const respuesta = await POST(postFirmado(JSON.stringify(payload)));
+
+    expect(respuesta.status).toBe(500);
+    expect(procesarEventos).not.toHaveBeenCalled();
+  });
+
+  it("con varios secrets en IG_APP_SECRET acepta un cuerpo firmado con el segundo", async () => {
+    vi.stubEnv("IG_APP_SECRET", "secret-de-meta,secret-de-instagram");
+    const cuerpo = JSON.stringify(payload);
+
+    const respuesta = await POST(postFirmado(cuerpo, firmar(cuerpo, "secret-de-instagram")));
+
+    expect(respuesta.status).toBe(200);
+    expect(procesarEventos).toHaveBeenCalledTimes(1);
+  });
+
+  it("con varios secrets rechaza una firma hecha con un secret ajeno", async () => {
+    vi.stubEnv("IG_APP_SECRET", "secret-de-meta,secret-de-instagram");
+    const cuerpo = JSON.stringify(payload);
+
+    const respuesta = await POST(postFirmado(cuerpo, firmar(cuerpo, "secret-ajeno")));
+
+    expect(respuesta.status).toBe(401);
     expect(procesarEventos).not.toHaveBeenCalled();
   });
 

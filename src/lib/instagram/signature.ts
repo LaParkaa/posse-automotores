@@ -15,3 +15,15 @@ export function verificarFirma(rawBody: string, header: string | null, appSecret
   // timingSafeEqual lanza si los largos difieren; un hex invalido da un buffer mas corto.
   return recibida.length === esperada.length && timingSafeEqual(recibida, esperada);
 }
+
+/**
+ * Con Instagram Login no es seguro si Meta firma con el app secret de Meta o con el de Instagram,
+ * asi que IG_APP_SECRET admite varios separados por comas y basta con que coincida uno.
+ */
+export function verificarFirmaConAlgunSecret(rawBody: string, header: string | null, secretos: string): boolean {
+  return secretos
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s !== "")
+    .some((s) => verificarFirma(rawBody, header, s));
+}

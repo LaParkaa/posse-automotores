@@ -1,7 +1,7 @@
 import { crearDeps } from "@/lib/bot/deps";
 import { procesarEventos } from "@/lib/bot/handler";
 import { extraerEventos } from "@/lib/instagram/payload";
-import { verificarFirma } from "@/lib/instagram/signature";
+import { verificarFirmaConAlgunSecret } from "@/lib/instagram/signature";
 
 export const runtime = "nodejs"; // usa node:crypto
 export const dynamic = "force-dynamic";
@@ -29,15 +29,16 @@ export async function GET(request: Request) {
 
 /** Recibe los mensajes de Instagram. Con firma valida siempre devuelve 200 para que Meta no reintente. */
 export async function POST(request: Request) {
+  // Puede traer varios secrets separados por comas; una lista sin ninguno cuenta como no configurada.
   const appSecret = process.env.IG_APP_SECRET;
-  if (!appSecret) {
+  if (!appSecret || appSecret.split(",").every((s) => s.trim() === "")) {
     console.error("[instagram] Falta la variable de entorno IG_APP_SECRET");
     return new Response("Server misconfigured", { status: 500 });
   }
 
   // La firma se calcula sobre el texto exacto: hay que leerlo crudo antes de parsear.
   const cuerpo = await request.text();
-  if (!verificarFirma(cuerpo, request.headers.get("x-hub-signature-256"), appSecret)) {
+  if (!verificarFirmaConAlgunSecret(cuerpo, request.headers.get("x-hub-signature-256"), appSecret)) {
     return new Response("Invalid signature", { status: 401 });
   }
 
