@@ -1,5 +1,7 @@
 # Bot de Instagram (migración desde WhatsApp) — Diseño
 
+> **Reemplazado en lo referido a la IA por** docs/superpowers/specs/2026-10-11-bot-reglas-instagram-design.md (el bot ahora funciona por reglas, sin modelo de IA).
+
 Fecha: 2026-10-06
 
 ## Objetivo
