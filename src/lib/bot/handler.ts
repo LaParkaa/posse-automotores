@@ -1,6 +1,7 @@
 import type { EventoEntrante } from "../instagram/payload";
 import { conversar } from "./motor";
 import { type Negocio, NEGOCIO } from "./negocio";
+import { normalizar } from "./nlu/normalizar";
 import { tarjetaContacto } from "./respuestas";
 import { type Sesion, sesionNueva } from "./sesion";
 import { contactoEnTexto } from "./textos";
@@ -57,7 +58,7 @@ type Parte = { texto: string; mid: string | null };
 export async function procesarEventos(eventos: EventoEntrante[], deps: DepsBot): Promise<void> {
   for (const evento of eventos) {
     try {
-      if (evento.tipo === "eco") await procesarEco(evento.destinatarioId, evento.mid, deps);
+      if (evento.tipo === "eco") await procesarEco(evento.destinatarioId, evento.mid, evento.texto, deps);
       else await procesarMensaje(evento, deps);
     } catch (err) {
       console.error(`[bot] Error procesando el evento ${evento.mid}:`, err);
@@ -67,7 +68,23 @@ export async function procesarEventos(eventos: EventoEntrante[], deps: DepsBot):
   }
 }
 
-async function procesarEco(destinatarioId: string, mid: string, deps: DepsBot): Promise<void> {
+/** True si el texto es una respuesta automatica de Instagram (ausencia, respuesta instantanea) y no una persona. */
+function esMensajeAutomatico(texto: string | null, negocio: Negocio): boolean {
+  if (texto === null) return false;
+  const normalizado = normalizar(texto);
+  return negocio.mensajesAutomaticos.some((frase) => {
+    const buscada = normalizar(frase);
+    return buscada !== "" && normalizado.includes(buscada);
+  });
+}
+
+async function procesarEco(destinatarioId: string, mid: string, texto: string | null, deps: DepsBot): Promise<void> {
+  // La respuesta automatica de Instagram sale desde la cuenta igual que una persona: sin esto pausaria el chat.
+  if (esMensajeAutomatico(texto, deps.negocio)) {
+    console.info("[bot] Eco de respuesta automatica de Instagram: no se pausa", { mid });
+    return;
+  }
+
   // Meta puede entregar el eco antes de que el bot haya guardado los mid de lo que acaba de enviar:
   // sin esta espera se confundiria un mensaje propio con una persona y se pausaria el bot de mas.
   await deps.esperar(ESPERA_ECO_MS);

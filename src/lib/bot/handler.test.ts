@@ -75,7 +75,7 @@ const mensaje = (parcial: Partial<Extract<EventoEntrante, { tipo: "mensaje" }>> 
   ...parcial,
 });
 
-const eco: EventoEntrante = { tipo: "eco", destinatarioId: "111", mid: "mid.eco" };
+const eco: EventoEntrante = { tipo: "eco", destinatarioId: "111", mid: "mid.eco", texto: "Hola, soy Nati" };
 
 const enviado = (deps: DepsBot) => vi.mocked(deps.enviarTexto).mock.calls.map((c) => c[1]);
 
@@ -488,6 +488,37 @@ describe("procesarEventos: ecos", () => {
 
     expect(deps.esperar).toHaveBeenCalledWith(3000);
     expect(deps.pausar).toHaveBeenCalledWith("111", new Date(AHORA.getTime() + 6 * 60 * 60 * 1000));
+  });
+
+  it("eco de la respuesta automatica de Instagram: no pausa aunque el mid no sea propio", async () => {
+    const deps = crearDeps({ esMidPropio: vi.fn(async () => false) });
+    const automatico: EventoEntrante = {
+      tipo: "eco",
+      destinatarioId: "111",
+      mid: "mid.auto",
+      texto: "¡Hola! Posse Automotores recibio tu mensaje. En este momentos los horarios de atención no se encuentran disponibles.",
+    };
+
+    await procesarEventos([automatico], deps);
+
+    expect(deps.pausar).not.toHaveBeenCalled();
+    expect(deps.esMidPropio).not.toHaveBeenCalled();
+  });
+
+  it("el texto automatico se reconoce sin importar tildes ni mayusculas", async () => {
+    const deps = crearDeps({ esMidPropio: vi.fn(async () => false) });
+
+    await procesarEventos([{ ...eco, texto: "RECIBIÓ TU MENSAJE, gracias" } as EventoEntrante], deps);
+
+    expect(deps.pausar).not.toHaveBeenCalled();
+  });
+
+  it("un eco sin texto o con otro texto sigue siendo una persona", async () => {
+    const deps = crearDeps({ esMidPropio: vi.fn(async () => false) });
+
+    await procesarEventos([{ ...eco, texto: null } as EventoEntrante, { ...eco, texto: "Pasate por el local" } as EventoEntrante], deps);
+
+    expect(deps.pausar).toHaveBeenCalledTimes(2);
   });
 
   it("espera antes de consultar el mid (el eco puede llegar antes de que se registre)", async () => {

@@ -39,7 +39,9 @@ describe("extraerEventos", () => {
   it("conserva los ecos: el destinatario es el cliente", () => {
     const body = webhook([evento({ mid: "m5", text: "Hola, te cuento...", is_echo: true }, "999", "111")]);
 
-    expect(extraerEventos(body)).toEqual([{ tipo: "eco", destinatarioId: "111", mid: "m5" }]);
+    expect(extraerEventos(body)).toEqual([
+      { tipo: "eco", destinatarioId: "111", mid: "m5", texto: "Hola, te cuento..." },
+    ]);
   });
 
   it("ignora mensajes borrados, eventos sin mensaje y objetos que no son de Instagram", () => {

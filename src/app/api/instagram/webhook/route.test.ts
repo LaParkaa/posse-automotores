@@ -182,7 +182,7 @@ describe("POST /api/instagram/webhook", () => {
 
     expect(respuesta.status).toBe(200);
     expect(vi.mocked(procesarEventos).mock.calls[0][0]).toEqual([
-      { tipo: "eco", destinatarioId: "1234567890", mid: "mid.eco" },
+      { tipo: "eco", destinatarioId: "1234567890", mid: "mid.eco", texto: "Hola, soy Nati" },
     ]);
   });
 

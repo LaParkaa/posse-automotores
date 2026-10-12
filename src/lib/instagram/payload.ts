@@ -10,8 +10,9 @@ export type EventoEntrante =
       /** Tipos de adjunto tal como los manda Meta ("audio", "image", "ig_reel", "story_mention"...). */
       adjuntos: string[];
     }
-  // Mensaje enviado DESDE la cuenta (por el bot o por una persona). Sirve para pausar el bot.
-  | { tipo: "eco"; destinatarioId: string; mid: string };
+  // Mensaje enviado DESDE la cuenta (por el bot, por una persona o por una respuesta automatica de
+  // Instagram). Sirve para pausar el bot; el texto permite reconocer las respuestas automaticas.
+  | { tipo: "eco"; destinatarioId: string; mid: string; texto: string | null };
 
 type Objeto = Record<string, unknown>;
 
@@ -51,7 +52,14 @@ export function extraerEventos(body: unknown): EventoEntrante[] {
 
       if (esEco === true) {
         const destinatario = esObjeto(evento.recipient) ? evento.recipient.id : undefined;
-        if (typeof destinatario === "string") eventos.push({ tipo: "eco", destinatarioId: destinatario, mid });
+        if (typeof destinatario === "string") {
+          eventos.push({
+            tipo: "eco",
+            destinatarioId: destinatario,
+            mid,
+            texto: typeof text === "string" && text.trim() !== "" ? text.trim() : null,
+          });
+        }
         continue;
       }
 
