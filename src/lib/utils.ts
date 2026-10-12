@@ -23,22 +23,20 @@ export function buildWhatsAppUrl(
 /**
  * Link de WhatsApp para el cierre desde Instagram. El mensaje dice de donde viene y por que
  * auto, asi quien atiende el WhatsApp no tiene que preguntar.
+ * Sin emojis a proposito: el navegador interno de Instagram los rompe al pasar por wa.me y en el
+ * chat aparecian como "?".
  */
 export function buildWhatsAppUrlInstagram(
   vehiculo: Pick<Vehiculo, "nombre" | "tipo"> | null,
 ): string {
   const base = `https://wa.me/${WHATSAPP_LOCAL}?text=`;
   if (!vehiculo) {
-    return base + encodeURIComponent("Hola, te escribo desde Instagram 📲. Quiero consultar por un vehículo.");
+    return base + encodeURIComponent("Hola, te escribo desde Instagram. Quiero consultar por un vehículo.");
   }
-  const esMoto = vehiculo.tipo === "Moto";
-  const articulo = esMoto ? "la" : "el";
-  const emoji = esMoto ? "🏍️" : "🚗";
+  const articulo = vehiculo.tipo === "Moto" ? "la" : "el";
   return (
     base +
-    encodeURIComponent(
-      `Hola, te escribo desde Instagram 📲. Me interesa ${articulo} ${vehiculo.nombre} ${emoji}. ¿Sigue disponible?`,
-    )
+    encodeURIComponent(`Hola, te escribo desde Instagram. Me interesa ${articulo} ${vehiculo.nombre}. ¿Sigue disponible?`)
   );
 }
 

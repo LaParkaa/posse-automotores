@@ -50,15 +50,15 @@ describe("buildWhatsAppUrlInstagram", () => {
 
     expect(url.startsWith(`https://wa.me/${WHATSAPP_LOCAL}?text=`)).toBe(true);
     expect(decodeURIComponent(url.split("?text=")[1])).toBe(
-      "Hola, te escribo desde Instagram 📲. Me interesa el Peugeot 206 1.6 🚗. ¿Sigue disponible?",
+      "Hola, te escribo desde Instagram. Me interesa el Peugeot 206 1.6. ¿Sigue disponible?",
     );
   });
 
-  it("usa 'la' y la moto para las motos", () => {
+  it("usa 'la' para las motos", () => {
     const url = buildWhatsAppUrlInstagram({ nombre: "Honda XR 150", tipo: "Moto" });
 
     expect(decodeURIComponent(url.split("?text=")[1])).toBe(
-      "Hola, te escribo desde Instagram 📲. Me interesa la Honda XR 150 🏍️. ¿Sigue disponible?",
+      "Hola, te escribo desde Instagram. Me interesa la Honda XR 150. ¿Sigue disponible?",
     );
   });
 
@@ -66,8 +66,17 @@ describe("buildWhatsAppUrlInstagram", () => {
     const url = buildWhatsAppUrlInstagram(null);
 
     expect(decodeURIComponent(url.split("?text=")[1])).toBe(
-      "Hola, te escribo desde Instagram 📲. Quiero consultar por un vehículo.",
+      "Hola, te escribo desde Instagram. Quiero consultar por un vehículo.",
     );
+  });
+
+  it("el mensaje no lleva emojis (Instagram los rompe en el link)", () => {
+    const vehiculos = [{ nombre: "Peugeot 206", tipo: "Hatchback" }, { nombre: "Honda XR 150", tipo: "Moto" }, null] as const;
+
+    for (const v of vehiculos) {
+      const texto = decodeURIComponent(buildWhatsAppUrlInstagram(v).split("?text=")[1]);
+      expect(texto).not.toMatch(/\p{Extended_Pictographic}/u);
+    }
   });
 
   it("el numero compartido es el de Nati", () => {
