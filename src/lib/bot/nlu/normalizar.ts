@@ -30,7 +30,9 @@ export function normalizar(texto: string): string {
     .replaceAll(PUNTO_PROTEGIDO, ".")
     .replaceAll(COMA_PROTEGIDA, ",")
     // "holaaaa" → "hola"; se deja pasar una repeticion doble ("sii", "cooper") porque puede ser parte de la palabra.
-    .replace(/(\p{L})\1{2,}/gu, "$1");
+    .replace(/(\p{L})\1{2,}/gu, "$1")
+    // "holaa": ninguna palabra en español termina en "aa", asi que al final es un alargue.
+    .replace(/aa(?![\p{L}\p{N}])/gu, "a");
 
   return limpio.replace(/\s+/g, " ").trim();
 }

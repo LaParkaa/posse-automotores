@@ -6,6 +6,8 @@ describe("normalizar", () => {
     ["¡Hola! ¿Cómo estás?", "hola como estas"],
     ["AÑO 2015", "ano 2015"],
     ["holaaaa", "hola"],
+    ["Holaa", "hola"],
+    ["aaron", "aaron"],
     ["sii", "sii"],
     ["Peugeot 206 1.6", "peugeot 206 1.6"],
     ["$9.500.000", "9.500.000"],

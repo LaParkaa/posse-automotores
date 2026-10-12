@@ -5,6 +5,7 @@ describe("detectarIntenciones — la intencion principal (primera)", () => {
   it.each([
     ["hola", "saludo"],
     ["holaaa", "saludo"],
+    ["Holaa", "saludo"],
     ["ola buenas tardes", "saludo"],
     ["Hola !como estas??", "cortesia"],
     ["como andas", "cortesia"],
