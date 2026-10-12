@@ -1,6 +1,6 @@
 import { crearDeps } from "@/lib/bot/deps";
-import { procesarMensajes } from "@/lib/bot/handler";
-import { extraerMensajes } from "@/lib/instagram/payload";
+import { procesarEventos } from "@/lib/bot/handler";
+import { extraerEventos } from "@/lib/instagram/payload";
 import { verificarFirma } from "@/lib/instagram/signature";
 
 export const runtime = "nodejs"; // usa node:crypto
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await procesarMensajes(extraerMensajes(payload), crearDeps());
+    await procesarEventos(extraerEventos(payload), crearDeps());
   } catch (err) {
     // crearDeps() puede lanzar si falta la config de Supabase. Se loguea y se responde 200 igual.
     console.error("[instagram] Error inesperado en el webhook:", err);

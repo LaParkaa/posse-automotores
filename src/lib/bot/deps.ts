@@ -1,10 +1,19 @@
 import { createAdminSupabaseClient } from "../supabase";
-import { enviarMensajeInstagram } from "../instagram/graph";
-import { responderIA } from "./ai";
-import { guardarRespuesta, obtenerHistorial, reclamarMensaje } from "./conversations";
+import { enviarAccion, enviarMensajeInstagram, enviarTarjetas, obtenerPerfil } from "../instagram/graph";
+import { obtenerCatalogo } from "./catalogo";
+import { esMidPropio, guardarSalida, marcarNoEntendido, reclamarMensaje } from "./conversations";
 import type { DepsBot } from "./handler";
 import { guardarLeadInstagram } from "./leads";
-import { obtenerStockTexto } from "./stock";
+import { NEGOCIO } from "./negocio";
+import {
+  aprenderHistoria,
+  cargarChat,
+  guardarPerfil,
+  guardarSesion,
+  olvidarHistoria,
+  pausarChat,
+  vehiculoDeHistoria,
+} from "./sesiones";
 
 /**
  * Arma las dependencias reales del bot. Se llama una vez por request: en serverless
@@ -12,17 +21,34 @@ import { obtenerStockTexto } from "./stock";
  */
 export function crearDeps(): DepsBot {
   const db = createAdminSupabaseClient();
-  const siteUrl = process.env.SITE_URL ?? "";
 
   return {
     reclamarMensaje: (senderId, mid, contenido) => reclamarMensaje(db, senderId, mid, contenido),
-    obtenerHistorial: (senderId) => obtenerHistorial(db, senderId),
-    obtenerStockTexto: () => obtenerStockTexto(db, siteUrl),
-    responderIA,
+    cargarChat: (senderId) => cargarChat(db, senderId, new Date()),
+    guardarSesion: (senderId, sesion) => guardarSesion(db, senderId, sesion),
+    catalogo: () => obtenerCatalogo(db),
+    vehiculoDeHistoria: (storyId) => vehiculoDeHistoria(db, storyId),
+    aprenderHistoria: (storyId, vehiculoId) => aprenderHistoria(db, storyId, vehiculoId),
+    olvidarHistoria: (storyId) => olvidarHistoria(db, storyId),
+    obtenerPerfil,
+    guardarPerfil: (senderId, perfil) => guardarPerfil(db, senderId, perfil),
     guardarLead: (senderId, lead) => guardarLeadInstagram(db, senderId, lead),
-    guardarRespuesta: (senderId, texto) => guardarRespuesta(db, senderId, texto),
-    enviar: async (senderId, texto) => {
-      await enviarMensajeInstagram(senderId, texto);
+    // "Visto" y "escribiendo" son un detalle de trato: enviarAccion nunca lanza y su resultado no importa.
+    marcarVisto: async (senderId) => {
+      await enviarAccion(senderId, "mark_seen");
     },
+    escribiendo: async (senderId) => {
+      await enviarAccion(senderId, "typing_on");
+    },
+    enviarTexto: enviarMensajeInstagram,
+    enviarTarjetas,
+    guardarSalida: (senderId, partes) => guardarSalida(db, senderId, partes),
+    marcarNoEntendido: (mid) => marcarNoEntendido(db, mid),
+    esMidPropio: (mid) => esMidPropio(db, mid),
+    pausar: (senderId, hasta) => pausarChat(db, senderId, hasta),
+    esperar: (ms) => new Promise((resolver) => setTimeout(resolver, ms)),
+    ahora: () => new Date(),
+    siteUrl: process.env.SITE_URL ?? "",
+    negocio: NEGOCIO,
   };
 }

@@ -1,10 +1,10 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { crearDeps } from "@/lib/bot/deps";
-import { procesarMensajes } from "@/lib/bot/handler";
+import { procesarEventos } from "@/lib/bot/handler";
 import { GET, POST } from "./route";
 
-vi.mock("@/lib/bot/handler", () => ({ procesarMensajes: vi.fn(async () => {}) }));
+vi.mock("@/lib/bot/handler", () => ({ procesarEventos: vi.fn(async () => {}) }));
 const DEPS_CENTINELA = { centinela: true };
 vi.mock("@/lib/bot/deps", () => ({ crearDeps: vi.fn(() => DEPS_CENTINELA) }));
 
@@ -45,8 +45,8 @@ function postFirmado(cuerpo: string, firma = firmar(cuerpo)) {
 beforeEach(() => {
   vi.stubEnv("IG_VERIFY_TOKEN", VERIFY_TOKEN);
   vi.stubEnv("IG_APP_SECRET", APP_SECRET);
-  vi.mocked(procesarMensajes).mockClear();
-  vi.mocked(procesarMensajes).mockResolvedValue(undefined);
+  vi.mocked(procesarEventos).mockClear();
+  vi.mocked(procesarEventos).mockResolvedValue(undefined);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -95,7 +95,7 @@ describe("POST /api/instagram/webhook", () => {
     const respuesta = await POST(postFirmado(cuerpo, "sha256=deadbeef"));
 
     expect(respuesta.status).toBe(401);
-    expect(procesarMensajes).not.toHaveBeenCalled();
+    expect(procesarEventos).not.toHaveBeenCalled();
   });
 
   it("responde 401 si falta la firma", async () => {
@@ -112,25 +112,73 @@ describe("POST /api/instagram/webhook", () => {
     const respuesta = await POST(postFirmado(JSON.stringify(payload)));
 
     expect(respuesta.status).toBe(500);
-    expect(procesarMensajes).not.toHaveBeenCalled();
+    expect(procesarEventos).not.toHaveBeenCalled();
   });
 
   it("responde 400 si el cuerpo firmado no es JSON", async () => {
     const respuesta = await POST(postFirmado("esto no es json"));
 
     expect(respuesta.status).toBe(400);
-    expect(procesarMensajes).not.toHaveBeenCalled();
+    expect(procesarEventos).not.toHaveBeenCalled();
   });
 
-  it("extrae los mensajes y los procesa cuando la firma es valida", async () => {
+  it("extrae los eventos y los procesa cuando la firma es valida", async () => {
     const respuesta = await POST(postFirmado(JSON.stringify(payload)));
 
     expect(respuesta.status).toBe(200);
-    expect(procesarMensajes).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(procesarMensajes).mock.calls[0][0]).toEqual([
-      { senderId: "1234567890", mid: "mid.abc", texto: "Hola" },
+    expect(procesarEventos).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(procesarEventos).mock.calls[0][0]).toEqual([
+      { tipo: "mensaje", senderId: "1234567890", mid: "mid.abc", texto: "Hola", historiaId: null, adjuntos: [] },
     ]);
-    expect(vi.mocked(procesarMensajes).mock.calls[0][1]).toBe(DEPS_CENTINELA);
+    expect(vi.mocked(procesarEventos).mock.calls[0][1]).toBe(DEPS_CENTINELA);
+  });
+
+  it("un eco de la cuenta llega a procesarEventos como evento eco", async () => {
+    const conEco = {
+      object: "instagram",
+      entry: [
+        {
+          messaging: [
+            {
+              sender: { id: "1" },
+              recipient: { id: "1234567890" },
+              message: { mid: "mid.eco", text: "Hola, soy Nati", is_echo: true },
+            },
+          ],
+        },
+      ],
+    };
+
+    const respuesta = await POST(postFirmado(JSON.stringify(conEco)));
+
+    expect(respuesta.status).toBe(200);
+    expect(vi.mocked(procesarEventos).mock.calls[0][0]).toEqual([
+      { tipo: "eco", destinatarioId: "1234567890", mid: "mid.eco" },
+    ]);
+  });
+
+  it("una respuesta a una historia llega con su historiaId", async () => {
+    const aHistoria = {
+      object: "instagram",
+      entry: [
+        {
+          messaging: [
+            {
+              sender: { id: "1234567890" },
+              recipient: { id: "1" },
+              message: { mid: "mid.h", text: "Precio?", reply_to: { story: { id: "story.77" } } },
+            },
+          ],
+        },
+      ],
+    };
+
+    const respuesta = await POST(postFirmado(JSON.stringify(aHistoria)));
+
+    expect(respuesta.status).toBe(200);
+    expect(vi.mocked(procesarEventos).mock.calls[0][0]).toEqual([
+      { tipo: "mensaje", senderId: "1234567890", mid: "mid.h", texto: "Precio?", historiaId: "story.77", adjuntos: [] },
+    ]);
   });
 
   it("responde 200 y no procesa nada si no se pueden crear las dependencias (p. ej. sin Supabase)", async () => {
@@ -141,11 +189,11 @@ describe("POST /api/instagram/webhook", () => {
     const respuesta = await POST(postFirmado(JSON.stringify(payload)));
 
     expect(respuesta.status).toBe(200);
-    expect(procesarMensajes).not.toHaveBeenCalled();
+    expect(procesarEventos).not.toHaveBeenCalled();
   });
 
   it("responde 200 aunque el procesamiento falle (para que Meta no reintente en bucle)", async () => {
-    vi.mocked(procesarMensajes).mockRejectedValue(new Error("explotó todo"));
+    vi.mocked(procesarEventos).mockRejectedValue(new Error("explotó todo"));
 
     const respuesta = await POST(postFirmado(JSON.stringify(payload)));
 
@@ -158,6 +206,6 @@ describe("POST /api/instagram/webhook", () => {
     const respuesta = await POST(postFirmado(JSON.stringify(lectura)));
 
     expect(respuesta.status).toBe(200);
-    expect(vi.mocked(procesarMensajes).mock.calls[0][0]).toEqual([]);
+    expect(vi.mocked(procesarEventos).mock.calls[0][0]).toEqual([]);
   });
 });
