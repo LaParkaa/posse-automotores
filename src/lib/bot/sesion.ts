@@ -66,6 +66,9 @@ export function sesionVigente(sesion: Sesion, ahora: Date, horas = 24): boolean 
 const esTexto = (v: unknown): v is string => typeof v === "string";
 const textoONulo = (v: unknown): string | null => (esTexto(v) ? v : null);
 const listaDeTextos = (v: unknown): string[] => (Array.isArray(v) ? v.filter(esTexto) : []);
+// NaN, Infinity y negativos vienen de jsonb corrupto o editado a mano: no son un contador valido.
+const enteroNoNegativo = (v: unknown): number =>
+  typeof v === "number" && Number.isFinite(v) && Number.isInteger(v) && v >= 0 ? v : 0;
 
 /** Lee lo guardado en la base (jsonb) sin confiar en su forma: lo invalido se descarta. */
 export function normalizarSesion(crudo: unknown, ahora: Date): Sesion {
@@ -79,14 +82,17 @@ export function normalizarSesion(crudo: unknown, ahora: Date): Sesion {
       ? (c.filtros as Record<string, unknown>)
       : {};
 
+  const tipos = listaDeTextos(filtros.tipos);
+
   return {
     paso: PASOS.includes(c.paso as Paso) ? (c.paso as Paso) : base.paso,
     filtros: {
       ...(esTexto(filtros.marca) ? { marca: filtros.marca } : {}),
-      ...(Array.isArray(filtros.tipos) ? { tipos: listaDeTextos(filtros.tipos) } : {}),
+      // Una lista vacia no filtra nada: se omite la clave para no confundirla con "filtro activo".
+      ...(tipos.length > 0 ? { tipos } : {}),
       ...(esTexto(filtros.combustible) ? { combustible: filtros.combustible } : {}),
       ...(esTexto(filtros.transmision) ? { transmision: filtros.transmision } : {}),
-      ...(typeof filtros.anio === "number" ? { anio: filtros.anio } : {}),
+      ...(typeof filtros.anio === "number" && Number.isFinite(filtros.anio) ? { anio: filtros.anio } : {}),
     },
     vehiculoActualId: textoONulo(c.vehiculoActualId),
     historiaActualId: textoONulo(c.historiaActualId),
@@ -101,7 +107,7 @@ export function normalizarSesion(crudo: unknown, ahora: Date): Sesion {
     preguntaPendiente: textoONulo(c.preguntaPendiente),
     historiaPendienteId: textoONulo(c.historiaPendienteId),
     ofrecio: OFERTAS.includes(c.ofrecio as Oferta) ? (c.ofrecio as Oferta) : null,
-    fallos: typeof c.fallos === "number" ? c.fallos : 0,
+    fallos: enteroNoNegativo(c.fallos),
     saludado: c.saludado === true,
     ultimaActividad: esTexto(c.ultimaActividad) ? c.ultimaActividad : base.ultimaActividad,
   };
