@@ -123,7 +123,7 @@ export const contactoEnTexto = (secretaria: string, url: string) => `Escribile a
 
 /** Respuesta a "cuanto sale?" con el precio cargado: va en la primera linea. */
 export const conPrecio = (v: VehiculoCatalogo, precio: string) => [
-  `Sii, ${el(v)} está ${precio} 😉`,
+  `${El(v)} está ${precio} 😉`,
   `Dale, te cuento 😊 ${El(v)} está ${precio}`,
   `${El(v)} sale ${precio} 🚗`,
 ];
@@ -131,7 +131,7 @@ export const conPrecio = (v: VehiculoCatalogo, precio: string) => [
 /** Respuesta a "cuanto sale?" sin precio cargado (o "Consultá"): lo pasa la secretaria. */
 export const sinPrecio = (v: VehiculoCatalogo, secretaria: string) => [
   `El precio ${del(v)} te lo pasa ${secretaria} por WhatsApp 💬`,
-  `Sii, ${el(v)} está disponible 😊 El precio te lo pasa ${secretaria} por WhatsApp`,
+  `${El(v)} está disponible 😊 El precio te lo pasa ${secretaria} por WhatsApp`,
 ];
 
 /** Info o "tienen el X?": presenta el auto. */
@@ -208,8 +208,8 @@ export const listaVacia = [
 export const verMasEncabezado = ["Acá van más 👇", "Dale, mirá estos otros 👇"];
 
 export const verMasAgotado = (secretaria: string) => [
-  `Eso es todo lo que tengo con eso por ahora 😅\nSi querés, ${secretaria} te avisa cuando entre algo 👇`,
-  `Ya te mostré todo lo que hay por ahora 🙌\nSi buscás algo puntual, escribile a ${secretaria} 👇`,
+  `Eso es todo lo que tengo con eso por ahora 😅\nSi querés, escribile a ${secretaria} por WhatsApp y te cuenta si va a entrar algo 👇`,
+  `Ya te mostré todo lo que hay por ahora 🙌\nEscribile a ${secretaria} por WhatsApp y te cuenta si va a entrar algo 👇`,
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -239,7 +239,7 @@ export const historiaNinguno = [
 // Datos del negocio
 
 /** Introduce los datos del negocio cuando hay alguno cargado. */
-export const introNegocio = ["Dale, te cuento 😊", "Sii, te cuento 😊", "Te cuento 😊"];
+export const introNegocio = ["Dale, te cuento 😊", "Mirá, te cuento 😊", "Te cuento 😊"];
 
 /** Un dato pendiente (null en negocio.ts) dentro de una respuesta con otros datos. */
 export const temaPendiente = (tema: string, secretaria: string) => `Lo de ${tema} te lo confirma ${secretaria}`;

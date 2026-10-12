@@ -15,6 +15,7 @@ import {
   auto,
   autoActual,
   decir,
+  fijarVehiculo,
   idDeOrdinal,
   mostrarContacto,
   mostrarLista,
@@ -89,6 +90,9 @@ const ESCAPAN_DE_HISTORIA = new Set<Intencion>([
   "humano", "identidad", "avisame", "catalogo", "ver_mas", ...TEMAS_NEGOCIO,
 ]);
 const NINGUNO = new Set(["ninguno", "ninguna", "ningun", "otro", "otra"]);
+// Unicas frases que dicen "ese no es el auto de la historia"; una frase larga ya es otra cosa ("ese no me gusta tanto").
+const FRASES_CORRECCION = ["ese no", "esa no", "no es ese", "no es esa", "no era ese", "no era esa"];
+const MAX_TOKENS_CORRECCION = 6;
 
 export function conversar(e: EntradaMotor): ResultadoMotor {
   // Regla 1: pasadas 24 h el cliente vuelve por otra cosa; arrastrar el auto de ayer confunde.
@@ -140,7 +144,7 @@ function turno(t: Turno): void {
   const intenciones = detectarIntenciones(texto);
   const ent = extraerEntidades(texto, t.e.catalogo);
   if (historiaId !== null && !respuestaAHistoria(t, historiaId, texto, ent, intenciones)) return;
-  if (esCorreccion(t, texto, intenciones, ent)) return corregirHistoria(t);
+  if (esCorreccion(t, texto)) return corregirHistoria(t);
   responderIntenciones(t, texto, intenciones, ent, { autoDeHistoria: historiaId !== null, saludar: true });
 }
 
@@ -162,10 +166,13 @@ function sinTexto(t: Turno): void {
 /**
  * Un emoji suelto sin contexto (una reaccion) no se contesta. Dentro de una charla libre un 👍 es un
  * "si" a lo ultimo que se ofrecio. En medio de un paso (nombre, telefono) un emoji no responde nada.
+ * Una reaccion a una historia solo es contexto si ya se sabe de que auto es: si no, no hay nada que
+ * confirmar. Sin oferta pendiente un 👍 tampoco contesta (ej. despues de un vendido): el bot no tiene
+ * nada que reafirmar y "contame que andas buscando" suena a no haber leido la charla.
  */
 function emojiCuentaComoSi(t: Turno, texto: string): boolean {
   const { s } = t;
-  const hayContexto = s.vehiculoActualId !== null || s.ofrecio !== null || t.e.historiaId !== null;
+  const hayContexto = t.e.historiaId !== null ? auto(t, t.e.vehiculoDeHistoria) !== null : s.ofrecio !== null;
   return s.paso === "libre" && hayContexto && tiene(detectarIntenciones(texto), "afirmacion");
 }
 
@@ -226,12 +233,14 @@ function resolverHistoria(t: Turno, v: VehiculoCatalogo): void {
   const storyId = s.historiaPendienteId;
   const pregunta = s.preguntaPendiente ?? "";
   salirDelPaso(s);
+  fijarVehiculo(t, v.id);
   if (storyId) {
     t.aprenderHistoria = { storyId, vehiculoId: v.id };
     s.historiaActualId = storyId;
   }
-  s.vehiculoActualId = v.id;
-  const ent = extraerEntidades(pregunta, t.e.catalogo);
+  const entPregunta = extraerEntidades(pregunta, t.e.catalogo);
+  // Si la pregunta nombraba varios autos ("el 206 o el 208?"), el cliente ya eligio uno: la respuesta es sobre ese.
+  const ent = entPregunta.vehiculoIds.length > 1 ? { ...entPregunta, vehiculoIds: [v.id] } : entPregunta;
   responderIntenciones(t, pregunta, detectarIntenciones(pregunta), ent, { autoDeHistoria: true, saludar: false });
 }
 
@@ -261,10 +270,18 @@ function respuestaAHistoria(t: Turno, historiaId: string, texto: string, ent: En
   return false;
 }
 
-/** "no es ese", "ese no": solo corrige si el auto salio de una historia (si no, es un "no" comun). */
-function esCorreccion(t: Turno, texto: string, intenciones: Intencion[], ent: Entidades): boolean {
-  if (t.s.historiaActualId === null || !tiene(intenciones, "negacion")) return false;
-  return ent.deictico || /\bno (es|era)\b/.test(tokenizar(texto).join(" "));
+/**
+ * "no es ese", "ese no": solo corrige si el auto actual salio de una historia (si no, es un "no" comun).
+ * Solo cuentan las frases explicitas: "no, es mucho" o "eso no" son un reclamo por el precio, no un "ese
+ * no es el auto de la historia", y tomar una por la otra borra un vinculo correcto. `historiaActualId` se
+ * limpia cuando se presenta otro auto, asi que aca basta con que siga puesto.
+ */
+function esCorreccion(t: Turno, texto: string): boolean {
+  if (t.s.historiaActualId === null) return false;
+  const tokens = tokenizar(texto);
+  if (tokens.length > MAX_TOKENS_CORRECCION) return false;
+  const dicho = ` ${tokens.join(" ")} `;
+  return FRASES_CORRECCION.some((frase) => dicho.includes(` ${frase} `));
 }
 
 /** Regla 7: el aprendizaje se equivoco; se borra el vinculo y se vuelve a preguntar para aprenderlo bien. */
@@ -336,6 +353,9 @@ function despacharIntencion(
     return false;
   }
   if (temas.length > 0) {
+    // "el vento tiene financiacion?": el boton de Nati tiene que hablar del Vento, no de un auto viejo o de ninguno.
+    const nombradosAca = nombrados(t, ent);
+    if (nombradosAca.length === 1) fijarVehiculo(t, nombradosAca[0].id);
     responderNegocio(t, temas, true);
     return false;
   }
@@ -472,8 +492,10 @@ function responderNegocio(t: Turno, temas: Intencion[], conContacto: boolean): v
   } else {
     // Pegado a la respuesta de un auto ya hubo un "te cuento": no se repite.
     const intro = conContacto ? [variante(t, "intro-negocio", T.introNegocio)] : [];
-    const lineas = [...intro, ...datos.map((d) => d.texto ?? T.temaPendiente(d.tema, sec))];
-    if (deriva) lineas.push(variante(t, "cierre-negocio", T.cierreNegocio(sec)));
+    const cuerpo = datos.map((d) => d.texto ?? T.temaPendiente(d.tema, sec));
+    const lineas = [...intro, ...cuerpo];
+    // Si los datos ya mandan a la secretaria ("te la pasa Nati"), repetirlo en el cierre suena a disco rayado.
+    if (deriva && !cuerpo.some((linea) => linea.includes(sec))) lineas.push(variante(t, "cierre-negocio", T.cierreNegocio(sec)));
     decir(t, lineas.join("\n"));
   }
   if (deriva && conContacto) mostrarContacto(t, autoActual(t));
@@ -537,7 +559,9 @@ function verMas(t: Turno): void {
     mostrarContacto(t, null);
     return;
   }
-  mostrarPagina(t, faltan, variante(t, "ver-mas", T.verMasEncabezado));
+  // Sin busqueda previa no hay "mas": es la primera pagina, y "acá van más" no tendria sentido.
+  const encabezado = s.vistosIds.length === 0 ? variante(t, "lista", T.listaExacta) : variante(t, "ver-mas", T.verMasEncabezado);
+  mostrarPagina(t, faltan, encabezado);
 }
 
 function mostrarPagina(t: Turno, vehiculos: VehiculoCatalogo[], encabezado: string): void {
@@ -554,7 +578,7 @@ function mostrarPagina(t: Turno, vehiculos: VehiculoCatalogo[], encabezado: stri
 // Regla 9: presentar un auto segun su estado
 
 function presentarVehiculo(t: Turno, v: VehiculoCatalogo, motivo: "precio" | "info" | "general"): void {
-  t.s.vehiculoActualId = v.id;
+  fijarVehiculo(t, v.id);
   if (v.estado === "vendido") return presentarVendido(t, v);
   if (v.estado === "reservado") return presentarReservado(t, v);
 

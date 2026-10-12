@@ -678,3 +678,283 @@ describe("pureza y tono", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------------------------
+// Correcciones de la revision de la tarea 9 (telefono con etiqueta, correcciones de historia, eleccion entre varios autos).
+
+/** Texto del mensaje de WhatsApp que lleva un boton (la URL ya viene codificada). */
+const textoDeWhatsApp = (url: string) => decodeURIComponent(url.split("?text=")[1] ?? "");
+/** Solo los mensajes de texto (sin el respaldo en texto de las tarjetas). */
+const soloTextos = (r: ResultadoMotor) => r.mensajes.flatMap((m) => (m.tipo === "texto" ? [m.texto] : []));
+const veces = (texto: string, buscado: string) => texto.split(buscado).length - 1;
+
+describe("captacion: telefono escrito con etiqueta y nombre con telefono", () => {
+  const casos: Array<[string, string]> = [
+    ["mi cel es 3537 123456", "3537 123456"],
+    ["mi numero es 3537 123456", "3537 123456"],
+    ["whatsapp 3537123456", "3537123456"],
+    ["telefono: 3537 123456", "3537 123456"],
+  ];
+
+  for (const [escrito, telefono] of casos) {
+    it(`'${escrito}' en el paso del telefono entrega el lead`, () => {
+      const [, , c] = charlar(["avisame cuando entre una hilux", "Juan", escrito]);
+
+      expect(c.lead).toMatchObject({ nombre: "Juan", telefono });
+      expect(c.sesion.paso).toBe("libre");
+      expect(c.sesion.lead).toEqual({ nombre: "Juan", telefono });
+      expect(hayBotonNati(c)).toBe(true);
+    });
+  }
+
+  it("un telefono dentro de otra pregunta sobre un auto sigue siendo cambio de tema", () => {
+    const [, , c] = charlar(["avisame cuando entre una hilux", "Juan", "cuanto sale el vento? lo vi publicado en 12345678"]);
+
+    expect(c.lead).toBeNull();
+    expect(todo(c)).toContain("USD 14.500");
+  });
+
+  it("'Horacio' es un nombre, no la intencion de horarios", () => {
+    const [, b] = charlar(["avisame cuando entre una hilux", "Horacio"]);
+
+    expect(b.sesion.lead.nombre).toBe("Horacio");
+    expect(b.sesion.paso).toBe("pidiendo_telefono");
+    expect(textos(b).join("\n")).toMatch(/Horacio/);
+    expect(b.noEntendido).toBe(false);
+  });
+
+  it("'hola' y 'dale' siguen sin ser un nombre", () => {
+    expect(charlar(["avisame cuando entre una hilux", "hola"])[1].sesion.paso).toBe("pidiendo_nombre");
+    expect(charlar(["avisame cuando entre una hilux", "dale"])[1].sesion.lead.nombre).toBeUndefined();
+  });
+
+  it("'Juan 3537123456' en el paso del nombre da nombre y telefono juntos", () => {
+    const [, b] = charlar(["avisame cuando entre una hilux", "Juan 3537123456"]);
+
+    expect(b.lead).toMatchObject({ nombre: "Juan", telefono: "3537123456" });
+    expect(b.lead?.mensaje ?? "").toMatch(/hilux/i);
+    expect(b.sesion.paso).toBe("libre");
+  });
+
+  it("'avisame si entra una ranger' durante el nombre reinicia el aviso, no cuenta como nombre invalido", () => {
+    const [, b, c, d] = charlar(["avisame cuando entre una hilux", "avisame si entra una ranger", "Juan", "3537123456"]);
+
+    expect(b.noEntendido).toBe(false);
+    expect(b.sesion.fallos).toBe(0);
+    expect(b.sesion.paso).toBe("pidiendo_nombre");
+    expect(b.sesion.lead.motivo).toMatch(/ranger/i);
+    expect(c.sesion.paso).toBe("pidiendo_telefono");
+    expect(d.lead?.mensaje).toMatch(/ranger/i);
+  });
+});
+
+describe("historias: solo las correcciones explicitas olvidan el vinculo", () => {
+  const historias = { "st-vento": "v-vento" };
+  const precioVento = { texto: "precio?", historiaId: "st-vento" };
+
+  for (const texto of ["no, es mucho", "no es muy caro", "no, eso no"]) {
+    it(`'${texto}' despues de la historia conocida no borra el vinculo`, () => {
+      const [a, b] = charlar([precioVento, texto], { historias });
+
+      expect(todo(a)).toContain("Vento");
+      expect(b.olvidarHistoria).toBeNull();
+      expect(b.sesion.paso).toBe("libre");
+      expect(b.sesion.historiaActualId).toBe("st-vento");
+      expect(b.responder).toBe(true);
+      expect(textos(b).join("\n")).not.toMatch(/por cu[aá]l auto/i);
+    });
+  }
+
+  it("'no, ese no' sobre otro auto que se presento despues no borra el vinculo viejo", () => {
+    const [, b, c] = charlar([precioVento, "tienen la 206?", "no, ese no"], { historias });
+
+    expect(b.sesion.vehiculoActualId).toBe("v-206");
+    expect(b.sesion.historiaActualId).toBeNull();
+    expect(c.olvidarHistoria).toBeNull();
+    expect(c.sesion.paso).toBe("libre");
+  });
+
+  it("'no, ese no es' justo despues de presentar el auto de la historia lo olvida", () => {
+    const [, b] = charlar([precioVento, "no, ese no es"], { historias });
+
+    expect(b.olvidarHistoria).toBe("st-vento");
+    expect(b.sesion.paso).toBe("eligiendo_historia");
+    expect(b.sesion.vehiculoActualId).toBeNull();
+  });
+
+  for (const texto of ["ese no", "esa no", "no es ese", "no es esa", "no era ese", "no era esa"]) {
+    it(`'${texto}' es una correccion explicita`, () => {
+      expect(charlar([precioVento, texto], { historias })[1].olvidarHistoria).toBe("st-vento");
+    });
+  }
+});
+
+describe("historias: el cliente elige entre varios autos nombrados", () => {
+  it("'cuanto sale el 206 o el 208?' + 'el 1' → precio del 206 solamente", () => {
+    const [a, b] = charlar([{ texto: "cuanto sale el 206 o el 208?", historiaId: "st-nueva" }, "el 1"]);
+
+    expect(a.sesion.paso).toBe("eligiendo_historia");
+    expect(b.aprenderHistoria).toEqual({ storyId: "st-nueva", vehiculoId: "v-206" });
+    expect(b.sesion.paso).toBe("libre");
+    expect(b.sesion.vehiculoActualId).toBe("v-206");
+    expect(todo(b)).toContain("$9.500.000");
+    expect(todo(b)).not.toContain("208");
+    expect(tarjetas(b)).toHaveLength(1);
+    expect(textos(b).join("\n")).not.toMatch(/me dec[ií]s cu[aá]l/i);
+  });
+
+  it("'es el 206 o el 208?' + 'el 2' → muestra solo el 208", () => {
+    const [, b] = charlar([{ texto: "es el 206 o el 208?", historiaId: "st-nueva" }, "el 2"]);
+
+    expect(b.aprenderHistoria).toEqual({ storyId: "st-nueva", vehiculoId: "v-208" });
+    expect(b.sesion.paso).toBe("libre");
+    expect(b.sesion.vehiculoActualId).toBe("v-208");
+    expect(titulos(b)).toEqual(["Peugeot 208 Style 2023"]);
+    expect(todo(b)).not.toContain("206");
+  });
+
+  it("tambien vale elegir nombrando el auto", () => {
+    const [, b] = charlar([{ texto: "cuanto sale el 206 o el 208?", historiaId: "st-nueva" }, "el 206"]);
+
+    expect(b.aprenderHistoria).toEqual({ storyId: "st-nueva", vehiculoId: "v-206" });
+    expect(tarjetas(b)).toHaveLength(1);
+  });
+});
+
+describe("emojis, negocio con auto, ver mas y copy", () => {
+  it("un 👍 suelto como respuesta a una historia desconocida no se contesta", () => {
+    const [r] = charlar([{ texto: "👍", historiaId: "st-nueva" }]);
+
+    expect(r.responder).toBe(false);
+    expect(r.mensajes).toEqual([]);
+  });
+
+  it("un 👍 a una historia conocida sigue mostrando ese auto", () => {
+    const [r] = charlar([{ texto: "👍", historiaId: "st-vento" }], { historias: { "st-vento": "v-vento" } });
+
+    expect(r.responder).toBe(true);
+    expect(todo(r)).toContain("Vento");
+  });
+
+  it("'el vento tiene financiacion?' fija el Vento y el boton de Nati lo menciona", () => {
+    const [r] = charlar(["el vento tiene financiacion?"]);
+
+    expect(r.sesion.vehiculoActualId).toBe("v-vento");
+    const botones = urls(r).filter((u) => u.startsWith("https://wa.me/"));
+    expect(botones.length).toBeGreaterThan(0);
+    for (const u of botones) expect(textoDeWhatsApp(u)).toContain("Vento");
+  });
+
+  it("'cuanto es el anticipo del vento?' tambien", () => {
+    const [r] = charlar(["cuanto es el anticipo del vento?"]);
+
+    expect(r.sesion.vehiculoActualId).toBe("v-vento");
+    expect(urls(r).some((u) => textoDeWhatsApp(u).includes("Vento"))).toBe(true);
+  });
+
+  it("una pregunta de negocio con otro auto en contexto cambia el auto y suelta la historia vieja", () => {
+    const [, b] = charlar([{ texto: "precio?", historiaId: "st-206" }, "el vento tiene financiacion?"], { historias: { "st-206": "v-206" } });
+
+    expect(b.sesion.vehiculoActualId).toBe("v-vento");
+    expect(b.sesion.historiaActualId).toBeNull();
+  });
+
+  it("'ver mas' sin busqueda previa muestra la primera pagina con una intro neutra", () => {
+    const [r] = charlar(["ver mas"]);
+
+    expect(tarjetas(r).length).toBeGreaterThan(0);
+    expect(textos(r).join("\n")).not.toMatch(/ac[aá] van m[aá]s|otros/i);
+  });
+
+  it("'ver mas' agotado no promete que Nati avise: invita a escribirle", () => {
+    const [, , c] = charlar(["que autos tienen?", "mostrame mas", "mostrame mas"]);
+
+    expect(soloTextos(c).join("\n")).not.toMatch(/te avisa/i);
+    expect(soloTextos(c).join("\n")).toMatch(/escribile a Nati por WhatsApp y te cuenta si va a entrar algo/i);
+  });
+
+  it("las respuestas de precio y de datos del negocio no arrancan con 'Sii,'", () => {
+    for (let i = 0; i < 12; i++) {
+      for (const texto of ["cuanto sale el vento?", "hacen financiacion?", "donde estan?"]) {
+        const r = conversar({
+          texto, adjuntos: [], historiaId: null, vehiculoDeHistoria: null, mid: `mid.${i}`,
+          sesion: sesionNueva(AHORA), catalogo: CATALOGO, perfil: null, ahora: AHORA, siteUrl: SITE, negocio: NEGOCIO,
+        });
+        expect(soloTextos(r).join("\n"), texto).not.toMatch(/\bSii,/);
+      }
+    }
+  });
+
+  it("ubicacion sin direccion y financiacion nombran a Nati una sola vez en el texto", () => {
+    for (const pregunta of ["donde estan?", "hacen financiacion?"]) {
+      const [r] = charlar([pregunta]);
+
+      expect(veces(soloTextos(r).join("\n"), "Nati"), pregunta).toBe(1);
+      expect(hayBotonNati(r)).toBe(true);
+    }
+  });
+});
+
+describe("casos borde de entrada", () => {
+  it("una historia conocida cuyo auto ya no esta en el catalogo cae en el camino de historia desconocida", () => {
+    const [r] = charlar([{ texto: "hola que valor tiene?", historiaId: "st-fantasma" }], { historias: { "st-fantasma": "v-no-existe" } });
+
+    expect(r.responder).toBe(true);
+    expect(r.sesion.paso).toBe("eligiendo_historia");
+    expect(r.sesion.historiaPendienteId).toBe("st-fantasma");
+    expect(r.aprenderHistoria).toBeNull();
+  });
+
+  it("y un emoji sobre esa historia sin auto en el catalogo no se contesta", () => {
+    const [r] = charlar([{ texto: "👍", historiaId: "st-fantasma" }], { historias: { "st-fantasma": "v-no-existe" } });
+
+    expect(r.responder).toBe(false);
+  });
+
+  it("texto null sin adjuntos no se contesta", () => {
+    const [r] = charlar([{ texto: null, adjuntos: [] }]);
+
+    expect(r.responder).toBe(false);
+    expect(r.mensajes).toEqual([]);
+  });
+
+  it("un 👍 despues de mostrar un auto vendido no pregunta 'que andas buscando'", () => {
+    const [a, b] = charlar(["la partner", "👍"]);
+
+    expect(todo(a)).toMatch(/vendi/i);
+    expect(soloTextos(b).join("\n")).not.toMatch(/contame qu[eé] and[aá]s buscando/i);
+    expect(b.mensajes.length === 0 || hayBotonNati(b)).toBe(true);
+  });
+});
+
+describe("tono en los flujos corregidos", () => {
+  it("los textos nuevos cumplen las reglas de tono, llevan 1 a 3 emojis y no se dicen persona", () => {
+    const charlas: Turno[][] = [
+      ["avisame cuando entre una hilux", "Juan", "mi cel es 3537 123456"],
+      ["avisame cuando entre una hilux", "Horacio", "3537123456"],
+      ["avisame cuando entre una hilux", "avisame si entra una ranger", "Juan 3537123456"],
+      [{ texto: "precio?", historiaId: "st-vento" }, "no, es mucho", "no, ese no es", "el 4"],
+      [{ texto: "cuanto sale el 206 o el 208?", historiaId: "st-nueva" }, "el 1"],
+      ["ver mas", "el vento tiene financiacion?", "donde estan?", "que autos tienen?", "mostrame mas", "mostrame mas"],
+    ];
+    for (const turnos of charlas) {
+      for (const r of charlar(turnos, { historias: { "st-vento": "v-vento" } })) {
+        for (const m of r.mensajes) {
+          if (m.tipo !== "texto") continue;
+          expect(emojis(m.texto), m.texto).toBeGreaterThanOrEqual(1);
+          expect(emojis(m.texto), m.texto).toBeLessThanOrEqual(3);
+          expect(violacionesDeTono(m.texto), m.texto).toEqual([]);
+          expect(m.texto).not.toMatch(/soy (una )?persona|soy humano/i);
+        }
+      }
+    }
+  });
+
+  it("los casos nuevos no modifican la sesion de entrada", () => {
+    const sesion = { ...sesionNueva(AHORA), vehiculoActualId: "v-vento", historiaActualId: "st-vento", paso: "pidiendo_telefono" as const };
+    const copia = structuredClone(sesion);
+    charlar(["mi cel es 3537 123456"], { sesion });
+
+    expect(sesion).toEqual(copia);
+  });
+});

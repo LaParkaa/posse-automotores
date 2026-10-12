@@ -24,41 +24,72 @@ import {
  */
 
 // Mientras se pide nombre o telefono, estas intenciones son otra pregunta: se deja el paso y se responde.
+// "avisame" tambien: es pedir un aviso nuevo y reinicia la captacion con el motivo nuevo.
 const CAMBIAN_DE_TEMA = new Set<Intencion>([
-  "humano", "identidad", "precio", "info", "disponibilidad", "catalogo", "ver_mas", ...TEMAS_NEGOCIO,
+  "humano", "identidad", "avisame", "precio", "info", "disponibilidad", "catalogo", "ver_mas", ...TEMAS_NEGOCIO,
 ]);
+// Un nombre no puede ser una de estas: son saludos, "si", "gracias" o pedidos concretos. Los temas de
+// negocio (horarios, garantia...) NO estan: por tolerancia a typos "Horacio" se lee como "horarios".
+const NO_ES_UN_NOMBRE = new Set<Intencion>([
+  "humano", "identidad", "avisame", "negacion", "precio", "info", "disponibilidad", "ver_mas", "catalogo",
+  "afirmacion", "gracias", "despedida", "cortesia", "saludo",
+]);
+// Un telefono con etiqueta ("mi cel es 3537 123456") dispara "humano"; ese tema no impide leer el numero
+// (cualquier otro, como un precio o un auto nombrado, si: ahi el numero es parte de otra pregunta).
+const NO_IMPIDEN_EL_TELEFONO = new Set<Intencion>(["humano", "avisame"]);
 const CANCELAR = new Set(["cancelar", "cancela", "cancelo", "cancelalo", "no", "nop", "nah", "dejalo", "deja", "dejala", "olvidalo", "olvidate", "nada"]);
 
 /** Devuelve false si el cliente cambio de tema: el paso se abandona y el mensaje sigue su curso. */
 export function pasoCaptacion(t: Turno, texto: string): boolean {
   const intenciones = detectarIntenciones(texto);
+  const ent = extraerEntidades(texto, t.e.catalogo);
+  const nombraUnAuto = ent.vehiculoIds.length > 0;
+
+  // El numero se lee ANTES de evaluar cambios de tema: "mi cel es 3537 123456" dispara la intencion de
+  // contacto, y abandonar el paso por eso perderia un lead que el cliente acaba de dejar.
+  const telefono = telefonoEn(texto);
+  const esOtraPregunta = nombraUnAuto || intenciones.some((i) => CAMBIAN_DE_TEMA.has(i));
+  const impideElTelefono = nombraUnAuto || intenciones.some((i) => CAMBIAN_DE_TEMA.has(i) && !NO_IMPIDEN_EL_TELEFONO.has(i));
+  if (telefono !== null && !impideElTelefono) {
+    if (t.s.paso === "pidiendo_telefono") {
+      entregarLead(t, telefono.numero);
+      return true;
+    }
+    // "Juan 3537123456": nombre y telefono en el mismo mensaje.
+    const nombre = nombreDe(telefono.resto);
+    if (nombre !== null) {
+      t.s.lead = { ...t.s.lead, nombre };
+      entregarLead(t, telefono.numero);
+      return true;
+    }
+  }
+
   const tokens = tokenizar(texto);
   if (CANCELAR.has(tokens[0] ?? "") || tiene(intenciones, "negacion")) {
     cerrarCaptacion(t);
     decir(t, variante(t, "cancelar", T.captacionCancelada));
     return true;
   }
-  const ent = extraerEntidades(texto, t.e.catalogo);
-  // "cuanto sale el vento?" no es un nombre aunque tenga 4 palabras: es otra pregunta.
-  if (intenciones.some((i) => CAMBIAN_DE_TEMA.has(i)) || ent.vehiculoIds.length > 0) {
+
+  if (t.s.paso === "pidiendo_nombre") {
+    // Antes del cambio de tema: un nombre como "Horacio" parece la intencion "horarios", pero es lo que se pidio.
+    // "cuanto sale el vento?" no es un nombre aunque tenga 4 palabras: es otra pregunta.
+    const nombre = nombraUnAuto ? null : nombreDe(texto);
+    if (nombre !== null) {
+      t.s.lead = { ...t.s.lead, nombre };
+      t.s.paso = "pidiendo_telefono";
+      t.s.fallos = 0;
+      decir(t, variante(t, "telefono", T.pedirTelefono(primeraPalabra(nombre))));
+      return true;
+    }
+  }
+
+  if (esOtraPregunta) {
     cerrarCaptacion(t);
     return false;
   }
-
-  if (t.s.paso === "pidiendo_nombre") {
-    const nombre = nombreDe(texto);
-    if (nombre === null) return falloEnPaso(t, T.nombreInvalido);
-    t.s.lead = { ...t.s.lead, nombre };
-    t.s.paso = "pidiendo_telefono";
-    t.s.fallos = 0;
-    decir(t, variante(t, "telefono", T.pedirTelefono(primeraPalabra(nombre))));
-    return true;
-  }
-
-  const telefono = telefonoDe(texto);
-  if (telefono === null) return falloEnPaso(t, T.telefonoInvalido);
-  entregarLead(t, telefono);
-  return true;
+  if (t.s.paso === "pidiendo_nombre") return falloEnPaso(t, T.nombreInvalido);
+  return falloEnPaso(t, T.telefonoInvalido);
 }
 
 /** Repregunta una vez; a la segunda deja el paso y ofrece a la secretaria (no se traba el chat). */
@@ -88,8 +119,12 @@ function primeraPalabra(nombre: string): string {
   return nombre.split(/\s+/)[0] ?? nombre;
 }
 
-/** "Juan Pérez", "soy Juan", "me llamo Ana Paula" → el nombre; null si no parece un nombre (1-4 palabras, sin digitos). */
+/**
+ * "Juan Pérez", "soy Juan", "me llamo Ana Paula" → el nombre; null si no parece un nombre (1-4 palabras,
+ * solo letras, sin signo de pregunta). "hola", "dale" o "gracias" son palabras sin digitos pero no son un nombre.
+ */
 function nombreDe(texto: string): string | null {
+  if (texto.includes("?")) return null;
   const limpio = texto
     .trim()
     .replace(/^(hola|buenas)\b[\s,!.]*/i, "")
@@ -99,16 +134,21 @@ function nombreDe(texto: string): string | null {
   const palabras = limpio.split(/\s+/).filter((p) => p !== "");
   if (palabras.length < 1 || palabras.length > 4) return null;
   if (!palabras.every((p) => /^\p{L}[\p{L}'’.-]*$/u.test(p))) return null;
-  // "hola", "dale", "gracias" son palabras sin digitos pero no son un nombre.
-  return detectarIntenciones(limpio).every((i) => i === "desconocida") ? limpio : null;
+  return detectarIntenciones(limpio).some((i) => NO_ES_UN_NOMBRE.has(i)) ? null : limpio;
 }
 
-/** Telefono con 8 a 13 digitos (con o sin espacios, guiones o +54). Se guarda tal cual lo escribio. */
-function telefonoDe(texto: string): string | null {
-  const encontrado = texto.match(/\+?\d[\d\s().-]*\d/);
-  if (!encontrado) return null;
-  const digitos = encontrado[0].replace(/\D/g, "").length;
-  return digitos >= 8 && digitos <= 13 ? encontrado[0].trim() : null;
+/**
+ * Primer telefono del texto (8 a 13 digitos, con o sin espacios, guiones o +54), tal cual lo escribio y sin
+ * las palabras de la etiqueta ("mi cel es", "whatsapp:"). `resto` es el texto sin el numero.
+ */
+function telefonoEn(texto: string): { numero: string; resto: string } | null {
+  for (const encontrado of texto.matchAll(/\+?\d[\d\s().-]*\d/g)) {
+    const digitos = encontrado[0].replace(/\D/g, "").length;
+    if (digitos < 8 || digitos > 13) continue;
+    const resto = (texto.slice(0, encontrado.index) + " " + texto.slice(encontrado.index + encontrado[0].length)).trim();
+    return { numero: encontrado[0].trim(), resto };
+  }
+  return null;
 }
 
 /** Con nombre y telefono el lead sale para guardarse; el handler no confirma si el guardado falla. */

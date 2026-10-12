@@ -48,6 +48,15 @@ export function auto(t: Turno, id: string | null | undefined): VehiculoCatalogo 
 
 export const autoActual = (t: Turno) => auto(t, t.s.vehiculoActualId);
 
+/**
+ * Cambia el auto del que se habla. Si es otro distinto, la historia que lo originaba deja de aplicar:
+ * un "no, ese no" posterior habla del auto nuevo y no debe borrar el vinculo viejo (que era correcto).
+ */
+export function fijarVehiculo(t: Turno, id: string): void {
+  if (t.s.vehiculoActualId !== id) t.s.historiaActualId = null;
+  t.s.vehiculoActualId = id;
+}
+
 export function decir(t: Turno, texto: string): void {
   // Un texto vacio rompe el envio en Instagram: nunca se manda.
   if (texto.trim() !== "") t.mensajes.push({ tipo: "texto", texto });
