@@ -23,6 +23,11 @@ describe("NEGOCIO", () => {
     expect(NEGOCIO.direccion).toBeNull();
   });
 
+  it("reconoce el texto de la respuesta automatica de Instagram para no pausar el chat", () => {
+    expect(NEGOCIO.mensajesAutomaticos.length).toBeGreaterThan(0);
+    for (const frase of NEGOCIO.mensajesAutomaticos) expect(frase).toBe(frase.toLowerCase());
+  });
+
   it("la pausa cuando contesta una persona es de horas positivas", () => {
     expect(NEGOCIO.pausaHumanoHoras).toBeGreaterThan(0);
   });
