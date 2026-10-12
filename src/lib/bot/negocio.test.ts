@@ -13,8 +13,13 @@ describe("NEGOCIO", () => {
     expect(NEGOCIO.whatsappVisible).toBe("+54 9 3537 55-8947");
   });
 
-  it("los datos no confirmados son null (el bot dice que Nati los confirma)", () => {
-    expect(NEGOCIO.horarios).toBeNull();
+  it("tiene los horarios del sitio", () => {
+    expect(NEGOCIO.horarios).toContain("lunes a viernes de 9 a 13 y de 16 a 20");
+    expect(NEGOCIO.horarios).toContain("sábados de 9 a 13");
+    expect(NEGOCIO.horarios).toContain("domingos");
+  });
+
+  it("la direccion exacta sigue sin confirmar (el bot dice que Nati la pasa)", () => {
     expect(NEGOCIO.direccion).toBeNull();
   });
 
