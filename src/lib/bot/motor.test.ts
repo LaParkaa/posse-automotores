@@ -229,7 +229,7 @@ describe("derivacion, identidad y datos del negocio", () => {
   });
 
   it("horarios: pendiente → Nati; cargados → los dice", () => {
-    expect(todo(charlar(["a que hora abren?"])[0])).toContain("Nati");
+    expect(todo(charlar(["a que hora abren?"], { negocio: { ...NEGOCIO, horarios: null } })[0])).toContain("Nati");
     expect(todo(charlar(["a que hora abren?"], { negocio: { ...NEGOCIO, horarios: "Lunes a viernes de 9 a 13 y de 16 a 20" } })[0])).toContain(
       "Lunes a viernes de 9 a 13 y de 16 a 20",
     );
@@ -639,7 +639,7 @@ describe("listas, ofertas y estados", () => {
   });
 
   it("varios datos del negocio en un mensaje: los cargados y los pendientes, sin inventar", () => {
-    const [r] = charlar(["a que hora abren y tienen garantia?"]);
+    const [r] = charlar(["a que hora abren y tienen garantia?"], { negocio: { ...NEGOCIO, horarios: null } });
 
     expect(todo(r)).toContain(NEGOCIO.garantia!);
     expect(todo(r)).toMatch(/horarios te lo confirma Nati/);

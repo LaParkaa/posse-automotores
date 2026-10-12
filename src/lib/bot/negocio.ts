@@ -29,8 +29,8 @@ export const NEGOCIO: Negocio = {
   whatsappNumero: WHATSAPP_LOCAL,
   whatsappVisible: "+54 9 3537 55-8947",
 
-  // PENDIENTE: completar con los horarios reales. Mientras sea null, el bot dice que los confirma Nati.
-  horarios: null,
+  // Tomado de la seccion Contacto del sitio. Si cambian, editar aca y en el sitio.
+  horarios: "Atendemos de lunes a viernes de 9 a 13 y de 16 a 20 hs, y los sábados de 9 a 13 hs. Los domingos estamos cerrados 🕘",
   // PENDIENTE: direccion exacta (hoy solo se sabe la ciudad).
   direccion: null,
 
