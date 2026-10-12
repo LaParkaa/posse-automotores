@@ -18,7 +18,7 @@ export default async function LeadsPage() {
     <AdminShell>
       <div className="mb-6">
         <h1 className="font-condensed text-3xl font-black italic text-car-white">Leads</h1>
-        <p className="mt-1 text-sm text-car-muted">Clientes captados por el bot de WhatsApp</p>
+        <p className="mt-1 text-sm text-car-muted">Clientes captados por el bot de Instagram y WhatsApp</p>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-white/10">
@@ -27,6 +27,7 @@ export default async function LeadsPage() {
             <tr className="border-b border-white/10 bg-car-gray2 text-xs uppercase tracking-wide text-car-muted">
               <th className="px-4 py-3 text-left">Nombre</th>
               <th className="px-4 py-3 text-left">Teléfono</th>
+              <th className="px-4 py-3 text-left">Origen</th>
               <th className="px-4 py-3 text-left">Interés</th>
               <th className="px-4 py-3 text-left">Estado</th>
               <th className="px-4 py-3 text-left">Fecha</th>
@@ -40,14 +41,25 @@ export default async function LeadsPage() {
               >
                 <td className="px-4 py-3 font-semibold text-car-white">{lead.nombre ?? "—"}</td>
                 <td className="px-4 py-3 text-car-muted">
-                  <a
-                    href={`https://wa.me/${lead.telefono?.replace(/\D/g, "")}`}
-                    target="_blank"
-                    rel="noopener"
-                    className="hover:text-car-gold"
-                  >
-                    {lead.telefono ?? lead.whatsapp}
-                  </a>
+                  {lead.telefono ? (
+                    <a
+                      href={`https://wa.me/${lead.telefono.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="hover:text-car-gold"
+                    >
+                      {lead.telefono}
+                    </a>
+                  ) : (
+                    (lead.whatsapp ?? "—")
+                  )}
+                </td>
+                <td className="px-4 py-3 text-xs text-car-muted">
+                  {lead.origen === "instagram" ? (
+                    <span title={`ID de Instagram: ${lead.instagram_id}`}>Instagram</span>
+                  ) : (
+                    "WhatsApp"
+                  )}
                 </td>
                 <td className="px-4 py-3 text-car-muted">{lead.vehiculo_interes ?? "—"}</td>
                 <td className="px-4 py-3">
