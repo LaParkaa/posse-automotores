@@ -36,6 +36,39 @@ describe("extraerEventos", () => {
     ]);
   });
 
+  it("lee los textos de un adjunto (titulo, telefono): un telefono que Instagram convierte en contacto llega ahi", () => {
+    const body = webhook([
+      evento({
+        mid: "m6",
+        attachments: [{ type: "fallback", title: "Juan", payload: { title: "Juan 3537 123456", url: "tel:+5493537123456" } }],
+      }),
+    ]);
+    const [e] = extraerEventos(body);
+
+    expect(e).toMatchObject({ tipo: "mensaje", texto: null, adjuntos: ["fallback"] });
+    expect(e).toHaveProperty("adjuntosTexto");
+    expect((e as { adjuntosTexto: string[] }).adjuntosTexto).toEqual(
+      expect.arrayContaining(["Juan", "Juan 3537 123456", "tel:+5493537123456"]),
+    );
+  });
+
+  it("ignora los links de los adjuntos: los de fotos traen numeros largos que no son un telefono", () => {
+    const body = webhook([
+      evento({ mid: "m7", attachments: [{ type: "image", payload: { url: "https://cdn.example/x?asset_id=123456789012345" } }] }),
+    ]);
+
+    expect(extraerEventos(body)[0]).not.toHaveProperty("adjuntosTexto");
+  });
+
+  it("acota la cantidad y el largo de los textos del adjunto", () => {
+    const muchos = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`k${i}`, "x".repeat(1000)]));
+    const [e] = extraerEventos(webhook([evento({ mid: "m8", attachments: [{ type: "fallback", payload: muchos }] })]));
+    const textos = (e as { adjuntosTexto: string[] }).adjuntosTexto;
+
+    expect(textos.length).toBeLessThanOrEqual(8);
+    for (const t of textos) expect(t.length).toBeLessThanOrEqual(200);
+  });
+
   it("conserva los ecos: el destinatario es el cliente", () => {
     const body = webhook([evento({ mid: "m5", text: "Hola, te cuento...", is_echo: true }, "999", "111")]);
 

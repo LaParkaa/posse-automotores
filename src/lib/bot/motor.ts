@@ -4,7 +4,7 @@ import type { Negocio } from "./negocio";
 import { extraerEntidades, type Entidades } from "./nlu/entidades";
 import { detectarIntenciones, type Intencion } from "./nlu/intenciones";
 import { esSoloEmojis, tokenizar } from "./nlu/normalizar";
-import { iniciarPostulacion, pasoPostulacion } from "./postulacion";
+import { adjuntoEnPostulacion, iniciarPostulacion, pasoPostulacion } from "./postulacion";
 import { datosVehiculo, listaNumerada, precioDe, tarjetaEleccion } from "./respuestas";
 import { sesionNueva, sesionVigente, type Filtros, type Oferta, type Sesion } from "./sesion";
 import * as T from "./textos";
@@ -19,12 +19,10 @@ import {
   fijarVehiculo,
   idDeOrdinal,
   mostrarContacto,
-  mostrarContactoReclutador,
   mostrarLista,
   nombrados,
   nombreParaSaludo,
   referenciaContextual,
-  reclutador,
   saludarAntes,
   salirDelPaso,
   secretaria,
@@ -59,6 +57,8 @@ export type EntradaMotor = {
   /** null si el mensaje no trae texto (adjunto). */
   texto: string | null;
   adjuntos: string[];
+  /** Textos de los adjuntos (titulo, telefono de una tarjeta de contacto); ver `payload.ts`. */
+  adjuntosTexto?: string[];
   historiaId: string | null;
   /** Auto vinculado a `historiaId` en la base (null si la historia no se conoce). */
   vehiculoDeHistoria: string | null;
@@ -167,11 +167,8 @@ function sinTexto(t: Turno): void {
     t.responder = false;
     return;
   }
-  // Quien se postula suele mandar el CV como foto o archivo: por Instagram no se recibe, va a Marcos por WhatsApp.
-  if (t.s.paso === "postulando") {
-    decir(t, variante(t, "postula-adjunto", T.postulacionAdjunto(reclutador(t))));
-    return mostrarContactoReclutador(t, t.s.postulacion?.datos ?? {});
-  }
+  // Durante una postulacion un adjunto es el CV (o un telefono que Instagram convirtio en contacto).
+  if (t.s.paso === "postulando") return adjuntoEnPostulacion(t);
   // Audio o foto: el bot no los entiende, pero el cliente si espera respuesta.
   if (adjuntos.includes("audio")) decir(t, variante(t, "audio", T.audio));
   else decir(t, variante(t, "foto", T.foto));

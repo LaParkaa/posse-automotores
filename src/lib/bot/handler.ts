@@ -110,10 +110,12 @@ async function procesarEco(destinatarioId: string, mid: string, texto: string | 
 type Mensaje = Extract<EventoEntrante, { tipo: "mensaje" }>;
 
 async function procesarMensaje(evento: Mensaje, deps: DepsBot): Promise<void> {
-  const { senderId, mid, texto, historiaId, adjuntos } = evento;
+  const { senderId, mid, texto, historiaId, adjuntos, adjuntosTexto } = evento;
   const inicio = deps.ahora().getTime();
 
   if (!(await deps.reclamarMensaje(senderId, mid, texto ?? "[adjunto]"))) return;
+  // Solo los tipos (nunca el contenido): sirve para saber como manda Instagram cada cosa (ej. un telefono como contacto).
+  if (adjuntos.length > 0) console.info("[bot] Adjuntos recibidos", { tipos: adjuntos, conTexto: Boolean(texto) });
 
   const chat = await deps.cargarChat(senderId);
   const ahora = deps.ahora();
@@ -152,6 +154,7 @@ async function procesarMensaje(evento: Mensaje, deps: DepsBot): Promise<void> {
   const resultado = conversar({
     texto,
     adjuntos,
+    adjuntosTexto,
     historiaId,
     vehiculoDeHistoria,
     mid,
