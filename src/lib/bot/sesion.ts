@@ -1,4 +1,53 @@
-export type Paso = "libre" | "pidiendo_nombre" | "pidiendo_telefono" | "eligiendo_historia";
+import { EDAD_MAXIMA, EDAD_MINIMA } from "./nlu/numeros";
+
+export type Paso = "libre" | "pidiendo_nombre" | "pidiendo_telefono" | "eligiendo_historia" | "postulando";
+
+/** Datos que se piden en la postulacion de vendedor, en el orden en que se preguntan. */
+export const CAMPOS_POSTULACION = [
+  "nombre",
+  "edad",
+  "localidad",
+  "telefono",
+  "experiencia_ventas",
+  "experiencia_rubro",
+  "financiaciones",
+  "disponibilidad",
+] as const;
+export type CampoPostulacion = (typeof CAMPOS_POSTULACION)[number];
+
+export type DatosPostulacion = {
+  nombre?: string;
+  edad?: number;
+  localidad?: string;
+  telefono?: string;
+  experiencia_ventas?: string;
+  experiencia_rubro?: string;
+  financiaciones?: string;
+  disponibilidad?: string;
+};
+
+export type Postulacion = {
+  datos: DatosPostulacion;
+  /** Datos que el candidato prefirio no responder: no se vuelven a preguntar. */
+  omitidos: CampoPostulacion[];
+  /** Dato que se pregunto y espera respuesta (null si no hay una pregunta pendiente). */
+  campo: CampoPostulacion | null;
+  /** Se conto la experiencia en ventas sin decir cuanto tiempo: se espera la duracion antes de seguir. */
+  pendienteDuracion: boolean;
+  /** True una vez armado el mensaje para Marcos: un nuevo "cv" no vuelve a pedir todo. */
+  enviada: boolean;
+};
+
+export const postulacionNueva = (): Postulacion => ({
+  datos: {},
+  omitidos: [],
+  campo: null,
+  pendienteDuracion: false,
+  enviada: false,
+});
+
+// Una respuesta libre mas larga no aporta y rompe los limites de los mensajes y de los links.
+const MAX_RESPUESTA_POSTULACION = 300;
 
 /** Lo ultimo que ofrecio el bot: un "si" del cliente se interpreta segun esto. */
 export type Oferta = "contacto" | "mas" | "aviso";
@@ -25,6 +74,8 @@ export type Sesion = {
   /** Todos los ya mostrados en la busqueda actual (para "ver mas" sin repetir). */
   vistosIds: string[];
   lead: { nombre?: string; telefono?: string; vehiculoInteres?: string; motivo?: string };
+  /** Postulacion de vendedor en curso (o ya armada); null si el cliente nunca pidio trabajo. */
+  postulacion: Postulacion | null;
   /** Pregunta del cliente que quedo sin responder mientras se identifica la historia. */
   preguntaPendiente: string | null;
   historiaPendienteId: string | null;
@@ -35,7 +86,7 @@ export type Sesion = {
   ultimaActividad: string;
 };
 
-const PASOS: Paso[] = ["libre", "pidiendo_nombre", "pidiendo_telefono", "eligiendo_historia"];
+const PASOS: Paso[] = ["libre", "pidiendo_nombre", "pidiendo_telefono", "eligiendo_historia", "postulando"];
 const OFERTAS: Oferta[] = ["contacto", "mas", "aviso"];
 
 export function sesionNueva(ahora: Date): Sesion {
@@ -47,6 +98,7 @@ export function sesionNueva(ahora: Date): Sesion {
     mostradosIds: [],
     vistosIds: [],
     lead: {},
+    postulacion: null,
     preguntaPendiente: null,
     historiaPendienteId: null,
     ofrecio: null,
@@ -69,6 +121,40 @@ const listaDeTextos = (v: unknown): string[] => (Array.isArray(v) ? v.filter(esT
 // NaN, Infinity y negativos vienen de jsonb corrupto o editado a mano: no son un contador valido.
 const enteroNoNegativo = (v: unknown): number =>
   typeof v === "number" && Number.isFinite(v) && Number.isInteger(v) && v >= 0 ? v : 0;
+
+const esCampo = (v: unknown): v is CampoPostulacion => (CAMPOS_POSTULACION as readonly unknown[]).includes(v);
+
+function textoAcotado(v: unknown): string | null {
+  if (!esTexto(v)) return null;
+  const texto = v.trim().slice(0, MAX_RESPUESTA_POSTULACION);
+  return texto === "" ? null : texto;
+}
+
+/** Lee la postulacion guardada (jsonb) sin confiar en su forma: lo invalido se descarta. */
+function normalizarPostulacion(crudo: unknown): Postulacion | null {
+  if (typeof crudo !== "object" || crudo === null || Array.isArray(crudo)) return null;
+  const c = crudo as Record<string, unknown>;
+  const d = typeof c.datos === "object" && c.datos !== null && !Array.isArray(c.datos) ? (c.datos as Record<string, unknown>) : {};
+
+  const datos: DatosPostulacion = {};
+  for (const campo of CAMPOS_POSTULACION) {
+    if (campo === "edad") {
+      const edad = d.edad;
+      if (typeof edad === "number" && Number.isInteger(edad) && edad >= EDAD_MINIMA && edad <= EDAD_MAXIMA) datos.edad = edad;
+      continue;
+    }
+    const texto = textoAcotado(d[campo]);
+    if (texto !== null) datos[campo] = texto;
+  }
+
+  return {
+    datos,
+    omitidos: Array.isArray(c.omitidos) ? [...new Set(c.omitidos.filter(esCampo))] : [],
+    campo: esCampo(c.campo) ? c.campo : null,
+    pendienteDuracion: c.pendienteDuracion === true,
+    enviada: c.enviada === true,
+  };
+}
 
 /** Lee lo guardado en la base (jsonb) sin confiar en su forma: lo invalido se descarta. */
 export function normalizarSesion(crudo: unknown, ahora: Date): Sesion {
@@ -104,6 +190,7 @@ export function normalizarSesion(crudo: unknown, ahora: Date): Sesion {
       ...(esTexto(lead.vehiculoInteres) ? { vehiculoInteres: lead.vehiculoInteres } : {}),
       ...(esTexto(lead.motivo) ? { motivo: lead.motivo } : {}),
     },
+    postulacion: normalizarPostulacion(c.postulacion),
     preguntaPendiente: textoONulo(c.preguntaPendiente),
     historiaPendienteId: textoONulo(c.historiaPendienteId),
     ofrecio: OFERTAS.includes(c.ofrecio as Oferta) ? (c.ofrecio as Oferta) : null,
