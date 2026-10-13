@@ -1,9 +1,10 @@
 import { coincideAprox, esSoloEmojis, normalizar } from "./normalizar";
 import { aplicarFrases } from "./vocabulario";
 
-// El orden del tipo es la prioridad: "humano" gana sobre todo y "ver_mas" va antes que "catalogo"
-// para que "mostrame mas" no se lea como un pedido de catalogo.
+// El orden del tipo es la prioridad: "empleo" y "humano" ganan sobre todo (pedir trabajo manda sobre pedir
+// "un vendedor") y "ver_mas" va antes que "catalogo" para que "mostrame mas" no se lea como un pedido de catalogo.
 export type Intencion =
+  | "empleo"
   | "humano"
   | "identidad"
   | "avisame"
@@ -58,6 +59,7 @@ const NEGACION_MAX_TOKENS = 5;
 // Intenciones que son una pregunta o pedido concreto. Si alguna aparece, "no tienen financiacion?" es
 // una pregunta con un "no" delante y no un rechazo: la negacion por primer token no corre.
 const INTENCIONES_CONTENIDO = new Set<Intencion>([
+  "empleo",
   "precio",
   "financiacion",
   "permuta",
@@ -135,6 +137,32 @@ function empiezaCon(tokens: string[], prefijo: string): boolean {
 
 // Ordenada igual que el tipo `Intencion`: el resultado sale en este orden.
 const REGLAS: Regla[] = [
+  {
+    intencion: "empleo",
+    // "vendedor" y "trabajo" sueltos NO van: "quiero hablar con un vendedor" es pedir a alguien de ventas y
+    // "lo necesito para trabajo" es de autos. Solo frases que piden empleo.
+    frases: [
+      "curriculum vitae",
+      "c v",
+      "busco trabajo",
+      "busco laburo",
+      "trabajar con ustedes",
+      "trabajar en la agencia",
+      "trabajar en posse",
+      "trabajar con posse",
+      "buscan vendedor",
+      "buscan un vendedor",
+      "buscan vendedora",
+      "necesitan vendedor",
+      "necesitan un vendedor",
+      "puesto de vendedor",
+      "puesto de vendedora",
+    ],
+    // Solo "curriculum" admite error de tipeo ("curriculun"): las demas, exactas. "postular" aproximado
+    // coincidiria con "popular" ("un auto popular").
+    palabras: ["curriculum"],
+    exactas: ["cv", "curriculo", "empleo", "laburo", "postular", "postularme", "postularse", "postulo", "postulacion"],
+  },
   {
     intencion: "humano",
     // "persona" y "humano" sueltas NO van: "es una persona la que me atiende?" pregunta por la identidad.

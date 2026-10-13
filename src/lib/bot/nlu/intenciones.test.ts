@@ -201,3 +201,48 @@ describe("detectarIntenciones — permuta y cuota", () => {
     expect(detectarIntenciones("tienen una cuota?")).toContain("financiacion");
   });
 });
+
+describe("detectarIntenciones — empleo (postulacion de vendedor)", () => {
+  it.each([
+    "cv",
+    "CV",
+    "Mando mi CV",
+    "C.V.",
+    "quiero dejar mi curriculum",
+    "curriculum vitae",
+    "curriculun",
+    "busco trabajo",
+    "busco laburo",
+    "tienen laburo?",
+    "hay empleo?",
+    "me quiero postular",
+    "buscan vendedor?",
+    "necesitan un vendedor",
+    "quiero trabajar con ustedes",
+    "puesto de vendedor",
+  ])("'%s' es empleo", (texto) => {
+    expect(detectarIntenciones(texto)[0]).toBe("empleo");
+  });
+
+  it.each([
+    "quiero hablar con un vendedor",
+    "lo necesito para trabajo",
+    "busco un auto para trabajo",
+    "busco una camioneta para trabajar",
+    "es un auto popular",
+    "hola",
+    "tienen alguna pickup?",
+    "cuanto sale el vento?",
+    "me interesa el vento",
+    "tienen financiacion?",
+  ])("'%s' NO es empleo", (texto) => {
+    expect(detectarIntenciones(texto)).not.toContain("empleo");
+  });
+
+  it("'no, busco trabajo' sigue siendo empleo (el 'no' no la vuelve una negativa)", () => {
+    const intenciones = detectarIntenciones("no, busco trabajo");
+
+    expect(intenciones).toContain("empleo");
+    expect(intenciones).not.toContain("negacion");
+  });
+});
