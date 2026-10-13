@@ -80,6 +80,10 @@ export default function PrivacidadPage() {
                   Los datos de contacto que nos des voluntariamente, por ejemplo tu nombre y tu
                   teléfono.
                 </li>
+                <li>
+                  Si te postulás para trabajar con nosotros, lo que nos cuentes en la charla: tu
+                  edad, tu localidad, tu teléfono y tu experiencia laboral.
+                </li>
               </ul>
               <p>No pedimos ni guardamos contraseñas, datos de tarjetas ni documentos.</p>
             </Seccion>
@@ -90,6 +94,7 @@ export default function PrivacidadPage() {
                 <li>Contarte la disponibilidad y los precios.</li>
                 <li>Derivarte con nuestro equipo por WhatsApp.</li>
                 <li>Contactarte, si lo pediste.</li>
+                <li>Armar tu mensaje de postulación, si querés sumarte a nuestro equipo.</li>
               </ul>
               <p>
                 Parte de la atención por Instagram es automática (asistente virtual) y siempre podés
@@ -155,7 +160,7 @@ export default function PrivacidadPage() {
           </div>
 
           <p className="mt-12 border-t border-car-gold/15 pt-6 text-xs text-car-muted">
-            Última actualización: 12/10/2026
+            Última actualización: 13/10/2026
           </p>
         </div>
       </main>

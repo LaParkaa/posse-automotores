@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WHATSAPP_LOCAL } from "../utils";
+import { WHATSAPP_LOCAL, WHATSAPP_RECLUTADOR } from "../utils";
 import { NEGOCIO } from "./negocio";
 
 describe("NEGOCIO", () => {
@@ -30,5 +30,15 @@ describe("NEGOCIO", () => {
 
   it("la pausa cuando contesta una persona es de horas positivas", () => {
     expect(NEGOCIO.pausaHumanoHoras).toBeGreaterThan(0);
+  });
+  it("el reclutador es Marcos, con su propio numero (distinto del de Nati)", () => {
+    expect(WHATSAPP_RECLUTADOR).toBe("5493537662444");
+    expect(NEGOCIO.reclutador).toEqual({
+      nombre: "Marcos",
+      whatsappNumero: WHATSAPP_RECLUTADOR,
+      whatsappVisible: "+54 9 3537 66-2444",
+    });
+    expect(NEGOCIO.reclutador.whatsappNumero).toMatch(/^\d{11,15}$/);
+    expect(NEGOCIO.reclutador.whatsappNumero).not.toBe(NEGOCIO.whatsappNumero);
   });
 });

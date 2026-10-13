@@ -14,6 +14,7 @@ import {
   tarjetaContacto,
   tarjetaDe,
   tarjetaEleccion,
+  tarjetaPostulacion,
   urlImagen,
 } from "./respuestas";
 
@@ -402,5 +403,31 @@ describe("listaNumerada", () => {
 
   it("sin autos devuelve vacio", () => {
     expect(listaNumerada([])).toBe("");
+  });
+});
+
+describe("tarjetaPostulacion", () => {
+  it("lleva al WhatsApp de Marcos con el mensaje completo y respeta los limites de Instagram", () => {
+    const t = tarjetaPostulacion({ nombre: "Juan Pérez", edad: 28, localidad: "Posse", experiencia_ventas: "3 años" }, ctx);
+    const mensaje = decodeURIComponent(t.botones[0].url.split("?text=")[1]);
+
+    expect(t.titulo).toBe("Puesto de vendedor");
+    expect(t.imagenUrl).toBeNull();
+    expect(t.botones).toHaveLength(1);
+    expect(t.botones[0].titulo).toBe("Enviar a Marcos");
+    expect(Array.from(t.botones[0].titulo).length).toBeLessThanOrEqual(20);
+    expect(Array.from(t.titulo).length).toBeLessThanOrEqual(80);
+    expect(Array.from(t.subtitulo).length).toBeLessThanOrEqual(80);
+    expect(t.botones[0].url.startsWith("https://wa.me/5493537662444?text=")).toBe(true);
+    expect(mensaje).toContain("Nombre: Juan Pérez");
+    expect(mensaje).toContain("Edad: 28 años");
+    expect(mensaje).toContain("Experiencia en ventas: 3 años");
+  });
+
+  it("no usa el WhatsApp de Nati y funciona sin datos", () => {
+    const t = tarjetaPostulacion({}, ctx);
+
+    expect(t.botones[0].url).not.toContain("5493537558947");
+    expect(decodeURIComponent(t.botones[0].url.split("?text=")[1])).toContain("puesto de vendedor");
   });
 });

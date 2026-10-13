@@ -19,6 +19,7 @@ describe("sesionNueva", () => {
     expect(s.ofrecio).toBeNull();
     expect(s.fallos).toBe(0);
     expect(s.saludado).toBe(false);
+    expect(s.postulacion).toBeNull();
     expect(s.ultimaActividad).toBe(AHORA.toISOString());
   });
 });
@@ -70,7 +71,7 @@ describe("normalizarSesion", () => {
 
 describe("normalizarSesion (blindaje)", () => {
   const sesionCompleta: Sesion = {
-    paso: "pidiendo_nombre",
+    paso: "postulando",
     filtros: { marca: "Peugeot", tipos: ["pickup", "suv"], combustible: "nafta", transmision: "manual", anio: 2014 },
     vehiculoActualId: "v-206",
     historiaActualId: "h-1",
@@ -82,6 +83,13 @@ describe("normalizarSesion (blindaje)", () => {
     ofrecio: "mas",
     fallos: 2,
     saludado: true,
+    postulacion: {
+      datos: { nombre: "Juan Pérez", edad: 28, localidad: "Posse", telefono: "3537123456", experiencia_ventas: "3 años en una agencia" },
+      omitidos: ["experiencia_rubro"],
+      campo: "financiaciones",
+      pendienteDuracion: false,
+      enviada: false,
+    },
     ultimaActividad: AHORA.toISOString(),
   };
 
@@ -126,5 +134,51 @@ describe("normalizarSesion (blindaje)", () => {
 
   it("sesionVigente es false si ultimaActividad no es una fecha valida", () => {
     expect(sesionVigente({ ...sesionNueva(AHORA), ultimaActividad: "basura" }, AHORA)).toBe(false);
+  });
+});
+
+describe("normalizarSesion — postulacion de vendedor", () => {
+  it("una sesion guardada antes de este cambio (sin la clave) queda con postulacion null", () => {
+    expect(normalizarSesion({ paso: "libre", saludado: true }, AHORA).postulacion).toBeNull();
+  });
+
+  it("lo que no es un objeto es null", () => {
+    for (const basura of ["x", 3, [], true]) {
+      expect(normalizarSesion({ postulacion: basura }, AHORA).postulacion).toBeNull();
+    }
+  });
+
+  it("descarta datos invalidos, recorta los largos y no acepta campos inventados", () => {
+    const s = normalizarSesion(
+      {
+        postulacion: {
+          datos: { nombre: 5, edad: 3, localidad: "x".repeat(1000), telefono: ["a"], disponibilidad: "   " },
+          omitidos: ["inventado", "edad", "edad", 7],
+          campo: "otro",
+          pendienteDuracion: "si",
+          enviada: "si",
+        },
+      },
+      AHORA,
+    );
+
+    expect(s.postulacion).toEqual({
+      datos: { localidad: "x".repeat(300) },
+      omitidos: ["edad"],
+      campo: null,
+      pendienteDuracion: false,
+      enviada: false,
+    });
+  });
+
+  it("la edad solo vale como entero de 16 a 75", () => {
+    for (const mala of [15, 76, 28.5, NaN, "28"]) {
+      expect(normalizarSesion({ postulacion: { datos: { edad: mala } } }, AHORA).postulacion?.datos).toEqual({});
+    }
+    expect(normalizarSesion({ postulacion: { datos: { edad: 28 } } }, AHORA).postulacion?.datos).toEqual({ edad: 28 });
+  });
+
+  it("'postulando' es un paso valido", () => {
+    expect(normalizarSesion({ paso: "postulando" }, AHORA).paso).toBe("postulando");
   });
 });

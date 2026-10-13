@@ -1,4 +1,4 @@
-import { buildWhatsAppUrlInstagram } from "../utils";
+import { buildWhatsAppUrlInstagram, buildWhatsAppUrlPostulacion, type DatosPostulacionMensaje } from "../utils";
 import type { Negocio } from "./negocio";
 import type { Boton, Perfil, Tarjeta, VehiculoCatalogo } from "./types";
 
@@ -151,6 +151,25 @@ export function tarjetaContacto(v: VehiculoCatalogo | null, ctx: Contexto): Tarj
     subtitulo: recortar(`Escribile a ${negocio.secretaria} y te cuenta todo`, MAX_SUBTITULO),
     imagenUrl: null,
     botones: [botonNati(v, negocio)],
+  };
+}
+
+/**
+ * Tarjeta del puesto de vendedor: el boton abre el WhatsApp de Marcos con el mensaje ya armado con los datos
+ * del candidato, para que solo toque enviar. Instagram no admite tarjetas sin botones, asi que siempre lleva ese.
+ */
+export function tarjetaPostulacion(datos: DatosPostulacionMensaje, ctx: Contexto): Tarjeta {
+  const { reclutador } = ctx.negocio;
+  return {
+    titulo: recortar("Puesto de vendedor", MAX_TITULO),
+    subtitulo: recortar(`Tu mensaje para ${reclutador.nombre} ya está armado`, MAX_SUBTITULO),
+    imagenUrl: null,
+    botones: [
+      {
+        titulo: recortar(`Enviar a ${reclutador.nombre}`, MAX_BOTON),
+        url: buildWhatsAppUrlPostulacion(datos, reclutador),
+      },
+    ],
   };
 }
 

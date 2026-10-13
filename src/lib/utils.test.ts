@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildWhatsAppUrl, buildWhatsAppUrlInstagram, WHATSAPP_LOCAL } from "./utils";
+import {
+  buildWhatsAppUrl,
+  buildWhatsAppUrlInstagram,
+  buildWhatsAppUrlPostulacion,
+  WHATSAPP_LOCAL,
+  WHATSAPP_RECLUTADOR,
+} from "./utils";
 
 describe("buildWhatsAppUrl", () => {
   it("arma el mensaje de catalogo web para un auto (no reel, no moto)", () => {
@@ -81,5 +87,79 @@ describe("buildWhatsAppUrlInstagram", () => {
 
   it("el numero compartido es el de Nati", () => {
     expect(WHATSAPP_LOCAL).toBe("5493537558947");
+  });
+});
+
+describe("buildWhatsAppUrlPostulacion", () => {
+  const MARCOS = { nombre: "Marcos", whatsappNumero: WHATSAPP_RECLUTADOR };
+  const textoDe = (url: string) => decodeURIComponent(url.split("?text=")[1]);
+  const COMPLETO = {
+    nombre: "Juan Pérez",
+    edad: 28,
+    localidad: "Justiniano Posse",
+    telefono: "3537 123456",
+    experiencia_ventas: "3 años en una agencia",
+    experiencia_rubro: "gestoría del automotor",
+    financiaciones: "prendarios y créditos",
+    disponibilidad: "jornada completa",
+  };
+
+  it("arma el mensaje completo para Marcos, con un dato por linea y emojis", () => {
+    const url = buildWhatsAppUrlPostulacion(COMPLETO, MARCOS);
+
+    expect(url.startsWith(`https://wa.me/${WHATSAPP_RECLUTADOR}?text=`)).toBe(true);
+    expect(textoDe(url)).toBe(
+      [
+        "Hola Marcos ✌️, te escribo desde Instagram por el puesto de vendedor.",
+        "✍️ Nombre: Juan Pérez",
+        "☺️ Edad: 28 años",
+        "⛳ Localidad: Justiniano Posse",
+        "☎️ Teléfono: 3537 123456",
+        "⭐ Experiencia en ventas: 3 años en una agencia",
+        "⚙️ Experiencia en el rubro automotor: gestoría del automotor",
+        "✅ Financiaciones: prendarios y créditos",
+        "⏰ Disponibilidad: jornada completa",
+        "Te mando mi CV ✉️",
+      ].join("\n"),
+    );
+  });
+
+  it("omite lo que el candidato no contesto", () => {
+    const texto = textoDe(buildWhatsAppUrlPostulacion({ nombre: "Ana", edad: null, localidad: "Posse" }, MARCOS));
+
+    expect(texto).toBe(
+      [
+        "Hola Marcos ✌️, te escribo desde Instagram por el puesto de vendedor.",
+        "✍️ Nombre: Ana",
+        "⛳ Localidad: Posse",
+        "Te mando mi CV ✉️",
+      ].join("\n"),
+    );
+    expect(textoDe(buildWhatsAppUrlPostulacion({}, MARCOS))).toBe(
+      "Hola Marcos ✌️, te escribo desde Instagram por el puesto de vendedor.\nTe mando mi CV ✉️",
+    );
+  });
+
+  it("solo usa simbolos del plano basico: el navegador de Instagram rompe los emojis de 4 bytes", () => {
+    const texto = textoDe(buildWhatsAppUrlPostulacion({ ...COMPLETO, localidad: "Posse 🚗📍" }, MARCOS));
+
+    for (const caracter of texto) expect(caracter.codePointAt(0)!, caracter).toBeLessThanOrEqual(0xffff);
+    expect(texto).toContain("⛳ Localidad: Posse\n");
+  });
+
+  it("recorta las respuestas largas para que el link no pase del limite de Instagram", () => {
+    const larga = "é".repeat(400);
+    const url = buildWhatsAppUrlPostulacion(
+      { ...COMPLETO, experiencia_ventas: larga, experiencia_rubro: larga, financiaciones: larga, disponibilidad: larga },
+      MARCOS,
+    );
+
+    expect(url.length).toBeLessThanOrEqual(1700);
+    expect(textoDe(url)).toContain("Nombre: Juan Pérez");
+    expect(textoDe(url)).toContain("Te mando mi CV");
+  });
+
+  it("no usa el WhatsApp de Nati", () => {
+    expect(buildWhatsAppUrlPostulacion(COMPLETO, MARCOS)).not.toContain(WHATSAPP_LOCAL);
   });
 });
