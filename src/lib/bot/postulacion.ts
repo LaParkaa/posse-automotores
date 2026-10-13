@@ -51,6 +51,9 @@ const PREGUNTAS_DE_AUTO = new Set<Intencion>(["precio", "info", "disponibilidad"
 const PALABRAS_CONDICIONES = ["sueldo", "sueldos", "comision", "comisiones", "aguinaldo", "blanco"];
 const FRASES_CONDICIONES = ["cuanto pagan", "cuanto cobran", "cuanto se gana", "cuanto ganan", "horario de trabajo", "horarios de trabajo", "obra social"];
 const INTERROGATIVAS = new Set(["cuanto", "cuanta", "cuantos", "cuantas", "hay", "tienen", "como", "es", "son", "que", "cual", "cuales", "se", "pagan", "cobran", "dan"]);
+// Un adjunto de estos tipos es el CV (foto, archivo...); cualquier otro, mientras se pide el telefono, es el numero
+// que Instagram convirtio en "tarjeta de contacto".
+const ADJUNTOS_MULTIMEDIA = new Set(["image", "video", "audio", "file", "ig_reel", "reel", "share", "story_mention"]);
 const PALABRAS_VENTAS = new Set(["venta", "ventas", "vendi", "vendia", "vendo", "vendiendo", "vendedor", "vendedora"]);
 // "vivo en Posse y 5 años en ventas": lo personal que va antes del "y" no es parte de la experiencia.
 const PERSONAL_ANTES_DE_Y = /^.*\b(?:vivo en|soy de|tengo \S+ a[nñ]os?)\b.*?\s+y\s+/iu;
@@ -158,6 +161,27 @@ export function pasoPostulacion(t: Turno, texto: string): boolean {
   }
   avanzar(t, p);
   return true;
+}
+
+/**
+ * Un adjunto en medio de la postulacion. Si se esta pidiendo el telefono, Instagram suele convertir el numero
+ * en una "tarjeta de contacto" que llega como adjunto sin texto: se intenta leer el numero de ahi y, si no se
+ * puede, se pide de nuevo en una frase (en vez de confundirlo con el CV). Un adjunto multimedia, o cualquiera
+ * cuando no se pide el telefono, es el CV: va a Marcos por WhatsApp.
+ */
+export function adjuntoEnPostulacion(t: Turno): void {
+  const p = postulacionDe(t);
+  const campo = p.campo ?? siguienteCampo(p);
+  if (campo === "telefono" && !p.pendienteDuracion) {
+    const numero = telefonoEn((t.e.adjuntosTexto ?? []).join(" "))?.numero;
+    if (numero !== undefined && pasoPostulacion(t, numero)) return;
+    if (!t.e.adjuntos.every((tipo) => ADJUNTOS_MULTIMEDIA.has(tipo))) {
+      decir(t, variante(t, "postula-contacto", T.telefonoComoContacto));
+      return;
+    }
+  }
+  decir(t, variante(t, "postula-adjunto", T.postulacionAdjunto(reclutador(t))));
+  mostrarContactoReclutador(t, p.datos);
 }
 
 /** Pregunta el proximo dato, o cierra la postulacion si ya no falta ninguno. */

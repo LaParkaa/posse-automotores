@@ -786,3 +786,21 @@ describe("textos fijos al cliente", () => {
     expect(texto).not.toMatch(/soy (una persona|humano|nati)/i);
   });
 });
+
+describe("procesarEventos: adjuntos", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("pasa al motor los textos del adjunto y solo loguea los tipos, nunca el contenido", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.mocked(conversar).mockReturnValue(resultado());
+    const deps = crearDeps();
+
+    await procesarEventos([mensaje({ texto: null, adjuntos: ["contact"], adjuntosTexto: ["Juan 3537 123456"] })], deps);
+
+    expect(conversar).toHaveBeenCalledWith(
+      expect.objectContaining({ adjuntos: ["contact"], adjuntosTexto: ["Juan 3537 123456"] }),
+    );
+    expect(info).toHaveBeenCalledWith("[bot] Adjuntos recibidos", { tipos: ["contact"], conTexto: false });
+    expect(JSON.stringify(info.mock.calls)).not.toContain("3537");
+  });
+});

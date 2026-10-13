@@ -23,6 +23,7 @@ const VARIANTES: Array<[string, readonly string[]]> = [
   ["postulacionListo", T.postulacionListo("Ana", "Marcos")],
   ["postulacionSinNombre", T.postulacionSinNombre("Marcos")],
   ["postulacionAdjunto", T.postulacionAdjunto("Marcos")],
+  ["telefonoComoContacto", T.telefonoComoContacto],
 ];
 
 describe("textos de la postulacion de vendedor", () => {

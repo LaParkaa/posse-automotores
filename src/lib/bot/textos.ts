@@ -319,9 +319,10 @@ export const preguntaPostulacion: Record<CampoPostulacion, string[]> = {
   nombre: ["Para empezar, ¿cómo te llamás? 😊 (nombre y apellido)", "¿Me pasás tu nombre y apellido? 🙂"],
   edad: ["¿Qué edad tenés? 🙂", "¿Cuántos años tenés? 😊"],
   localidad: ["¿En qué localidad vivís? 📍", "¿De dónde sos? ¿En qué localidad vivís? 🙂"],
+  // Pedido dentro de una frase: Instagram convierte un numero suelto en "tarjeta de contacto" y no llega como texto.
   telefono: [
-    "¿Con qué número de WhatsApp te podemos contactar? 📱",
-    "¿Me dejás un teléfono de contacto? 📱 Con característica, por ejemplo 3537 123456",
+    "¿Con qué número de WhatsApp te podemos contactar? 📱 Escribilo en una frase, por ejemplo: Mi número es 3537 123456",
+    "¿Me dejás un teléfono de contacto? 📱 Mejor en una frase, por ejemplo: Mi número es 3537 123456",
   ],
   experiencia_ventas: [
     "Contame tu experiencia en ventas 💼 ¿Dónde trabajaste y cuántos años?",
@@ -392,6 +393,12 @@ export const postulacionSinNombre = (reclutador: string) => [
 export const postulacionAdjunto = (reclutador: string) => [
   `Por acá no puedo recibir archivos ni fotos 😅 Mandale tu CV a ${reclutador} por WhatsApp 👇 y seguimos con tus datos cuando quieras`,
   `Los archivos no me llegan bien por acá 🙂 Mandale tu CV a ${reclutador} por WhatsApp 👇 y después seguimos con tu postulación`,
+];
+
+/** Instagram tomo el numero como un contacto y no llego como texto: se pide de nuevo, dentro de una frase. */
+export const telefonoComoContacto = [
+  "Instagram tomó tu número como un contacto y no me llega 😅 ¿Me lo escribís en una frase? Por ejemplo: Mi número es 3537 123456",
+  "Tu número se mandó como contacto y no lo puedo leer 🙂 Escribilo en una frase, por ejemplo: Mi número es 3537 123456",
 ];
 
 /** Respaldo si Instagram rechaza la tarjeta: el link con todo el mensaje es muy largo para ir en un texto. */

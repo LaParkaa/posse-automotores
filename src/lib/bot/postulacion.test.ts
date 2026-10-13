@@ -7,7 +7,7 @@ import { normalizarSesion, sesionNueva, type Sesion } from "./sesion";
 
 const AHORA = new Date("2026-10-13T15:00:00Z");
 
-type Turno = string | { texto?: string | null; historiaId?: string; adjuntos?: string[] };
+type Turno = string | { texto?: string | null; historiaId?: string; adjuntos?: string[]; adjuntosTexto?: string[] };
 
 /** Simula una charla: encadena la sesion de cada turno en el siguiente. */
 function charlar(turnos: Turno[], sesionInicial?: Sesion): ResultadoMotor[] {
@@ -17,6 +17,7 @@ function charlar(turnos: Turno[], sesionInicial?: Sesion): ResultadoMotor[] {
     const r = conversar({
       texto: t.texto ?? null,
       adjuntos: t.adjuntos ?? [],
+      adjuntosTexto: t.adjuntosTexto,
       historiaId: t.historiaId ?? null,
       vehiculoDeHistoria: null,
       mid: `mid.${i}`,
@@ -57,16 +58,16 @@ const FLUJO = [
   "de lunes a sábado, jornada completa",
 ];
 const MENSAJE_ESPERADO = [
-  "Hola Marcos ✌️, te escribo desde Instagram por el puesto de vendedor.",
-  "✍️ Nombre: Juan Pérez",
-  "☺️ Edad: 28 años",
-  "⛳ Localidad: Justiniano Posse",
-  "☎️ Teléfono: 3537 123456",
-  "⭐ Experiencia en ventas: 3 años vendiendo en una agencia",
-  "⚙️ Experiencia en el rubro automotor: trabajé en gestoría del automotor",
-  "✅ Financiaciones: manejo prendarios y créditos bancarios",
-  "⏰ Disponibilidad: de lunes a sábado, jornada completa",
-  "Te mando mi CV ✉️",
+  "Hola Marcos, te escribo desde Instagram por el puesto de vendedor.",
+  "Nombre: Juan Pérez",
+  "Edad: 28 años",
+  "Localidad: Justiniano Posse",
+  "Teléfono: 3537 123456",
+  "Experiencia en ventas: 3 años vendiendo en una agencia",
+  "Experiencia en el rubro automotor: trabajé en gestoría del automotor",
+  "Financiaciones: manejo prendarios y créditos bancarios",
+  "Disponibilidad: de lunes a sábado, jornada completa",
+  "Te mando mi CV.",
 ].join("\n");
 /** Charla hasta tener contestado el telefono: la pregunta pendiente es la experiencia en ventas. */
 const HASTA_VENTAS = ["cv", "Juan Pérez", "28", "Posse", "3537 123456"];
@@ -480,5 +481,56 @@ describe("postulacion de vendedor: pureza, tono y persistencia", () => {
     const [r2] = charlar(["28"], viaJson);
     expect(datos(r2)).toMatchObject({ nombre: "Juan Pérez", edad: 28 });
     expect(r2.sesion.postulacion?.campo).toBe("localidad");
+  });
+});
+
+describe("postulacion de vendedor: un telefono que Instagram convierte en contacto", () => {
+  const HASTA_TELEFONO = ["cv", "Juan Pérez", "28", "Posse"];
+
+  it("la pregunta del telefono lo pide dentro de una frase, asi Instagram no lo convierte en contacto", () => {
+    const rs = charlar(HASTA_TELEFONO);
+
+    expect(ultimoTexto(rs[3])).toMatch(/Mi número es/);
+  });
+
+  it("si el numero llega dentro del adjunto, se toma como la respuesta y sigue", () => {
+    const rs = charlar([...HASTA_TELEFONO, { texto: null, adjuntos: ["fallback"], adjuntosTexto: ["Juan", "tel:+5493537123456"] }]);
+    const r = rs[rs.length - 1];
+
+    expect(datos(r)?.telefono).toBe("+5493537123456");
+    expect(r.sesion.postulacion?.campo).toBe("experiencia_ventas");
+    expect(ultimoTexto(r)).toMatch(PREGUNTAS[4]);
+    expect(botonMarcos(r)).toBe(false);
+  });
+
+  it("tambien si el numero viene con formato de contacto", () => {
+    const rs = charlar([...HASTA_TELEFONO, { texto: null, adjuntos: ["contact"], adjuntosTexto: ["Mi número 3537 123456"] }]);
+
+    expect(datos(rs[rs.length - 1])?.telefono).toBe("3537 123456");
+  });
+
+  it("si el adjunto no trae un numero legible, pide escribirlo en una frase y NO lo manda a Marcos", () => {
+    const rs = charlar([...HASTA_TELEFONO, { texto: null, adjuntos: ["contact"] }]);
+    const r = rs[rs.length - 1];
+
+    expect(textos(r).join("\n")).toMatch(/contacto/i);
+    expect(textos(r).join("\n")).toMatch(/Mi número es/);
+    expect(botonMarcos(r)).toBe(false);
+    expect(r.sesion.paso).toBe("postulando");
+    expect(r.sesion.postulacion?.campo).toBe("telefono");
+  });
+
+  it("una foto o un archivo cuando se pide el telefono sigue siendo el CV: se manda a Marcos", () => {
+    const rs = charlar([...HASTA_TELEFONO, { texto: null, adjuntos: ["image"] }]);
+    const r = rs[rs.length - 1];
+
+    expect(botonMarcos(r)).toBe(true);
+    expect(r.sesion.postulacion?.campo).toBe("telefono");
+  });
+
+  it("un adjunto raro cuando NO se pide el telefono sigue mandando el CV a Marcos", () => {
+    const rs = charlar([...HASTA_VENTAS, { texto: null, adjuntos: ["contact"] }]);
+
+    expect(botonMarcos(rs[rs.length - 1])).toBe(true);
   });
 });
