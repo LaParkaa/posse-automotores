@@ -104,22 +104,22 @@ describe("buildWhatsAppUrlPostulacion", () => {
     disponibilidad: "jornada completa",
   };
 
-  it("arma el mensaje completo para Marcos, con un dato por linea y emojis", () => {
+  it("arma el mensaje completo para Marcos, con un dato por linea y sin emojis", () => {
     const url = buildWhatsAppUrlPostulacion(COMPLETO, MARCOS);
 
     expect(url.startsWith(`https://wa.me/${WHATSAPP_RECLUTADOR}?text=`)).toBe(true);
     expect(textoDe(url)).toBe(
       [
-        "Hola Marcos ✌️, te escribo desde Instagram por el puesto de vendedor.",
-        "✍️ Nombre: Juan Pérez",
-        "☺️ Edad: 28 años",
-        "⛳ Localidad: Justiniano Posse",
-        "☎️ Teléfono: 3537 123456",
-        "⭐ Experiencia en ventas: 3 años en una agencia",
-        "⚙️ Experiencia en el rubro automotor: gestoría del automotor",
-        "✅ Financiaciones: prendarios y créditos",
-        "⏰ Disponibilidad: jornada completa",
-        "Te mando mi CV ✉️",
+        "Hola Marcos, te escribo desde Instagram por el puesto de vendedor.",
+        "Nombre: Juan Pérez",
+        "Edad: 28 años",
+        "Localidad: Justiniano Posse",
+        "Teléfono: 3537 123456",
+        "Experiencia en ventas: 3 años en una agencia",
+        "Experiencia en el rubro automotor: gestoría del automotor",
+        "Financiaciones: prendarios y créditos",
+        "Disponibilidad: jornada completa",
+        "Te mando mi CV.",
       ].join("\n"),
     );
   });
@@ -129,22 +129,26 @@ describe("buildWhatsAppUrlPostulacion", () => {
 
     expect(texto).toBe(
       [
-        "Hola Marcos ✌️, te escribo desde Instagram por el puesto de vendedor.",
-        "✍️ Nombre: Ana",
-        "⛳ Localidad: Posse",
-        "Te mando mi CV ✉️",
+        "Hola Marcos, te escribo desde Instagram por el puesto de vendedor.",
+        "Nombre: Ana",
+        "Localidad: Posse",
+        "Te mando mi CV.",
       ].join("\n"),
     );
     expect(textoDe(buildWhatsAppUrlPostulacion({}, MARCOS))).toBe(
-      "Hola Marcos ✌️, te escribo desde Instagram por el puesto de vendedor.\nTe mando mi CV ✉️",
+      "Hola Marcos, te escribo desde Instagram por el puesto de vendedor.\nTe mando mi CV.",
     );
   });
 
-  it("solo usa simbolos del plano basico: el navegador de Instagram rompe los emojis de 4 bytes", () => {
-    const texto = textoDe(buildWhatsAppUrlPostulacion({ ...COMPLETO, localidad: "Posse 🚗📍" }, MARCOS));
+  it("no lleva ningun emoji ni simbolo: WhatsApp no los interpreta bien al abrir el link desde Instagram", () => {
+    const texto = textoDe(buildWhatsAppUrlPostulacion({ ...COMPLETO, localidad: "Posse 🚗📍❤️⭐" }, MARCOS));
 
-    for (const caracter of texto) expect(caracter.codePointAt(0)!, caracter).toBeLessThanOrEqual(0xffff);
-    expect(texto).toContain("⛳ Localidad: Posse\n");
+    expect(texto).not.toMatch(/\p{Extended_Pictographic}/u);
+    expect(texto).toContain("Localidad: Posse\n");
+    // Solo letras latinas, numeros y signos comunes.
+    for (const caracter of textoDe(buildWhatsAppUrlPostulacion(COMPLETO, MARCOS))) {
+      expect(caracter.codePointAt(0)!, caracter).toBeLessThanOrEqual(0xff);
+    }
   });
 
   it("recorta las respuestas largas para que el link no pase del limite de Instagram", () => {

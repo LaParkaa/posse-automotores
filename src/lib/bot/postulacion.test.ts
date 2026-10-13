@@ -57,16 +57,16 @@ const FLUJO = [
   "de lunes a sábado, jornada completa",
 ];
 const MENSAJE_ESPERADO = [
-  "Hola Marcos ✌️, te escribo desde Instagram por el puesto de vendedor.",
-  "✍️ Nombre: Juan Pérez",
-  "☺️ Edad: 28 años",
-  "⛳ Localidad: Justiniano Posse",
-  "☎️ Teléfono: 3537 123456",
-  "⭐ Experiencia en ventas: 3 años vendiendo en una agencia",
-  "⚙️ Experiencia en el rubro automotor: trabajé en gestoría del automotor",
-  "✅ Financiaciones: manejo prendarios y créditos bancarios",
-  "⏰ Disponibilidad: de lunes a sábado, jornada completa",
-  "Te mando mi CV ✉️",
+  "Hola Marcos, te escribo desde Instagram por el puesto de vendedor.",
+  "Nombre: Juan Pérez",
+  "Edad: 28 años",
+  "Localidad: Justiniano Posse",
+  "Teléfono: 3537 123456",
+  "Experiencia en ventas: 3 años vendiendo en una agencia",
+  "Experiencia en el rubro automotor: trabajé en gestoría del automotor",
+  "Financiaciones: manejo prendarios y créditos bancarios",
+  "Disponibilidad: de lunes a sábado, jornada completa",
+  "Te mando mi CV.",
 ].join("\n");
 /** Charla hasta tener contestado el telefono: la pregunta pendiente es la experiencia en ventas. */
 const HASTA_VENTAS = ["cv", "Juan Pérez", "28", "Posse", "3537 123456"];
