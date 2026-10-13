@@ -1,4 +1,11 @@
-import { WHATSAPP_LOCAL } from "../utils";
+import { WHATSAPP_LOCAL, WHATSAPP_RECLUTADOR } from "../utils";
+
+/** Quien recibe las postulaciones de vendedor (no es la secretaria): el candidato le escribe por WhatsApp. */
+export type Reclutador = {
+  nombre: string;
+  whatsappNumero: string;
+  whatsappVisible: string;
+};
 
 /**
  * Datos del negocio que el bot puede decir. UNICO archivo a editar para cambiarlos.
@@ -11,6 +18,7 @@ export type Negocio = {
   secretaria: string;
   whatsappNumero: string;
   whatsappVisible: string;
+  reclutador: Reclutador;
   horarios: string | null;
   direccion: string | null;
   financiacion: string | null;
@@ -34,6 +42,9 @@ export const NEGOCIO: Negocio = {
   secretaria: "Nati",
   whatsappNumero: WHATSAPP_LOCAL,
   whatsappVisible: "+54 9 3537 55-8947",
+
+  // Las postulaciones de vendedor van a Marcos (numero del flyer), no a Nati.
+  reclutador: { nombre: "Marcos", whatsappNumero: WHATSAPP_RECLUTADOR, whatsappVisible: "+54 9 3537 66-2444" },
 
   // Tomado de la seccion Contacto del sitio. Si cambian, editar aca y en el sitio.
   horarios: "Atendemos de lunes a viernes de 9 a 13 y de 16 a 20 hs, y los sábados de 9 a 13 hs. Los domingos estamos cerrados 🕘",

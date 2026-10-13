@@ -7,6 +7,9 @@ export function formatPrice(precioTexto: string): string {
 /** Unica fuente del numero de WhatsApp del local (Nati). */
 export const WHATSAPP_LOCAL = "5493537558947";
 
+/** WhatsApp de Marcos, que recibe las postulaciones de vendedor (el de Nati es WHATSAPP_LOCAL). */
+export const WHATSAPP_RECLUTADOR = "5493537662444";
+
 export function buildWhatsAppUrl(
   vehiculo: Pick<Vehiculo, "nombre" | "tipo" | "promocionado_reel">
 ): string {
@@ -38,6 +41,80 @@ export function buildWhatsAppUrlInstagram(
     base +
     encodeURIComponent(`Hola, te escribo desde Instagram. Me interesa ${articulo} ${vehiculo.nombre}. ¿Sigue disponible?`)
   );
+}
+
+// Instagram acepta botones con links de hasta unos 2000 caracteres: se deja margen.
+const MAX_URL_POSTULACION = 1700;
+const LARGO_RESPUESTA_INICIAL = 160;
+const LARGO_RESPUESTA_MINIMO = 20;
+const PASO_ACHICAR = 20;
+const MAX_NOMBRE_EN_LINK = 80;
+
+/**
+ * Lo que escribio el candidato, apto para el link: sin emojis de 4 bytes (el navegador de Instagram los
+ * rompe al abrir wa.me y salen como "?"), sin invisibles, en una sola linea y con tope de largo.
+ */
+function limpioParaLink(texto: string | null | undefined, max: number): string {
+  const limpio = (texto ?? "")
+    .replace(/[\u{10000}-\u{10FFFF}️‍]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return Array.from(limpio).slice(0, max).join("").trim();
+}
+
+export type DatosPostulacionMensaje = {
+  nombre?: string | null;
+  edad?: number | null;
+  localidad?: string | null;
+  telefono?: string | null;
+  experiencia_ventas?: string | null;
+  experiencia_rubro?: string | null;
+  financiaciones?: string | null;
+  disponibilidad?: string | null;
+};
+
+// Solo simbolos del plano basico de Unicode (3 bytes): los emojis "nuevos" se rompen en el link de Instagram.
+const LINEAS_POSTULACION: Array<[Exclude<keyof DatosPostulacionMensaje, "edad">, string]> = [
+  ["nombre", "✍️ Nombre"],
+  ["localidad", "⛳ Localidad"],
+  ["telefono", "☎️ Teléfono"],
+  ["experiencia_ventas", "⭐ Experiencia en ventas"],
+  ["experiencia_rubro", "⚙️ Experiencia en el rubro automotor"],
+  ["financiaciones", "✅ Financiaciones"],
+  ["disponibilidad", "⏰ Disponibilidad"],
+];
+const CAMPOS_CORTOS = new Set<string>(["nombre", "localidad", "telefono"]);
+
+function mensajePostulacion(datos: DatosPostulacionMensaje, reclutador: string, largoMax: number): string {
+  const lineas: string[] = [];
+  const agregar = (etiqueta: string, valor: string) => {
+    if (valor !== "") lineas.push(`${etiqueta}: ${valor}`);
+  };
+  for (const [campo, etiqueta] of LINEAS_POSTULACION) {
+    const max = CAMPOS_CORTOS.has(campo) ? Math.min(largoMax, MAX_NOMBRE_EN_LINK) : largoMax;
+    agregar(etiqueta, limpioParaLink(datos[campo], max));
+    // La edad va entre el nombre y la localidad.
+    if (campo === "nombre" && datos.edad) agregar("☺️ Edad", `${datos.edad} años`);
+  }
+  return [`Hola ${reclutador} ✌️, te escribo desde Instagram por el puesto de vendedor.`, ...lineas, "Te mando mi CV ✉️"].join("\n");
+}
+
+/**
+ * Link de WhatsApp a Marcos con el mensaje de la postulacion ya armado: un dato por linea y con emojis, asi
+ * el candidato solo toca enviar (y adjunta su CV). Si las respuestas largas hacen pasar el link del limite
+ * de Instagram, se achican hasta que entre.
+ */
+export function buildWhatsAppUrlPostulacion(
+  datos: DatosPostulacionMensaje,
+  reclutador: { nombre: string; whatsappNumero: string },
+): string {
+  const base = `https://wa.me/${reclutador.whatsappNumero}?text=`;
+  let url = "";
+  for (let largo = LARGO_RESPUESTA_INICIAL; largo >= LARGO_RESPUESTA_MINIMO; largo -= PASO_ACHICAR) {
+    url = base + encodeURIComponent(mensajePostulacion(datos, reclutador.nombre, largo));
+    if (url.length <= MAX_URL_POSTULACION) break;
+  }
+  return url;
 }
 
 export function buildSlug(nombre: string, anio: number): string {
