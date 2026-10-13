@@ -1,5 +1,7 @@
 # Postulaciones de vendedor por Instagram — Diseño
 
+> **Revisión del 2026-10-13 (reemplaza lo que contradiga el resto de este documento).** Por pedido del dueño, la postulación es **100 % gratis y sin guardar nada**: no hay tabla `postulantes`, ni pantalla `/admin/postulantes`, ni SQL, ni cambios en el `handler`. Lo que se junta vive en la sesión de la charla y, al terminar, el bot arma **el mensaje completo para Marcos** (un dato por línea, con símbolos del plano básico de Unicode) en un botón de WhatsApp: el candidato toca enviar y adjunta su CV. El bot no puede escribirle a Marcos por su cuenta (haría falta la API de pago de WhatsApp Business); si el candidato no toca el botón, la postulación no llega. Además: se entienden edades en palabras ("veintiocho") y la experiencia con su tiempo ("5 años", "seis meses", "año y medio"); si cuenta su experiencia en ventas sin decir cuánto tiempo, el bot pregunta una vez; un mensaje con varios datos ("tengo 28, vivo en Posse y 5 años en ventas") se toma completo. Implementado en `src/lib/bot/postulacion.ts` y `src/lib/bot/nlu/numeros.ts`.
+
 Fecha: 2026-10-13
 
 ## Objetivo

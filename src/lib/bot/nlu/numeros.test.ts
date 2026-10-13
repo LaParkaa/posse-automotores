@@ -32,6 +32,7 @@ describe("duracionDe: cuanto tiempo de experiencia dijo", () => {
     ["seis meses en una agencia", "6 meses"],
     ["un año", "1 año"],
     ["1 año y medio", "1 año y medio"],
+    ["año y medio", "1 año y medio"],
     ["medio año", "medio año"],
     ["treinta y cinco años", "35 años"],
     ["2 años y 3 meses", "2 años y 3 meses"],

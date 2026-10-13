@@ -1,9 +1,10 @@
 import type { Entidades } from "./nlu/entidades";
 import type { Intencion } from "./nlu/intenciones";
 import type { EntradaMotor } from "./motor";
-import { alternativaTexto, elegir, primerNombre, tarjetaContacto, tarjetaDe, type Contexto } from "./respuestas";
+import { alternativaTexto, elegir, primerNombre, tarjetaContacto, tarjetaDe, tarjetaPostulacion, type Contexto } from "./respuestas";
 import type { Sesion } from "./sesion";
 import * as T from "./textos";
+import type { DatosPostulacionMensaje } from "../utils";
 import type { LeadInput, MensajeSalida, VehiculoCatalogo } from "./types";
 
 /**
@@ -40,6 +41,7 @@ export type Turno = {
 /** Variante de texto determinista: la semilla es el mid del mensaje mas una clave por situacion. */
 export const variante = (t: Turno, clave: string, variantes: readonly string[]) => elegir(variantes, `${t.e.mid}:${clave}`);
 export const secretaria = (t: Turno) => t.e.negocio.secretaria;
+export const reclutador = (t: Turno) => t.e.negocio.reclutador.nombre;
 export const tiene = (intenciones: Intencion[], i: Intencion) => intenciones.includes(i);
 
 export function auto(t: Turno, id: string | null | undefined): VehiculoCatalogo | null {
@@ -86,6 +88,16 @@ export function mostrarContacto(t: Turno, v: VehiculoCatalogo | null): void {
     tipo: "tarjetas",
     tarjetas: [tarjeta],
     alternativaTexto: T.contactoEnTexto(secretaria(t), tarjeta.botones[0].url),
+  });
+}
+
+/** Boton de WhatsApp con Marcos: abre el chat con el mensaje de la postulacion ya armado con lo que se sabe del candidato. */
+export function mostrarContactoReclutador(t: Turno, datos: DatosPostulacionMensaje): void {
+  const tarjeta = tarjetaPostulacion(datos, t.ctx);
+  t.mensajes.push({
+    tipo: "tarjetas",
+    tarjetas: [tarjeta],
+    alternativaTexto: T.contactoReclutadorEnTexto(reclutador(t), t.e.negocio.reclutador.whatsappVisible),
   });
 }
 

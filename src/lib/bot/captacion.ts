@@ -26,12 +26,12 @@ import {
 // Mientras se pide nombre o telefono, estas intenciones son otra pregunta: se deja el paso y se responde.
 // "avisame" tambien: es pedir un aviso nuevo y reinicia la captacion con el motivo nuevo.
 const CAMBIAN_DE_TEMA = new Set<Intencion>([
-  "humano", "identidad", "avisame", "precio", "info", "disponibilidad", "catalogo", "ver_mas", ...TEMAS_NEGOCIO,
+  "empleo", "humano", "identidad", "avisame", "precio", "info", "disponibilidad", "catalogo", "ver_mas", ...TEMAS_NEGOCIO,
 ]);
 // Un nombre no puede ser una de estas: son saludos, "si", "gracias" o pedidos concretos. Los temas de
 // negocio (horarios, garantia...) NO estan: por tolerancia a typos "Horacio" se lee como "horarios".
 const NO_ES_UN_NOMBRE = new Set<Intencion>([
-  "humano", "identidad", "avisame", "negacion", "precio", "info", "disponibilidad", "ver_mas", "catalogo",
+  "empleo", "humano", "identidad", "avisame", "negacion", "precio", "info", "disponibilidad", "ver_mas", "catalogo",
   "afirmacion", "gracias", "despedida", "cortesia", "saludo",
 ]);
 // Un telefono con etiqueta ("mi cel es 3537 123456") dispara "humano"; ese tema no impide leer el numero
@@ -123,7 +123,7 @@ function primeraPalabra(nombre: string): string {
  * "Juan Pérez", "soy Juan", "me llamo Ana Paula" → el nombre; null si no parece un nombre (1-4 palabras,
  * solo letras, sin signo de pregunta). "hola", "dale" o "gracias" son palabras sin digitos pero no son un nombre.
  */
-function nombreDe(texto: string): string | null {
+export function nombreDe(texto: string): string | null {
   if (texto.includes("?")) return null;
   const limpio = texto
     .trim()
@@ -141,7 +141,7 @@ function nombreDe(texto: string): string | null {
  * Primer telefono del texto (8 a 13 digitos, con o sin espacios, guiones o +54), tal cual lo escribio y sin
  * las palabras de la etiqueta ("mi cel es", "whatsapp:"). `resto` es el texto sin el numero.
  */
-function telefonoEn(texto: string): { numero: string; resto: string } | null {
+export function telefonoEn(texto: string): { numero: string; resto: string } | null {
   for (const encontrado of texto.matchAll(/\+?\d[\d\s().-]*\d/g)) {
     const digitos = encontrado[0].replace(/\D/g, "").length;
     if (digitos < 8 || digitos > 13) continue;

@@ -1,5 +1,7 @@
 # Postulaciones de vendedor por Instagram Implementation Plan
 
+> **Revisión del 2026-10-13:** las Tasks 7 (guardado en `postulantes`) y 8 (pantalla `/admin/postulantes`) **se descartaron**: la postulación es gratis y no guarda nada; solo se mantuvo el texto de `/privacidad`. El resto se implementó con cambios (mensaje completo para Marcos en el botón, `nlu/numeros.ts`, pregunta de duración). Ver la revisión en el spec.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Cuando alguien responda a la historia de "buscamos vendedor" (o escriba "cv", "busco trabajo"...), el bot pide los datos de un CV de a uno, los guarda en una tabla nueva y deriva al candidato a Marcos por WhatsApp, con una pantalla `/admin/postulantes` para verlas.

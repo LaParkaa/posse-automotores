@@ -76,8 +76,10 @@ export function duracionDe(texto: string): string | null {
         break;
       }
     }
-    if (cantidad === null) continue;
     const yMedio = tokens[i + 1] === "y" && (tokens[i + 2] === "medio" || tokens[i + 2] === "media") ? " y medio" : "";
+    // "año y medio", sin numero adelante, es un año y medio.
+    if (cantidad === null && yMedio !== "") cantidad = 1;
+    if (cantidad === null) continue;
     encontradas.push(`${cantidad} ${cantidad === 1 ? unidad.singular : unidad.plural}${yMedio}`);
   }
 

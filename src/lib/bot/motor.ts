@@ -4,6 +4,7 @@ import type { Negocio } from "./negocio";
 import { extraerEntidades, type Entidades } from "./nlu/entidades";
 import { detectarIntenciones, type Intencion } from "./nlu/intenciones";
 import { esSoloEmojis, tokenizar } from "./nlu/normalizar";
+import { iniciarPostulacion, pasoPostulacion } from "./postulacion";
 import { datosVehiculo, listaNumerada, precioDe, tarjetaEleccion } from "./respuestas";
 import { sesionNueva, sesionVigente, type Filtros, type Oferta, type Sesion } from "./sesion";
 import * as T from "./textos";
@@ -18,10 +19,12 @@ import {
   fijarVehiculo,
   idDeOrdinal,
   mostrarContacto,
+  mostrarContactoReclutador,
   mostrarLista,
   nombrados,
   nombreParaSaludo,
   referenciaContextual,
+  reclutador,
   saludarAntes,
   salirDelPaso,
   secretaria,
@@ -42,6 +45,7 @@ import type { LeadInput, MensajeSalida, Perfil, VehiculoCatalogo } from "./types
  *  2. mensaje sin texto (audio, foto, mencion) (sinTexto)
  *  3. solo emojis                              (emojiCuentaComoSi)
  *  4. pasos de captacion: nombre y telefono    (pasoCaptacion)
+ *  4b. postulacion de vendedor (paso "postulando" y pedido de empleo)  (pasoPostulacion / iniciarPostulacion)
  *  5. paso "eligiendo_historia"                (pasoEligiendoHistoria)
  *  6. respuesta a una historia                 (respuestaAHistoria)
  *  7. correccion "no es ese"                   (esCorreccion / corregirHistoria)
@@ -87,7 +91,7 @@ const CHARLA_EN_HISTORIA = new Set<Intencion>(["desconocida", "saludo", "cortesi
 
 // Mientras se elige la historia, estas tambien salen del paso (no tienen que ver con cual auto era).
 const ESCAPAN_DE_HISTORIA = new Set<Intencion>([
-  "humano", "identidad", "avisame", "catalogo", "ver_mas", ...TEMAS_NEGOCIO,
+  "empleo", "humano", "identidad", "avisame", "catalogo", "ver_mas", ...TEMAS_NEGOCIO,
 ]);
 const NINGUNO = new Set(["ninguno", "ninguna", "ningun", "otro", "otra"]);
 // Unicas frases que dicen "ese no es el auto de la historia"; una frase larga ya es otra cosa ("ese no me gusta tanto").
@@ -135,6 +139,8 @@ function turno(t: Turno): void {
       if (pasoCaptacion(t, texto)) return;
     } else if (t.s.paso === "eligiendo_historia") {
       if (pasoEligiendoHistoria(t, texto)) return;
+    } else if (t.s.paso === "postulando") {
+      if (pasoPostulacion(t, texto)) return;
     }
   } else {
     // Una respuesta a otra historia manda sobre lo que se estaba preguntando: es un tema nuevo.
@@ -142,6 +148,9 @@ function turno(t: Turno): void {
   }
 
   const intenciones = detectarIntenciones(texto);
+  // Pedir trabajo manda sobre todo lo demas, tambien sobre una respuesta a historia: un "cv" a la historia
+  // del puesto no es de ningun auto, y preguntar "de que auto era?" no tendria sentido.
+  if (tiene(intenciones, "empleo")) return iniciarPostulacion(t, texto);
   const ent = extraerEntidades(texto, t.e.catalogo);
   if (historiaId !== null && !respuestaAHistoria(t, historiaId, texto, ent, intenciones)) return;
   if (esCorreccion(t, texto)) return corregirHistoria(t);
@@ -157,6 +166,11 @@ function sinTexto(t: Turno): void {
   if (adjuntos.length === 0 || adjuntos.every((a) => a === "story_mention")) {
     t.responder = false;
     return;
+  }
+  // Quien se postula suele mandar el CV como foto o archivo: por Instagram no se recibe, va a Marcos por WhatsApp.
+  if (t.s.paso === "postulando") {
+    decir(t, variante(t, "postula-adjunto", T.postulacionAdjunto(reclutador(t))));
+    return mostrarContactoReclutador(t, t.s.postulacion?.datos ?? {});
   }
   // Audio o foto: el bot no los entiende, pero el cliente si espera respuesta.
   if (adjuntos.includes("audio")) decir(t, variante(t, "audio", T.audio));
