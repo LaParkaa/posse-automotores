@@ -1,4 +1,5 @@
 import { claveTipo } from "./nlu/vocabulario";
+import type { CampoPostulacion } from "./sesion";
 import type { VehiculoCatalogo } from "./types";
 
 /**
@@ -296,3 +297,103 @@ export const captacionAbandonada = (secretaria: string) => [
   `No pasa nada 😊 Si preferís, escribile directo a ${secretaria} por WhatsApp 👇`,
   `Dejemos así 🙂 Si querés, ${secretaria} te atiende por WhatsApp acá abajo 👇`,
 ];
+
+// ---------------------------------------------------------------------------------------------
+// Postulacion de vendedor (la deriva a Marcos, no a Nati)
+
+export const postulacionIntro = (nombre: string | null) => {
+  const n = nombre ? ` ${nombre}` : "";
+  return [
+    `¡Hola${n}! 🙌 Qué bueno que quieras sumarte al equipo. Te hago unas preguntas cortas y te dejo armado el mensaje para Marcos`,
+    `¡Buenísimo${n}! 😊 Gracias por querer sumarte al equipo. Te hago unas preguntas rápidas y te dejo listo el mensaje para Marcos`,
+  ];
+};
+
+export const postulacionRetoma = [
+  "¡Dale, seguimos con tu postulación! 🙌",
+  "¡Perfecto, retomamos tu postulación! 😊",
+];
+
+/** Una pregunta por dato, en el mismo orden en que las pide el motor. */
+export const preguntaPostulacion: Record<CampoPostulacion, string[]> = {
+  nombre: ["Para empezar, ¿cómo te llamás? 😊 (nombre y apellido)", "¿Me pasás tu nombre y apellido? 🙂"],
+  edad: ["¿Qué edad tenés? 🙂", "¿Cuántos años tenés? 😊"],
+  localidad: ["¿En qué localidad vivís? 📍", "¿De dónde sos? ¿En qué localidad vivís? 🙂"],
+  telefono: [
+    "¿Con qué número de WhatsApp te podemos contactar? 📱",
+    "¿Me dejás un teléfono de contacto? 📱 Con característica, por ejemplo 3537 123456",
+  ],
+  experiencia_ventas: [
+    "Contame tu experiencia en ventas 💼 ¿Dónde trabajaste y cuántos años?",
+    "¿Tenés experiencia en ventas? 💼 Contame dónde y por cuánto tiempo",
+  ],
+  experiencia_rubro: [
+    "¿Y en el rubro automotor? 🚗 Agencias, gestoría, lo que hayas hecho",
+    "¿Trabajaste antes con autos o motos? 🚗 Agencias, gestoría, trámites…",
+  ],
+  financiaciones: [
+    "¿Tenés conocimientos de financiaciones? 💳 Contame qué sabés (prendarios, bancos, etc.)",
+    "¿Manejás algo de financiaciones? 💳 Créditos, prendarios, lo que sepas",
+  ],
+  disponibilidad: [
+    "Última: ¿qué disponibilidad horaria tenés? 🕒",
+    "Y para terminar, ¿qué horarios tenés disponibles? 🕒 ¿Jornada completa?",
+  ],
+};
+
+/** Cuando una respuesta no sirve: el nombre y el telefono reusan los de la captacion de clientes. */
+export const repreguntaPostulacion: Partial<Record<CampoPostulacion, string[]>> = {
+  nombre: nombreInvalido,
+  edad: [
+    "Mmm, esa edad no me cierra 🤔 ¿Me la pasás con números? Por ejemplo 28",
+    "¿Qué edad tenés? 🙂 Escribila con números, por ejemplo 28",
+  ],
+  localidad: [
+    "¿En qué localidad vivís? 🙂 Con el nombre alcanza, por ejemplo Justiniano Posse",
+    "No te entendí bien 😅 ¿De qué localidad sos?",
+  ],
+  telefono: telefonoInvalido,
+};
+
+/** La experiencia en ventas se conto sin decir cuanto tiempo: Marcos lo necesita. */
+export const preguntaDuracion = [
+  "¿Y cuánto tiempo fue? 🕒 Decime los años o meses",
+  "¿Cuánto tiempo estuviste? ⏳ Años o meses, como te acuerdes",
+];
+
+/** Sueldo, comision, horario de trabajo: no lo define el bot. */
+export const postulacionCondiciones = (reclutador: string) => [
+  `Eso lo charlás directo con ${reclutador} 😉 Sigamos con tu postulación:`,
+  `De eso se encarga ${reclutador} 🙂 Sigamos:`,
+];
+
+export const postulacionCancelada = [
+  'Dale, sin problema 😊 Si querés retomar tu postulación, escribime "CV"',
+  'Listo, lo dejamos acá 👍 Cuando quieras seguir, escribime "CV"',
+];
+
+/** Ya contesto todo y el mensaje esta armado: se le vuelve a mostrar el boton. */
+export const postulacionYaArmada = (reclutador: string) => [
+  `Ya tengo armado tu mensaje para ${reclutador} 😊 Tocá el botón y enviáselo por WhatsApp 👇`,
+  `¡Tu mensaje para ${reclutador} ya está listo! 🙌 Tocá el botón y mandáselo por WhatsApp 👇`,
+];
+
+export const postulacionListo = (nombre: string, reclutador: string) => [
+  `¡Listo ${nombre}! 🙌 Armé tu mensaje para ${reclutador} con todos tus datos. Tocá el botón, adjuntá tu CV y enviáselo por WhatsApp 👇`,
+  `¡Anotado, ${nombre}! 😊 Ya dejé listo tu mensaje para ${reclutador}. Tocá el botón de abajo, adjuntá tu CV y mandáselo por WhatsApp 👇`,
+];
+
+export const postulacionSinNombre = (reclutador: string) => [
+  `No pude armar tu postulación sin tu nombre 😕 Escribile directo a ${reclutador} por WhatsApp y mandale tu CV 👇`,
+  `Sin tu nombre no puedo armar el mensaje 😅 Pero podés escribirle directo a ${reclutador} por WhatsApp y mandarle tu CV 👇`,
+];
+
+/** El CV en archivo no entra por Instagram: se manda a Marcos por WhatsApp. */
+export const postulacionAdjunto = (reclutador: string) => [
+  `Por acá no puedo recibir archivos ni fotos 😅 Mandale tu CV a ${reclutador} por WhatsApp 👇 y seguimos con tus datos cuando quieras`,
+  `Los archivos no me llegan bien por acá 🙂 Mandale tu CV a ${reclutador} por WhatsApp 👇 y después seguimos con tu postulación`,
+];
+
+/** Respaldo si Instagram rechaza la tarjeta: el link con todo el mensaje es muy largo para ir en un texto. */
+export const contactoReclutadorEnTexto = (reclutador: string, numeroVisible: string) =>
+  `Escribile a ${reclutador} por WhatsApp al ${numeroVisible} y mandale tu CV 💬`;
