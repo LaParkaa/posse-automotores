@@ -46,7 +46,7 @@ describe("buildWhatsAppUrl", () => {
 
   it("apunta siempre al mismo numero de WhatsApp", () => {
     const url = buildWhatsAppUrl({ nombre: "X", tipo: null, promocionado_reel: false });
-    expect(url.startsWith("https://wa.me/5493537558947?text=")).toBe(true);
+    expect(url.startsWith("https://wa.me/5493537662444?text=")).toBe(true);
   });
 });
 
@@ -85,8 +85,8 @@ describe("buildWhatsAppUrlInstagram", () => {
     }
   });
 
-  it("el numero compartido es el de Nati", () => {
-    expect(WHATSAPP_LOCAL).toBe("5493537558947");
+  it("el numero compartido es el de Marcos", () => {
+    expect(WHATSAPP_LOCAL).toBe("5493537662444");
   });
 });
 
@@ -163,7 +163,7 @@ describe("buildWhatsAppUrlPostulacion", () => {
     expect(textoDe(url)).toContain("Te mando mi CV");
   });
 
-  it("no usa el WhatsApp de Nati", () => {
-    expect(buildWhatsAppUrlPostulacion(COMPLETO, MARCOS)).not.toContain(WHATSAPP_LOCAL);
+  it("va al WhatsApp de Marcos", () => {
+    expect(buildWhatsAppUrlPostulacion(COMPLETO, MARCOS).startsWith(`https://wa.me/${WHATSAPP_LOCAL}?text=`)).toBe(true);
   });
 });

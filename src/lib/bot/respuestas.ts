@@ -46,7 +46,7 @@ function datoReal(valor: string | null | undefined): string | null {
   return texto;
 }
 
-/** Precio listo para decir, o null si no esta cargado o es un placeholder (ahi manda Nati). */
+/** Precio listo para decir, o null si no esta cargado o es un placeholder (ahi manda Marcos). */
 export function precioDe(v: VehiculoCatalogo): string | null {
   return datoReal(v.precio_texto);
 }
@@ -99,7 +99,7 @@ export function datosVehiculo(v: VehiculoCatalogo): string {
 }
 
 /** Boton que abre el WhatsApp de la secretaria con el mensaje del auto (origen Instagram). */
-export function botonNati(v: VehiculoCatalogo | null, negocio: Negocio): Boton {
+export function botonContacto(v: VehiculoCatalogo | null, negocio: Negocio): Boton {
   return {
     titulo: recortar(`Hablar con ${negocio.secretaria}`, MAX_BOTON),
     url: buildWhatsAppUrlInstagram(v),
@@ -130,7 +130,7 @@ function subtituloDe(v: VehiculoCatalogo, precio: string): string {
 export function tarjetaDe(v: VehiculoCatalogo, ctx: Contexto): Tarjeta {
   const precio = precioDe(v) ?? `precio con ${ctx.negocio.secretaria}`;
   const link = linkFicha(v, ctx.siteUrl);
-  const botones: Boton[] = [botonNati(v, ctx.negocio)];
+  const botones: Boton[] = [botonContacto(v, ctx.negocio)];
   if (esHttps(link)) botones.unshift({ titulo: "Ver en la web", url: link });
   return {
     titulo: recortar(`${v.nombre} ${v.anio}`, MAX_TITULO),
@@ -150,7 +150,7 @@ export function tarjetaContacto(v: VehiculoCatalogo | null, ctx: Contexto): Tarj
     titulo: recortar(v ? `${v.nombre} ${v.anio}` : negocio.nombre, MAX_TITULO),
     subtitulo: recortar(`Escribile a ${negocio.secretaria} y te cuenta todo`, MAX_SUBTITULO),
     imagenUrl: null,
-    botones: [botonNati(v, negocio)],
+    botones: [botonContacto(v, negocio)],
   };
 }
 
@@ -213,7 +213,7 @@ export function tarjetaEleccion(v: VehiculoCatalogo, numero: number, ctx: Contex
     // El estado va primero: si el subtitulo se recorta, se pierde el km y no el aviso de que no esta a la venta.
     subtitulo: recortar(datos === "" ? estado : `${estado} · ${datos}`, MAX_SUBTITULO),
     imagenUrl: urlImagen(v, ctx.siteUrl),
-    botones: [botonNati(v, ctx.negocio)],
+    botones: [botonContacto(v, ctx.negocio)],
   };
 }
 

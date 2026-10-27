@@ -4,11 +4,11 @@ export function formatPrice(precioTexto: string): string {
   return precioTexto;
 }
 
-/** Unica fuente del numero de WhatsApp del local (Nati). */
-export const WHATSAPP_LOCAL = "5493537558947";
+/** Unica fuente del numero de WhatsApp del local (Marcos). */
+export const WHATSAPP_LOCAL = "5493537662444";
 
-/** WhatsApp de Marcos, que recibe las postulaciones de vendedor (el de Nati es WHATSAPP_LOCAL). */
-export const WHATSAPP_RECLUTADOR = "5493537662444";
+/** Marcos tambien recibe las postulaciones de vendedor: mismo numero que el local. */
+export const WHATSAPP_RECLUTADOR = WHATSAPP_LOCAL;
 
 export function buildWhatsAppUrl(
   vehiculo: Pick<Vehiculo, "nombre" | "tipo" | "promocionado_reel">

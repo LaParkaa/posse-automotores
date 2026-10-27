@@ -4,7 +4,7 @@ import { violacionesDeTono } from "./__fixtures__/tono";
 import { NEGOCIO } from "./negocio";
 import {
   alternativaTexto,
-  botonNati,
+  botonContacto,
   datosVehiculo,
   elegir,
   linkFicha,
@@ -88,18 +88,18 @@ describe("datosVehiculo", () => {
   });
 });
 
-describe("botonNati y tarjetas", () => {
-  it("el boton abre el WhatsApp de Nati con el mensaje del auto", () => {
-    const b = botonNati(por("v-206"), NEGOCIO);
+describe("botonContacto y tarjetas", () => {
+  it("el boton abre el WhatsApp de Marcos con el mensaje del auto", () => {
+    const b = botonContacto(por("v-206"), NEGOCIO);
 
-    expect(b.titulo).toBe("Hablar con Nati");
+    expect(b.titulo).toBe("Hablar con Marcos");
     expect(b.titulo.length).toBeLessThanOrEqual(20);
-    expect(b.url.startsWith("https://wa.me/5493537558947?text=")).toBe(true);
+    expect(b.url.startsWith("https://wa.me/5493537662444?text=")).toBe(true);
     expect(decodeURIComponent(b.url)).toContain("Peugeot 206 1.6");
   });
 
   it("sin auto, el boton manda una consulta general", () => {
-    expect(decodeURIComponent(botonNati(null, NEGOCIO).url)).toContain("Quiero consultar por un vehículo");
+    expect(decodeURIComponent(botonContacto(null, NEGOCIO).url)).toContain("Quiero consultar por un vehículo");
   });
 
   it("tarjetaDe lleva foto, datos, precio y los dos botones", () => {
@@ -109,23 +109,23 @@ describe("botonNati y tarjetas", () => {
     expect(t.subtitulo).toContain("177.000 km");
     expect(t.subtitulo).toContain("$9.500.000");
     expect(t.imagenUrl).toBe("https://img.example/peugeot-206-1-6-2011.jpg");
-    expect(t.botones.map((b) => b.titulo)).toEqual(["Ver en la web", "Hablar con Nati"]);
+    expect(t.botones.map((b) => b.titulo)).toEqual(["Ver en la web", "Hablar con Marcos"]);
     expect(t.botones[0].url).toBe("https://posse.example/vehiculos/peugeot-206-1-6-2011");
   });
 
-  it("sin precio cargado el subtitulo manda a consultarlo con Nati", () => {
+  it("sin precio cargado el subtitulo manda a consultarlo con Marcos", () => {
     const t = tarjetaDe(por("v-208"), ctx);
 
-    expect(t.subtitulo).toContain("Nati");
+    expect(t.subtitulo).toContain("Marcos");
     expect(t.subtitulo).not.toMatch(/consult[aá] precio/i);
   });
 
-  it("tarjetaContacto es una tarjeta sin foto con solo el boton de Nati", () => {
+  it("tarjetaContacto es una tarjeta sin foto con solo el boton de Marcos", () => {
     const t = tarjetaContacto(null, ctx);
 
     expect(t.imagenUrl).toBeNull();
     expect(t.botones).toHaveLength(1);
-    expect(t.botones[0].titulo).toBe("Hablar con Nati");
+    expect(t.botones[0].titulo).toBe("Hablar con Marcos");
   });
 });
 
@@ -161,7 +161,7 @@ describe("limites de Instagram en las tarjetas", () => {
   });
 
   it("recorta el titulo del boton si la secretaria tiene un nombre largo", () => {
-    const b = botonNati(null, { ...NEGOCIO, secretaria: "Maria de los Angeles" });
+    const b = botonContacto(null, { ...NEGOCIO, secretaria: "Maria de los Angeles" });
 
     expect(cp(b.titulo)).toBeLessThanOrEqual(20);
   });
@@ -185,12 +185,12 @@ describe("alternativaTexto", () => {
     expect(t).toContain("https://posse.example/vehiculos/peugeot-208-style-2023");
   });
 
-  it("una linea por auto, sin encabezado, y 'precio con Nati' si no hay precio", () => {
+  it("una linea por auto, sin encabezado, y 'precio con Marcos' si no hay precio", () => {
     const lineas = alternativaTexto([por("v-206"), por("v-208")], ctx).split("\n");
 
     expect(lineas).toEqual([
       "• Peugeot 206 1.6 2011 · $9.500.000 · https://posse.example/vehiculos/peugeot-206-1-6-2011",
-      "• Peugeot 208 Style 2023 · precio con Nati · https://posse.example/vehiculos/peugeot-208-style-2023",
+      "• Peugeot 208 Style 2023 · precio con Marcos · https://posse.example/vehiculos/peugeot-208-style-2023",
     ]);
   });
 
@@ -222,11 +222,11 @@ describe("URLs validas para Instagram (boton y link en texto)", () => {
   ] as const;
 
   for (const [caso, siteUrl] of sinHttps) {
-    it(`tarjetaDe con ${caso} deja solo el boton de Nati`, () => {
+    it(`tarjetaDe con ${caso} deja solo el boton de Marcos`, () => {
       const t = tarjetaDe(por("v-206"), { negocio: NEGOCIO, siteUrl });
 
       expect(t.botones).toHaveLength(1);
-      expect(t.botones[0].titulo).toBe("Hablar con Nati");
+      expect(t.botones[0].titulo).toBe("Hablar con Marcos");
       expect(t.botones[0].url.startsWith("https://")).toBe(true);
     });
 
@@ -234,7 +234,7 @@ describe("URLs validas para Instagram (boton y link en texto)", () => {
       const t = alternativaTexto([por("v-206"), por("v-208")], { negocio: NEGOCIO, siteUrl });
 
       expect(t).not.toContain("/vehiculos/");
-      expect(t.split("\n")).toEqual(["• Peugeot 206 1.6 2011 · $9.500.000", "• Peugeot 208 Style 2023 · precio con Nati"]);
+      expect(t.split("\n")).toEqual(["• Peugeot 206 1.6 2011 · $9.500.000", "• Peugeot 208 Style 2023 · precio con Marcos"]);
     });
   }
 
@@ -368,7 +368,7 @@ describe("tarjetaEleccion: lista numerada para identificar un auto (historias)",
 
     expect(vendido.titulo).toBe("1) Peugeot Partner 2014");
     expect(vendido.subtitulo).toMatch(/vendi/i);
-    expect(vendido.botones).toEqual([botonNati(por("v-partner"), NEGOCIO)]);
+    expect(vendido.botones).toEqual([botonContacto(por("v-partner"), NEGOCIO)]);
     expect(reservado.subtitulo).toMatch(/reservad/i);
     expect(reservado.subtitulo).not.toContain("3.200.000");
     expect(reservado.imagenUrl).toBe("https://img.example/honda-xr-150-2022.jpg");
@@ -424,10 +424,9 @@ describe("tarjetaPostulacion", () => {
     expect(mensaje).toContain("Experiencia en ventas: 3 años");
   });
 
-  it("no usa el WhatsApp de Nati y funciona sin datos", () => {
+  it("funciona sin datos", () => {
     const t = tarjetaPostulacion({}, ctx);
 
-    expect(t.botones[0].url).not.toContain("5493537558947");
     expect(decodeURIComponent(t.botones[0].url.split("?text=")[1])).toContain("puesto de vendedor");
   });
 });

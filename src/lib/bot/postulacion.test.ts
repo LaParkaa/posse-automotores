@@ -37,8 +37,10 @@ const textos = (r: ResultadoMotor) => r.mensajes.flatMap((m) => (m.tipo === "tex
 const tarjetas = (r: ResultadoMotor) => r.mensajes.flatMap((m) => (m.tipo === "tarjetas" ? m.tarjetas : []));
 const urls = (r: ResultadoMotor) => tarjetas(r).flatMap((t) => t.botones.map((b) => b.url));
 const ultimoTexto = (r: ResultadoMotor) => textos(r)[textos(r).length - 1] ?? "";
-const botonMarcos = (r: ResultadoMotor) => urls(r).some((u) => u.startsWith("https://wa.me/5493537662444?text="));
-const botonNati = (r: ResultadoMotor) => urls(r).some((u) => u.startsWith("https://wa.me/5493537558947?text="));
+// Los dos botones abren el mismo WhatsApp: se distinguen por el mensaje (postulacion vs. consulta de un auto).
+const esPostulacion = (u: string) => decodeURIComponent(u).includes("puesto de vendedor");
+const botonMarcos = (r: ResultadoMotor) => urls(r).some((u) => u.startsWith("https://wa.me/5493537662444?text=") && esPostulacion(u));
+const botonContacto = (r: ResultadoMotor) => urls(r).some((u) => u.startsWith("https://wa.me/5493537662444?text=") && !esPostulacion(u));
 /** El mensaje que Marcos va a recibir: el que lleva el boton, ya decodificado. */
 const mensajeParaMarcos = (r: ResultadoMotor) => decodeURIComponent((urls(r)[0] ?? "").split("?text=")[1] ?? "");
 const emojis = (t: string) => Array.from(t.matchAll(/\p{Extended_Pictographic}/gu)).length;
@@ -100,7 +102,7 @@ describe("postulacion de vendedor: el flujo completo", () => {
     expect(textos(fin)[0]).toMatch(/bot[oó]n/i);
     expect(tarjetas(fin)).toHaveLength(1);
     expect(botonMarcos(fin)).toBe(true);
-    expect(botonNati(fin)).toBe(false);
+    expect(botonContacto(fin)).toBe(false);
     expect(mensajeParaMarcos(fin)).toBe(MENSAJE_ESPERADO);
   });
 
@@ -293,10 +295,10 @@ describe("postulacion de vendedor: como entra el flujo", () => {
     },
   );
 
-  it("'quiero hablar con un vendedor' sigue derivando a Nati", () => {
+  it("'quiero hablar con un vendedor' sigue derivando a Marcos", () => {
     const [r] = charlar(["quiero hablar con un vendedor"]);
 
-    expect(botonNati(r)).toBe(true);
+    expect(botonContacto(r)).toBe(true);
     expect(botonMarcos(r)).toBe(false);
   });
 
@@ -304,7 +306,7 @@ describe("postulacion de vendedor: como entra el flujo", () => {
     const [r] = charlar(["buscan vendedor?"]);
 
     expect(r.sesion.paso).toBe("postulando");
-    expect(botonNati(r)).toBe(false);
+    expect(botonContacto(r)).toBe(false);
   });
 });
 
@@ -445,7 +447,7 @@ describe("postulacion de vendedor: fotos, audios y archivos", () => {
     expect(r.responder).toBe(true);
     expect(textos(r).join("\n")).toMatch(/Marcos/);
     expect(botonMarcos(r)).toBe(true);
-    expect(botonNati(r)).toBe(false);
+    expect(botonContacto(r)).toBe(false);
     expect(r.sesion.paso).toBe("postulando");
     expect(r.sesion.postulacion?.campo).toBe("experiencia_ventas");
   });

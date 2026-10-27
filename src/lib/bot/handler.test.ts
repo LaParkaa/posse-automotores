@@ -75,7 +75,7 @@ const mensaje = (parcial: Partial<Extract<EventoEntrante, { tipo: "mensaje" }>> 
   ...parcial,
 });
 
-const eco: EventoEntrante = { tipo: "eco", destinatarioId: "111", mid: "mid.eco", texto: "Hola, soy Nati" };
+const eco: EventoEntrante = { tipo: "eco", destinatarioId: "111", mid: "mid.eco", texto: "Hola, soy Marcos" };
 
 const enviado = (deps: DepsBot) => vi.mocked(deps.enviarTexto).mock.calls.map((c) => c[1]);
 
@@ -212,13 +212,13 @@ describe("procesarEventos: mensajes", () => {
     const lead = { nombre: "Juan", telefono: "3537 123456" };
     const deps = crearDeps();
     vi.mocked(conversar).mockReturnValue(
-      resultado({ lead, mensajes: [{ tipo: "texto", texto: "Listo Juan, te escribe Nati." }] }),
+      resultado({ lead, mensajes: [{ tipo: "texto", texto: "Listo Juan, te escribe Marcos." }] }),
     );
 
     await procesarEventos([mensaje()], deps);
 
     expect(deps.guardarLead).toHaveBeenCalledWith("111", lead);
-    expect(enviado(deps)).toEqual(["Listo Juan, te escribe Nati."]);
+    expect(enviado(deps)).toEqual(["Listo Juan, te escribe Marcos."]);
   });
 
   it("lead que no se pudo guardar: manda MENSAJE_LEAD_FALLIDO y NO la confirmacion", async () => {
@@ -226,7 +226,7 @@ describe("procesarEventos: mensajes", () => {
     vi.mocked(conversar).mockReturnValue(
       resultado({
         lead: { nombre: "Juan", telefono: "3537 123456" },
-        mensajes: [{ tipo: "texto", texto: "Listo Juan, te escribe Nati." }],
+        mensajes: [{ tipo: "texto", texto: "Listo Juan, te escribe Marcos." }],
       }),
     );
 
@@ -749,7 +749,7 @@ describe("procesarEventos: ids propios, tiempos y datos del lead", () => {
     expect(deps.guardarLead).toHaveBeenCalledWith("111", { nombre: "Maria", telefono: "3537 000000", mensaje: "@maria_p" });
   });
 
-  it("lead fallido: ademas del texto manda la tarjeta con el boton de Nati", async () => {
+  it("lead fallido: ademas del texto manda la tarjeta con el boton de Marcos", async () => {
     const deps = crearDeps({ guardarLead: vi.fn(async () => { throw new Error("db caida"); }) });
     vi.mocked(conversar).mockReturnValue(resultado({ lead: { nombre: "Juan", telefono: "3537 123456" } }));
 
@@ -783,7 +783,7 @@ describe("textos fijos al cliente", () => {
   ])("%s lleva el WhatsApp visible, cumple el tono y no se dice persona", (_nombre, texto) => {
     expect(texto).toContain(NEGOCIO.whatsappVisible);
     expect(violacionesDeTono(texto)).toEqual([]);
-    expect(texto).not.toMatch(/soy (una persona|humano|nati)/i);
+    expect(texto).not.toMatch(/soy (una persona|humano|marcos)/i);
   });
 });
 

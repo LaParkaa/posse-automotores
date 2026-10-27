@@ -47,30 +47,30 @@ const tarjetas = (r: ResultadoMotor) => r.mensajes.flatMap((m) => (m.tipo === "t
 const todo = (r: ResultadoMotor) =>
   [...textos(r), ...tarjetas(r).flatMap((t) => [t.titulo, t.subtitulo, ...t.botones.map((b) => b.titulo)])].join("\n");
 const urls = (r: ResultadoMotor) => tarjetas(r).flatMap((t) => t.botones.map((b) => b.url));
-const hayBotonNati = (r: ResultadoMotor) => urls(r).some((u) => u.startsWith("https://wa.me/5493537558947?text="));
+const hayBotonContacto = (r: ResultadoMotor) => urls(r).some((u) => u.startsWith("https://wa.me/5493537662444?text="));
 const titulos = (r: ResultadoMotor) => tarjetas(r).map((t) => t.titulo);
 
 describe("respuestas a historias (los casos reales)", () => {
-  it("historia conocida + 'me decis el precio?' → precio del auto y boton a Nati", () => {
+  it("historia conocida + 'me decis el precio?' → precio del auto y boton a Marcos", () => {
     const [r] = charlar([{ texto: "hola. me decis el precio?", historiaId: "st-206" }], { historias: { "st-206": "v-206" } });
 
     expect(r.responder).toBe(true);
     expect(todo(r)).toContain("206");
     expect(todo(r)).toContain("$9.500.000");
     expect(tarjetas(r)).toHaveLength(1);
-    expect(hayBotonNati(r)).toBe(true);
+    expect(hayBotonContacto(r)).toBe(true);
     expect(r.sesion.vehiculoActualId).toBe("v-206");
     expect(r.sesion.historiaActualId).toBe("st-206");
     expect(r.aprenderHistoria).toBeNull();
   });
 
-  it("historia de un auto sin precio cargado → Nati lo pasa por WhatsApp", () => {
+  it("historia de un auto sin precio cargado → Marcos lo pasa por WhatsApp", () => {
     const [r] = charlar([{ texto: "hola, me decis el precio?", historiaId: "st-208" }], { historias: { "st-208": "v-208" } });
 
     expect(todo(r)).toContain("208");
-    expect(todo(r)).toContain("Nati");
+    expect(todo(r)).toContain("Marcos");
     expect(todo(r)).not.toMatch(/consult[aá] precio/i);
-    expect(hayBotonNati(r)).toBe(true);
+    expect(hayBotonContacto(r)).toBe(true);
   });
 
   it("historia del Vento + 'hola que valor tiene?'", () => {
@@ -199,20 +199,20 @@ describe("catalogo y busquedas", () => {
 });
 
 describe("derivacion, identidad y datos del negocio", () => {
-  it("'hablo con el dueño?' → boton de WhatsApp con Nati, sin pedir datos", () => {
+  it("'hablo con el dueño?' → boton de WhatsApp con Marcos, sin pedir datos", () => {
     const [r] = charlar(["hablo con el dueño?"]);
 
-    expect(todo(r)).toContain("Nati");
-    expect(hayBotonNati(r)).toBe(true);
+    expect(todo(r)).toContain("Marcos");
+    expect(hayBotonContacto(r)).toBe(true);
     expect(r.sesion.paso).toBe("libre");
   });
 
-  it("'sos un bot?' → respuesta honesta y boton a Nati", () => {
+  it("'sos un bot?' → respuesta honesta y boton a Marcos", () => {
     const [r] = charlar(["sos un bot?"]);
 
     expect(todo(r)).toMatch(/asistente virtual/i);
-    expect(todo(r)).toContain("Nati");
-    expect(hayBotonNati(r)).toBe(true);
+    expect(todo(r)).toContain("Marcos");
+    expect(hayBotonContacto(r)).toBe(true);
   });
 
   it("financiacion: usa el texto del negocio si esta cargado", () => {
@@ -221,15 +221,15 @@ describe("derivacion, identidad y datos del negocio", () => {
     expect(todo(r)).toContain("Financiamos hasta 60% con cuotas fijas.");
   });
 
-  it("financiacion pendiente (null) → no inventa: lo confirma Nati", () => {
+  it("financiacion pendiente (null) → no inventa: lo confirma Marcos", () => {
     const [r] = charlar(["hacen financiacion?"], { negocio: { ...NEGOCIO, financiacion: null } });
 
-    expect(todo(r)).toContain("Nati");
-    expect(hayBotonNati(r)).toBe(true);
+    expect(todo(r)).toContain("Marcos");
+    expect(hayBotonContacto(r)).toBe(true);
   });
 
-  it("horarios: pendiente → Nati; cargados → los dice", () => {
-    expect(todo(charlar(["a que hora abren?"], { negocio: { ...NEGOCIO, horarios: null } })[0])).toContain("Nati");
+  it("horarios: pendiente → Marcos; cargados → los dice", () => {
+    expect(todo(charlar(["a que hora abren?"], { negocio: { ...NEGOCIO, horarios: null } })[0])).toContain("Marcos");
     expect(todo(charlar(["a que hora abren?"], { negocio: { ...NEGOCIO, horarios: "Lunes a viernes de 9 a 13 y de 16 a 20" } })[0])).toContain(
       "Lunes a viernes de 9 a 13 y de 16 a 20",
     );
@@ -278,15 +278,15 @@ describe("conversacion natural", () => {
     expect(tarjetas(r)).toHaveLength(0);
   });
 
-  it("no entendido: repregunta la primera vez y ofrece a Nati la segunda", () => {
+  it("no entendido: repregunta la primera vez y ofrece a Marcos la segunda", () => {
     const [a, b] = charlar(["asdfgh", "qwerty"]);
 
     expect(a.noEntendido).toBe(true);
     expect(b.noEntendido).toBe(true);
     expect(a.sesion.fallos).toBe(1);
     expect(b.sesion.fallos).toBe(2);
-    expect(hayBotonNati(a)).toBe(false);
-    expect(hayBotonNati(b)).toBe(true);
+    expect(hayBotonContacto(a)).toBe(false);
+    expect(hayBotonContacto(b)).toBe(true);
   });
 
   it("entender algo despues de un fallo reinicia el contador", () => {
@@ -319,7 +319,7 @@ describe("mensajes que no son texto", () => {
     const [, r] = charlar(["tienen la 206?", "👍"]);
 
     expect(r.responder).toBe(true);
-    expect(hayBotonNati(r)).toBe(true);
+    expect(hayBotonContacto(r)).toBe(true);
   });
 });
 
@@ -402,23 +402,23 @@ const emojis = (t: string) => Array.from(t.matchAll(/\p{Extended_Pictographic}/g
 const porId = (id: string) => CATALOGO.find((v) => v.id === id)!;
 
 describe("captacion: casos borde", () => {
-  it("un nombre invalido se repregunta una vez; a la segunda manda el boton de Nati y sale", () => {
+  it("un nombre invalido se repregunta una vez; a la segunda manda el boton de Marcos y sale", () => {
     const [, b, c] = charlar(["avisame cuando entre una hilux", "hola", "dale"]);
 
     expect(b.sesion.paso).toBe("pidiendo_nombre");
-    expect(hayBotonNati(b)).toBe(false);
+    expect(hayBotonContacto(b)).toBe(false);
     expect(c.sesion.paso).toBe("libre");
-    expect(hayBotonNati(c)).toBe(true);
+    expect(hayBotonContacto(c)).toBe(true);
     expect(c.lead).toBeNull();
   });
 
-  it("un telefono invalido dos veces manda el boton de Nati y sale del paso", () => {
+  it("un telefono invalido dos veces manda el boton de Marcos y sale del paso", () => {
     const [, , c, d] = charlar(["avisame cuando entre una hilux", "Juan", "abc", "123"]);
 
     expect(c.sesion.paso).toBe("pidiendo_telefono");
     expect(d.sesion.paso).toBe("libre");
     expect(d.lead).toBeNull();
-    expect(hayBotonNati(d)).toBe(true);
+    expect(hayBotonContacto(d)).toBe(true);
   });
 
   it("acepta 'me llamo Ana' y telefonos con +54 y guiones (guardados tal cual)", () => {
@@ -478,7 +478,7 @@ describe("historias: casos borde", () => {
     const partner = tarjetas(r).find((t) => t.titulo.includes("Partner"))!;
 
     expect(partner.subtitulo).toMatch(/vendi/i);
-    expect(partner.botones.map((b) => b.titulo)).toEqual(["Hablar con Nati"]);
+    expect(partner.botones.map((b) => b.titulo)).toEqual(["Hablar con Marcos"]);
   });
 
   it("'el ultimo' elige el quinto de la lista", () => {
@@ -496,14 +496,14 @@ describe("historias: casos borde", () => {
     expect(tarjetas(r).length).toBeGreaterThan(0);
   });
 
-  it("si no entiende la eleccion repregunta (cuenta como fallo) y a la segunda ofrece a Nati", () => {
+  it("si no entiende la eleccion repregunta (cuenta como fallo) y a la segunda ofrece a Marcos", () => {
     const [, b, c] = charlar([{ texto: "precio?", historiaId: "st-x" }, "asdf", "qwer"]);
 
     expect(b.noEntendido).toBe(true);
     expect(b.sesion.paso).toBe("eligiendo_historia");
     expect(b.sesion.fallos).toBe(1);
     expect(c.sesion.paso).toBe("libre");
-    expect(hayBotonNati(c)).toBe(true);
+    expect(hayBotonContacto(c)).toBe(true);
   });
 
   it("si nombra varios autos pregunta cual de esos", () => {
@@ -535,7 +535,7 @@ describe("historias: casos borde", () => {
     expect(todo(r)).toContain("USD 14.500");
   });
 
-  it("un 'no' a la oferta de Nati no se lee como correccion de la historia", () => {
+  it("un 'no' a la oferta de Marcos no se lee como correccion de la historia", () => {
     const [, r] = charlar([{ texto: "me decis el precio?", historiaId: "st-206" }, "no"], { historias: { "st-206": "v-206" } });
 
     expect(r.olvidarHistoria).toBeNull();
@@ -544,11 +544,11 @@ describe("historias: casos borde", () => {
 });
 
 describe("listas, ofertas y estados", () => {
-  it("'ver mas' sin mas resultados lo dice y ofrece a Nati", () => {
+  it("'ver mas' sin mas resultados lo dice y ofrece a Marcos", () => {
     const [, , c] = charlar(["que autos tienen?", "mostrame mas", "mostrame mas"]);
 
     expect(tarjetas(c).every((t) => t.titulo === NEGOCIO.nombre)).toBe(true);
-    expect(hayBotonNati(c)).toBe(true);
+    expect(hayBotonContacto(c)).toBe(true);
   });
 
   it("un 'si' despues de mostrar una lista con mas resultados muestra los siguientes", () => {
@@ -601,7 +601,7 @@ describe("listas, ofertas y estados", () => {
   it("'ok gracias' no es un si a la oferta: cierra amable sin boton", () => {
     const [, r] = charlar(["tienen la 206?", "ok gracias"]);
 
-    expect(hayBotonNati(r)).toBe(false);
+    expect(hayBotonContacto(r)).toBe(false);
     expect(r.sesion.ofrecio).toBeNull();
   });
 
@@ -642,8 +642,8 @@ describe("listas, ofertas y estados", () => {
     const [r] = charlar(["a que hora abren y tienen garantia?"], { negocio: { ...NEGOCIO, horarios: null } });
 
     expect(todo(r)).toContain(NEGOCIO.garantia!);
-    expect(todo(r)).toMatch(/horarios te lo confirma Nati/);
-    expect(hayBotonNati(r)).toBe(true);
+    expect(todo(r)).toMatch(/horarios te lo confirma Marcos/);
+    expect(hayBotonContacto(r)).toBe(true);
   });
 });
 
@@ -703,7 +703,7 @@ describe("captacion: telefono escrito con etiqueta y nombre con telefono", () =>
       expect(c.lead).toMatchObject({ nombre: "Juan", telefono });
       expect(c.sesion.paso).toBe("libre");
       expect(c.sesion.lead).toEqual({ nombre: "Juan", telefono });
-      expect(hayBotonNati(c)).toBe(true);
+      expect(hayBotonContacto(c)).toBe(true);
     });
   }
 
@@ -836,7 +836,7 @@ describe("emojis, negocio con auto, ver mas y copy", () => {
     expect(todo(r)).toContain("Vento");
   });
 
-  it("'el vento tiene financiacion?' fija el Vento y el boton de Nati lo menciona", () => {
+  it("'el vento tiene financiacion?' fija el Vento y el boton de Marcos lo menciona", () => {
     const [r] = charlar(["el vento tiene financiacion?"]);
 
     expect(r.sesion.vehiculoActualId).toBe("v-vento");
@@ -866,11 +866,11 @@ describe("emojis, negocio con auto, ver mas y copy", () => {
     expect(textos(r).join("\n")).not.toMatch(/ac[aá] van m[aá]s|otros/i);
   });
 
-  it("'ver mas' agotado no promete que Nati avise: invita a escribirle", () => {
+  it("'ver mas' agotado no promete que Marcos avise: invita a escribirle", () => {
     const [, , c] = charlar(["que autos tienen?", "mostrame mas", "mostrame mas"]);
 
     expect(soloTextos(c).join("\n")).not.toMatch(/te avisa/i);
-    expect(soloTextos(c).join("\n")).toMatch(/escribile a Nati por WhatsApp y te cuenta si va a entrar algo/i);
+    expect(soloTextos(c).join("\n")).toMatch(/escribile a Marcos por WhatsApp y te cuenta si va a entrar algo/i);
   });
 
   it("las respuestas de precio y de datos del negocio no arrancan con 'Sii,'", () => {
@@ -885,12 +885,12 @@ describe("emojis, negocio con auto, ver mas y copy", () => {
     }
   });
 
-  it("ubicacion sin direccion y financiacion nombran a Nati una sola vez en el texto", () => {
+  it("ubicacion sin direccion y financiacion nombran a Marcos una sola vez en el texto", () => {
     for (const pregunta of ["donde estan?", "hacen financiacion?"]) {
       const [r] = charlar([pregunta]);
 
-      expect(veces(soloTextos(r).join("\n"), "Nati"), pregunta).toBe(1);
-      expect(hayBotonNati(r)).toBe(true);
+      expect(veces(soloTextos(r).join("\n"), "Marcos"), pregunta).toBe(1);
+      expect(hayBotonContacto(r)).toBe(true);
     }
   });
 });
@@ -923,7 +923,7 @@ describe("casos borde de entrada", () => {
 
     expect(todo(a)).toMatch(/vendi/i);
     expect(soloTextos(b).join("\n")).not.toMatch(/contame qu[eé] and[aá]s buscando/i);
-    expect(b.mensajes.length === 0 || hayBotonNati(b)).toBe(true);
+    expect(b.mensajes.length === 0 || hayBotonContacto(b)).toBe(true);
   });
 });
 

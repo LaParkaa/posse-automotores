@@ -364,7 +364,7 @@ function despacharIntencion(
     return false;
   }
   if (temas.length > 0) {
-    // "el vento tiene financiacion?": el boton de Nati tiene que hablar del Vento, no de un auto viejo o de ninguno.
+    // "el vento tiene financiacion?": el boton de Marcos tiene que hablar del Vento, no de un auto viejo o de ninguno.
     const nombradosAca = nombrados(t, ent);
     if (nombradosAca.length === 1) fijarVehiculo(t, nombradosAca[0].id);
     responderNegocio(t, temas, true);
@@ -505,7 +505,7 @@ function responderNegocio(t: Turno, temas: Intencion[], conContacto: boolean): v
     const intro = conContacto ? [variante(t, "intro-negocio", T.introNegocio)] : [];
     const cuerpo = datos.map((d) => d.texto ?? T.temaPendiente(d.tema, sec));
     const lineas = [...intro, ...cuerpo];
-    // Si los datos ya mandan a la secretaria ("te la pasa Nati"), repetirlo en el cierre suena a disco rayado.
+    // Si los datos ya mandan a la secretaria ("te la pasa Marcos"), repetirlo en el cierre suena a disco rayado.
     if (deriva && !cuerpo.some((linea) => linea.includes(sec))) lineas.push(variante(t, "cierre-negocio", T.cierreNegocio(sec)));
     decir(t, lineas.join("\n"));
   }

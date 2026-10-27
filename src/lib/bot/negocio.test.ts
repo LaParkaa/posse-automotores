@@ -9,8 +9,8 @@ describe("NEGOCIO", () => {
   });
 
   it("tiene el nombre de la secretaria y el numero visible", () => {
-    expect(NEGOCIO.secretaria).toBe("Nati");
-    expect(NEGOCIO.whatsappVisible).toBe("+54 9 3537 55-8947");
+    expect(NEGOCIO.secretaria).toBe("Marcos");
+    expect(NEGOCIO.whatsappVisible).toBe("+54 9 3537 66-2444");
   });
 
   it("tiene los horarios del sitio", () => {
@@ -19,7 +19,7 @@ describe("NEGOCIO", () => {
     expect(NEGOCIO.horarios).toContain("domingos");
   });
 
-  it("la direccion exacta sigue sin confirmar (el bot dice que Nati la pasa)", () => {
+  it("la direccion exacta sigue sin confirmar (el bot dice que Marcos la pasa)", () => {
     expect(NEGOCIO.direccion).toBeNull();
   });
 
@@ -31,7 +31,7 @@ describe("NEGOCIO", () => {
   it("la pausa cuando contesta una persona es de horas positivas", () => {
     expect(NEGOCIO.pausaHumanoHoras).toBeGreaterThan(0);
   });
-  it("el reclutador es Marcos, con su propio numero (distinto del de Nati)", () => {
+  it("el reclutador es Marcos, con el mismo numero del local", () => {
     expect(WHATSAPP_RECLUTADOR).toBe("5493537662444");
     expect(NEGOCIO.reclutador).toEqual({
       nombre: "Marcos",
@@ -39,6 +39,6 @@ describe("NEGOCIO", () => {
       whatsappVisible: "+54 9 3537 66-2444",
     });
     expect(NEGOCIO.reclutador.whatsappNumero).toMatch(/^\d{11,15}$/);
-    expect(NEGOCIO.reclutador.whatsappNumero).not.toBe(NEGOCIO.whatsappNumero);
+    expect(NEGOCIO.reclutador.whatsappNumero).toBe(NEGOCIO.whatsappNumero);
   });
 });

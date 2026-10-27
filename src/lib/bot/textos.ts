@@ -299,7 +299,7 @@ export const captacionAbandonada = (secretaria: string) => [
 ];
 
 // ---------------------------------------------------------------------------------------------
-// Postulacion de vendedor (la deriva a Marcos, no a Nati)
+// Postulacion de vendedor (la deriva a Marcos, no a Marcos)
 
 export const postulacionIntro = (nombre: string | null) => {
   const n = nombre ? ` ${nombre}` : "";

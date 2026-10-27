@@ -183,7 +183,7 @@ const REGLAS: Regla[] = [
       "numero de contacto",
     ],
     palabras: ["vendedor", "vendedora", "asesor", "asesora", "secretaria", "telefono", "whatsapp", "llamame"],
-    exactas: ["nati", "wsp", "wasap", "cel"],
+    exactas: ["marcos", "wsp", "wasap", "cel"],
     extra: ({ tokens }) => pideNumero(tokens) || pideAlDueno(tokens),
   },
   {
