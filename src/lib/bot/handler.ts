@@ -9,8 +9,8 @@ import type { LeadInput, MensajeSalida, Perfil, Tarjeta, VehiculoCatalogo } from
 
 // Textos fijos de emergencia: no pasan por el motor, asi que cumplen solos las reglas de tono
 // (cortos, sin markdown, rioplatenses) y no afirman ser una persona. Siempre dan una salida: el WhatsApp.
-export const MENSAJE_ERROR_TECNICO = `Uy, se me complicó algo de mi lado 😅 Probá de nuevo en un rato o escribile directo a Nati por WhatsApp al ${NEGOCIO.whatsappVisible}.`;
-export const MENSAJE_LEAD_FALLIDO = `No pude dejar anotados tus datos 😕 Escribile directo a Nati por WhatsApp al ${NEGOCIO.whatsappVisible} y te atiende ella.`;
+export const MENSAJE_ERROR_TECNICO = `Uy, se me complicó algo de mi lado 😅 Probá de nuevo en un rato o escribile directo a Marcos por WhatsApp al ${NEGOCIO.whatsappVisible}.`;
+export const MENSAJE_LEAD_FALLIDO = `No pude dejar anotados tus datos 😕 Escribile directo a Marcos por WhatsApp al ${NEGOCIO.whatsappVisible} y te atiende ella.`;
 
 // Parametros de la demora de "escribiendo...": que se note humano sin hacer esperar de mas.
 const ESPERA_ECO_MS = 3000;
@@ -110,10 +110,12 @@ async function procesarEco(destinatarioId: string, mid: string, texto: string | 
 type Mensaje = Extract<EventoEntrante, { tipo: "mensaje" }>;
 
 async function procesarMensaje(evento: Mensaje, deps: DepsBot): Promise<void> {
-  const { senderId, mid, texto, historiaId, adjuntos } = evento;
+  const { senderId, mid, texto, historiaId, adjuntos, adjuntosTexto } = evento;
   const inicio = deps.ahora().getTime();
 
   if (!(await deps.reclamarMensaje(senderId, mid, texto ?? "[adjunto]"))) return;
+  // Solo los tipos (nunca el contenido): sirve para saber como manda Instagram cada cosa (ej. un telefono como contacto).
+  if (adjuntos.length > 0) console.info("[bot] Adjuntos recibidos", { tipos: adjuntos, conTexto: Boolean(texto) });
 
   const chat = await deps.cargarChat(senderId);
   const ahora = deps.ahora();
@@ -152,6 +154,7 @@ async function procesarMensaje(evento: Mensaje, deps: DepsBot): Promise<void> {
   const resultado = conversar({
     texto,
     adjuntos,
+    adjuntosTexto,
     historiaId,
     vehiculoDeHistoria,
     mid,
@@ -175,8 +178,8 @@ async function procesarMensaje(evento: Mensaje, deps: DepsBot): Promise<void> {
       await deps.guardarLead(senderId, conUsuario(resultado.lead, perfil));
     } catch (err) {
       console.error(`[bot] No se pudo guardar el lead de ${senderId}:`, err);
-      // La respuesta del motor confirma que Nati va a llamar; si el lead no quedo guardado seria mentira.
-      // Se agrega el boton de Nati porque es la unica salida que le queda al cliente.
+      // La respuesta del motor confirma que Marcos va a llamar; si el lead no quedo guardado seria mentira.
+      // Se agrega el boton de Marcos porque es la unica salida que le queda al cliente.
       const tarjeta = tarjetaContacto(null, { negocio: deps.negocio, siteUrl: deps.siteUrl });
       mensajes = [
         { tipo: "texto", texto: MENSAJE_LEAD_FALLIDO },

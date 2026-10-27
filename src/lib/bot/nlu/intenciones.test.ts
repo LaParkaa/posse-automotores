@@ -36,7 +36,7 @@ describe("detectarIntenciones — la intencion principal (primera)", () => {
     ["que papeles necesito", "documentacion"],
     ["hablo con el dueño?", "humano"],
     ["quiero hablar con un vendedor", "humano"],
-    ["pasame con nati", "humano"],
+    ["pasame con marcos", "humano"],
     ["me pasas un numero?", "humano"],
     ["sos un bot?", "identidad"],
     ["es una persona la que me atiende?", "identidad"],

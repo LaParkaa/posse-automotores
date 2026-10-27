@@ -171,7 +171,7 @@ describe("POST /api/instagram/webhook", () => {
             {
               sender: { id: "1" },
               recipient: { id: "1234567890" },
-              message: { mid: "mid.eco", text: "Hola, soy Nati", is_echo: true },
+              message: { mid: "mid.eco", text: "Hola, soy Marcos", is_echo: true },
             },
           ],
         },
@@ -182,7 +182,7 @@ describe("POST /api/instagram/webhook", () => {
 
     expect(respuesta.status).toBe(200);
     expect(vi.mocked(procesarEventos).mock.calls[0][0]).toEqual([
-      { tipo: "eco", destinatarioId: "1234567890", mid: "mid.eco", texto: "Hola, soy Nati" },
+      { tipo: "eco", destinatarioId: "1234567890", mid: "mid.eco", texto: "Hola, soy Marcos" },
     ]);
   });
 

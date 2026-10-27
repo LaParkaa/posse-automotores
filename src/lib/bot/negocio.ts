@@ -1,6 +1,6 @@
 import { WHATSAPP_LOCAL, WHATSAPP_RECLUTADOR } from "../utils";
 
-/** Quien recibe las postulaciones de vendedor (no es la secretaria): el candidato le escribe por WhatsApp. */
+/** Quien recibe las postulaciones de vendedor el candidato le escribe por WhatsApp. */
 export type Reclutador = {
   nombre: string;
   whatsappNumero: string;
@@ -39,11 +39,11 @@ export type Negocio = {
 export const NEGOCIO: Negocio = {
   nombre: "Posse Automotores",
   ciudad: "Justiniano Posse, Córdoba",
-  secretaria: "Nati",
+  secretaria: "Marcos",
   whatsappNumero: WHATSAPP_LOCAL,
-  whatsappVisible: "+54 9 3537 55-8947",
+  whatsappVisible: "+54 9 3537 66-2444",
 
-  // Las postulaciones de vendedor van a Marcos (numero del flyer), no a Nati.
+  // Las postulaciones de vendedor tambien van a Marcos (numero del flyer).
   reclutador: { nombre: "Marcos", whatsappNumero: WHATSAPP_RECLUTADOR, whatsappVisible: "+54 9 3537 66-2444" },
 
   // Tomado de la seccion Contacto del sitio. Si cambian, editar aca y en el sitio.
@@ -52,7 +52,7 @@ export const NEGOCIO: Negocio = {
   direccion: null,
 
   // Tomado de las respuestas del bot de WhatsApp anterior: CONFIRMAR que siguen vigentes.
-  financiacion: "Trabajamos con financiación bancaria y propia. Las condiciones dependen del auto, te las pasa Nati.",
+  financiacion: "Trabajamos con financiación bancaria y propia. Las condiciones dependen del auto, te las pasa Marcos.",
   permutas: "Tomamos tu usado como parte de pago: lo tasamos en el local.",
   pagos: "Efectivo, transferencia bancaria y financiación.",
   garantia: "Todos los vehículos tienen garantía legal y verificación previa.",

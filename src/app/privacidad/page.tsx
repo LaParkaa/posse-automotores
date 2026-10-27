@@ -9,8 +9,8 @@ export const metadata: Metadata = {
     "Cómo Posse Automotores trata tus datos personales cuando nos escribís por Instagram o por la web, y cómo pedir que los eliminemos.",
 };
 
-const waUrl = "https://wa.me/5493537558947";
-const waTexto = "+54 9 3537 55-8947";
+const waUrl = "https://wa.me/5493537662444";
+const waTexto = "+54 9 3537 66-2444";
 
 const enlaceClase = "font-semibold text-car-gold underline-offset-4 hover:underline";
 

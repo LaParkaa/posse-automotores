@@ -203,7 +203,7 @@ describe("enviarTarjetas", () => {
     imagenUrl: `https://img.example/${n}.jpg`,
     botones: [
       { titulo: "Ver en la web", url: "https://posse.example/vehiculos/a" },
-      { titulo: "Hablar con Nati", url: "https://wa.me/5493537558947?text=hola" },
+      { titulo: "Hablar con Marcos", url: "https://wa.me/5493537662444?text=hola" },
     ],
   });
 
@@ -228,7 +228,7 @@ describe("enviarTarjetas", () => {
                 image_url: "https://img.example/1.jpg",
                 buttons: [
                   { type: "web_url", url: "https://posse.example/vehiculos/a", title: "Ver en la web" },
-                  { type: "web_url", url: "https://wa.me/5493537558947?text=hola", title: "Hablar con Nati" },
+                  { type: "web_url", url: "https://wa.me/5493537662444?text=hola", title: "Hablar con Marcos" },
                 ],
               },
             ],
