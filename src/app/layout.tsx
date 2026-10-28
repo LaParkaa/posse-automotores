@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Barlow, Barlow_Condensed } from "next/font/google";
+import { Rastreador } from "@/components/rastreador";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${barlow.variable} ${barlowCondensed.variable}`}>
       <body className="min-h-screen bg-car-black text-car-white font-barlow antialiased">
         {children}
+        <Rastreador />
       </body>
     </html>
   );
