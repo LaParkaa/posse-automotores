@@ -1,7 +1,17 @@
 import type { Entidades } from "./nlu/entidades";
 import type { Intencion } from "./nlu/intenciones";
 import type { EntradaMotor } from "./motor";
-import { alternativaTexto, elegir, primerNombre, tarjetaContacto, tarjetaDe, tarjetaPostulacion, type Contexto } from "./respuestas";
+import {
+  alternativaTexto,
+  elegir,
+  primerNombre,
+  tarjetaContacto,
+  tarjetaDe,
+  tarjetaFinanciacion,
+  tarjetaPostulacion,
+  urlFinanciacion,
+  type Contexto,
+} from "./respuestas";
 import type { Sesion } from "./sesion";
 import * as T from "./textos";
 import type { DatosPostulacionMensaje } from "../utils";
@@ -88,6 +98,20 @@ export function mostrarContacto(t: Turno, v: VehiculoCatalogo | null): void {
     tipo: "tarjetas",
     tarjetas: [tarjeta],
     alternativaTexto: T.contactoEnTexto(secretaria(t), tarjeta.botones[0].url),
+  });
+}
+
+/**
+ * Tarjeta con el link al simulador de financiacion (y el boton de Marcos). Sin un link https valido no hay
+ * simulador que ofrecer, asi que queda el contacto de siempre.
+ */
+export function mostrarFinanciacion(t: Turno, v: VehiculoCatalogo | null): void {
+  const url = urlFinanciacion(v, t.ctx.siteUrl);
+  if (url === null) return mostrarContacto(t, v);
+  t.mensajes.push({
+    tipo: "tarjetas",
+    tarjetas: [tarjetaFinanciacion(v, t.ctx)],
+    alternativaTexto: T.financiacionEnTexto(url),
   });
 }
 

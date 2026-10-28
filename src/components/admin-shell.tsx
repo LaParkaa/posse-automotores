@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Car, LayoutDashboard, LogOut, Users, Menu, X, Smartphone } from "lucide-react";
+import { BarChart3, Car, LayoutDashboard, LogOut, Users, Menu, X, Smartphone } from "lucide-react";
 
 const navItems = [
   { href: "/panel", label: "Panel de stock", icon: Smartphone },
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/vehiculos", label: "Vehículos", icon: Car },
   { href: "/admin/leads", label: "Leads (Bot)", icon: Users },
+  { href: "/admin/estadisticas", label: "Estadísticas", icon: BarChart3 },
 ];
 
 function Sidebar({ onClose }: { onClose?: () => void }) {
