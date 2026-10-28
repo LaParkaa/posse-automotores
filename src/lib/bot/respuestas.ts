@@ -233,14 +233,18 @@ export function listaNumerada(vehiculos: VehiculoCatalogo[]): string {
 
 /**
  * "Juan Perez" → "Juan"; null si el perfil no trae nombre o la primera palabra no parece uno
- * (un usuario como "juan94" o un emoji suenan raro en un saludo). Si viene todo en mayusculas
+ * (un usuario como "juan94" o un emoji suenan raro en un saludo). Los emojis y adornos pegados al nombre
+ * ("Anitta🌺🌹") se sacan. Si viene todo en mayusculas
  * ("JUAN") se pasa a "Juan"; los nombres normales no se tocan.
  */
 export function primerNombre(perfil: Perfil | null): string | null {
   const nombre = perfil?.nombre?.trim();
   if (!nombre) return null;
-  const palabra = nombre.split(/\s+/)[0];
-  if (!/\p{L}/u.test(palabra) || /\d/.test(palabra)) return null;
+  // NFKC pasa las letras "decoradas" de Instagram (𝑪𝒉𝒓𝒊𝒔) a letras comunes; despues se sacan emojis y adornos.
+  const cruda = nombre.normalize("NFKC").split(/\s+/)[0];
+  if (/\d/.test(cruda)) return null;
+  const palabra = cruda.replace(/[^\p{L}\p{M}'’-]/gu, "").replace(/^['’-]+|['’-]+$/g, "");
+  if (!/\p{L}/u.test(palabra)) return null;
   if (palabra === palabra.toUpperCase()) {
     const [inicial, ...resto] = Array.from(palabra.toLowerCase());
     return inicial.toUpperCase() + resto.join("");

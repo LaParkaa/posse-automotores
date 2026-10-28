@@ -208,6 +208,18 @@ describe("primerNombre", () => {
     expect(primerNombre({ nombre: "  ana  " })).toBe("ana");
   });
 
+  it("saca los emojis pegados al nombre y pasa las letras decoradas a letras comunes", () => {
+    expect(primerNombre({ nombre: "Anitta🌺🌹" })).toBe("Anitta");
+    expect(primerNombre({ nombre: "Gonzalo🟡🔵" })).toBe("Gonzalo");
+    expect(primerNombre({ nombre: "✨𝑪𝒉𝒓𝒊𝒔𝒕𝒐𝒑𝒉𝒆𝒓 Perez" })).toBe("Christopher");
+    expect(primerNombre({ nombre: "José María" })).toBe("José");
+  });
+
+  it("un nombre que es solo adornos o lleva numeros no se usa", () => {
+    expect(primerNombre({ nombre: "🔥🔥" })).toBeNull();
+    expect(primerNombre({ nombre: "juan94" })).toBeNull();
+  });
+
   it("devuelve null si no hay nombre", () => {
     expect(primerNombre(null)).toBeNull();
     expect(primerNombre({ usuario: "juan94" })).toBeNull();

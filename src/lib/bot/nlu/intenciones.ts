@@ -192,6 +192,11 @@ const REGLAS: Regla[] = [
     frases: [
       "sos un bot",
       "sos bot",
+      "sos un agente",
+      "sos agente",
+      "es un agente",
+      "sos un asistente",
+      "sos un chatbot",
       "es un bot",
       "sos una persona",
       "sos humano",

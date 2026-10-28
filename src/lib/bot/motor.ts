@@ -93,6 +93,8 @@ const CHARLA_EN_HISTORIA = new Set<Intencion>(["desconocida", "saludo", "cortesi
 const ESCAPAN_DE_HISTORIA = new Set<Intencion>([
   "empleo", "humano", "identidad", "avisame", "catalogo", "ver_mas", ...TEMAS_NEGOCIO,
 ]);
+const PALABRAS_GENERICAS = new Set(["auto", "autos", "coche", "coches", "vehiculo", "vehiculos", "usado", "usados", "un", "algun", "de", "los", "el"]);
+const MAX_TOKENS_PEDIDO_GENERICO = 3;
 const NINGUNO = new Set(["ninguno", "ninguna", "ningun", "otro", "otra"]);
 // Unicas frases que dicen "ese no es el auto de la historia"; una frase larga ya es otra cosa ("ese no me gusta tanto").
 const FRASES_CORRECCION = ["ese no", "esa no", "no es ese", "no es esa", "no era ese", "no era esa"];
@@ -224,6 +226,14 @@ function pasoEligiendoHistoria(t: Turno, texto: string): boolean {
   if (intenciones.some((i) => ESCAPAN_DE_HISTORIA.has(i))) {
     salirDelPaso(s);
     return false;
+  }
+  // "Peugeot", "el 2015": no nombra un auto pero si una marca o un año; se muestra lo que hay de eso.
+  const filtros = filtrosDeEntidades(ent);
+  if (Object.keys(filtros).length > 0) {
+    salirDelPaso(s);
+    s.historiaActualId = null;
+    mostrarBusqueda(t, filtros, texto, T.listaExacta);
+    return true;
   }
 
   s.fallos += 1;
@@ -426,8 +436,19 @@ function despacharIntencion(
     decir(t, variante(t, "saludo", T.saludo(nombreParaSaludo(t))));
     return true;
   }
+  // "Auto", "autos usados": el cliente pide ver lo que hay (la respuesta a "¿buscás auto, moto o utilitario?").
+  if (esPedidoGenerico(texto)) {
+    mostrarBusqueda(t, {}, texto, T.listaExacta);
+    return false;
+  }
   noEntendido(t, fallosPrevios);
   return false;
+}
+
+/** Mensaje corto hecho solo de palabras que dicen "un auto" en general; no restringen el tipo ni nombran un modelo. */
+function esPedidoGenerico(texto: string): boolean {
+  const tokens = tokenizar(texto);
+  return tokens.length > 0 && tokens.length <= MAX_TOKENS_PEDIDO_GENERICO && tokens.every((p) => PALABRAS_GENERICAS.has(p));
 }
 
 /** Primera vez: repregunta con ejemplos. Desde la segunda: menu corto y la secretaria. */
