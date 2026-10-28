@@ -7,6 +7,7 @@ export function SiteHeader() {
   const links = [
     { href: "/#nosotros", label: "Nosotros" },
     { href: "/catalogo", label: "Vehículos" },
+    { href: "/financiacion", label: "Financiación" },
     { href: "/lavadero", label: "Lavadero" },
     { href: "/#porque", label: "Por qué elegirnos" },
     { href: "/#contacto", label: "Contacto" },
