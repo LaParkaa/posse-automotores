@@ -15,13 +15,20 @@ export const metadata: Metadata = {
 export default async function FinanciacionPage({ searchParams }: { searchParams: Promise<{ auto?: string }> }) {
   const { auto } = await searchParams;
   const vehiculos = await getVehiculosDisponibles();
-  const autos = vehiculos.map((v) => ({ slug: v.slug, etiqueta: `${v.nombre.trim()} (${v.anio})` }));
+  const autos = vehiculos.map((v) => ({
+    slug: v.slug,
+    etiqueta: `${v.nombre.trim()} (${v.anio})`,
+    nombre: v.nombre.trim(),
+    detalle: `${v.anio} · ${v.kilometraje}`,
+    precio: v.precio_texto,
+    imagen: v.cover_image_url,
+  }));
 
   return (
     <>
       <SiteHeader />
       {/* El espacio de abajo evita que el botón flotante de WhatsApp tape el botón de enviar. */}
-      <main className="mx-auto max-w-xl px-5 pb-36 pt-28">
+      <main className="mx-auto max-w-xl px-5 pb-36 pt-28 lg:max-w-[64rem]">
         <p className="font-condensed text-sm font-bold italic uppercase tracking-[4px] text-car-gold">Financiación</p>
         <h1 className="mt-2 font-condensed text-5xl font-black italic text-car-white [text-shadow:0_0_28px_rgba(201,162,39,0.3)]">
           Simulá tu <span className="text-car-gold">Plan</span>

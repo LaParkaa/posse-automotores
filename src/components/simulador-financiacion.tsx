@@ -1,5 +1,9 @@
 "use client";
+import Image from "next/image";
+import Link from "next/link";
 import { useRef, useState } from "react";
+import { sePuedeOptimizar } from "@/lib/imagen";
+import { registrarEvento } from "@/lib/rastreo";
 import {
   ESTADOS,
   PLAZOS,
@@ -12,7 +16,15 @@ import {
   type SolicitudFinanciacion,
 } from "@/lib/financiacion";
 
-export type AutoParaFinanciar = { slug: string; etiqueta: string };
+export type AutoParaFinanciar = {
+  slug: string;
+  etiqueta: string;
+  nombre: string;
+  /** "2010 · 96.000 km" */
+  detalle: string;
+  precio: string;
+  imagen: string | null;
+};
 
 const OTRO_AUTO = "otro";
 
@@ -42,6 +54,45 @@ function Chip({ activo, onClick, children }: { activo: boolean; onClick: () => v
 
 function Error({ texto }: { texto: string | undefined }) {
   return texto ? <p className="mt-1.5 text-sm text-red-300" role="alert">{texto}</p> : null;
+}
+
+/**
+ * El auto elegido, con su foto: arriba del formulario en el celular y al costado (fijo) en la compu.
+ * Sin auto elegido solo se muestra en la compu, como invitación a elegir uno.
+ */
+function VistaPreviaAuto({ auto }: { auto: AutoParaFinanciar | undefined }) {
+  if (!auto) {
+    return (
+      <div className="hidden rounded-2xl border border-dashed border-white/20 bg-white/[0.03] p-8 text-center text-car-muted lg:block">
+        <p className="text-5xl" aria-hidden="true">🚗</p>
+        <p className="mt-3 text-base">Elegí un auto y lo ves acá</p>
+      </div>
+    );
+  }
+  return (
+    <div className={`${TARJETA} flex items-center gap-4 !p-3 lg:block lg:!p-4`}>
+      <div className="relative aspect-[4/3] w-28 shrink-0 overflow-hidden rounded-xl bg-car-gray2 lg:w-full lg:aspect-[16/10]">
+        {auto.imagen && (
+          <Image
+            src={auto.imagen}
+            alt={auto.nombre}
+            fill
+            sizes="(min-width: 1024px) 360px, 112px"
+            unoptimized={!sePuedeOptimizar(auto.imagen)}
+            className="object-cover"
+          />
+        )}
+      </div>
+      <div className="min-w-0 lg:mt-4">
+        <p className="font-condensed text-xl font-black italic leading-tight text-car-white lg:text-2xl">{auto.nombre}</p>
+        <p className="mt-1 text-sm text-car-muted">{auto.detalle}</p>
+        <p className="mt-1 font-condensed text-2xl font-black text-car-gold">{auto.precio}</p>
+        <Link href={`/vehiculos/${auto.slug}`} className="mt-1 inline-block text-sm font-semibold text-car-gold underline lg:mt-2">
+          Ver ficha
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 const WaIcon = () => (
@@ -80,6 +131,7 @@ export function SimuladorFinanciacion({ autos, autoInicial }: { autos: AutoParaF
     nombre,
   };
   const errores = intentado ? validar(solicitud) : {};
+  const autoElegido = autos.find((a) => a.slug === autoSlug);
 
   const enviar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,12 +143,19 @@ export function SimuladorFinanciacion({ autos, autoInicial }: { autos: AutoParaF
       return;
     }
     const url = urlFinanciacion(solicitud);
+    // Es la señal más fuerte de interés: alguien que armó su plan para este auto.
+    registrarEvento("simulacion", autoSlug === OTRO_AUTO ? null : autoSlug);
     setEnlace(url);
     window.open(url, "_blank", "noopener");
   };
 
   return (
-    <form ref={formulario} onSubmit={enviar} noValidate className="space-y-5">
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-10">
+    {/* En el celular el auto va arriba del formulario; en la compu, al costado. */}
+    <aside className="mb-5 lg:order-2 lg:mb-0 lg:sticky lg:top-24" aria-label="Auto elegido">
+      <VistaPreviaAuto auto={autoElegido} />
+    </aside>
+    <form ref={formulario} onSubmit={enviar} noValidate className="space-y-5 lg:order-1">
       {/* 1. AUTO */}
       <section className={TARJETA} aria-labelledby="paso-1">
         <h2 id="paso-1" className="font-condensed text-xl font-black text-car-white">1. ¿Qué auto querés comprar?</h2>
@@ -249,5 +308,6 @@ export function SimuladorFinanciacion({ autos, autoInicial }: { autos: AutoParaF
         )}
       </div>
     </form>
+    </div>
   );
 }

@@ -1,12 +1,18 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FloatingWhatsApp } from "@/components/floating-whatsapp";
 import { getVehiculoBySlug } from "@/lib/data";
+import { sePuedeOptimizar } from "@/lib/imagen";
 import { buildWhatsAppUrl } from "@/lib/utils";
 import { GalleryZoom } from "@/components/gallery-zoom";
+
+// Botón dorado con volumen que lleva al simulador de financiación.
+const BOTON_FINANCIAR =
+  "flex items-center justify-center gap-2 rounded-xl border border-[#f0d36b]/40 bg-gradient-to-b from-[#ecc94b] to-car-gold px-6 py-4 font-condensed text-base font-black uppercase tracking-wide text-car-black shadow-[0_5px_0_#8a6f14,0_12px_24px_rgba(201,162,39,0.35)] transition active:translate-y-[3px] active:shadow-[0_2px_0_#8a6f14]";
 
 // Igual que el catálogo: la ficha se arma en cada visita. Si se genera estática,
 // los cambios del admin (estado, Reel → mensaje de WhatsApp) nunca llegan acá.
@@ -34,6 +40,8 @@ export default async function VehiculoPage({ params }: { params: Promise<{ slug:
   if (!v) notFound();
 
   const whatsappUrl = buildWhatsAppUrl(v);
+  // El simulador abre con este auto ya elegido.
+  const financiacionUrl = `/financiacion?auto=${encodeURIComponent(v.slug)}`;
   const specs = [
     ["Año", String(v.anio)],
     ["Kilometraje", v.kilometraje],
@@ -51,9 +59,14 @@ export default async function VehiculoPage({ params }: { params: Promise<{ slug:
         <section className="relative min-h-[480px] bg-car-black">
           {v.cover_image_url && (
             <>
-              <div
-                className="absolute inset-0 bg-cover bg-center opacity-50"
-                style={{ backgroundImage: `url(${v.cover_image_url})` }}
+              <Image
+                src={v.cover_image_url}
+                alt=""
+                fill
+                priority
+                sizes="100vw"
+                unoptimized={!sePuedeOptimizar(v.cover_image_url)}
+                className="object-cover opacity-50"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-car-black via-black/50 to-transparent" />
             </>
@@ -70,6 +83,23 @@ export default async function VehiculoPage({ params }: { params: Promise<{ slug:
             <p className="mt-3 text-lg text-car-white/70">
               {v.anio} · {v.kilometraje}
             </p>
+            {/* Acá arriba, a la vista: en el celular el recuadro de precio queda después de la galería. */}
+            <p className="mt-4 font-condensed text-4xl font-black text-car-gold [text-shadow:0_0_20px_rgba(201,162,39,0.4)]">
+              {v.precio_texto}
+            </p>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <Link href={financiacionUrl} className={BOTON_FINANCIAR}>
+                <span aria-hidden="true">💳</span> Simular mi financiación
+              </Link>
+              <Link
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener"
+                className="flex items-center justify-center gap-2 rounded-xl border border-[#7df0a8]/40 bg-gradient-to-b from-[#34e07a] to-[#1fb457] px-6 py-4 font-condensed text-base font-bold uppercase tracking-wide text-white shadow-[0_5px_0_#127a38,0_12px_28px_rgba(37,211,102,0.35)] transition active:translate-y-[3px] active:shadow-[0_2px_0_#127a38]"
+              >
+                <WaIcon /> Consultar por WhatsApp
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -132,11 +162,14 @@ export default async function VehiculoPage({ params }: { params: Promise<{ slug:
             <p className="text-xs uppercase tracking-wide text-car-muted">Precio</p>
             <p className="mt-1 font-condensed text-4xl font-black text-car-gold">{v.precio_texto}</p>
             <p className="mt-1 text-sm text-car-muted">Consultar financiación disponible</p>
+            <Link href={financiacionUrl} className={`${BOTON_FINANCIAR} mt-6 w-full`}>
+              <span aria-hidden="true">💳</span> Simular mi financiación
+            </Link>
             <Link
               href={whatsappUrl}
               target="_blank"
               rel="noopener"
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded bg-[#25D366] py-4 font-condensed text-base font-bold uppercase tracking-wide text-white transition hover:bg-[#1da851]"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded bg-[#25D366] py-4 font-condensed text-base font-bold uppercase tracking-wide text-white transition hover:bg-[#1da851]"
             >
               <WaIcon /> Consultar por WhatsApp
             </Link>
