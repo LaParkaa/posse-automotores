@@ -451,6 +451,16 @@ describe("postulacion de vendedor: fotos, audios y archivos", () => {
     expect(r.sesion.paso).toBe("postulando");
     expect(r.sesion.postulacion?.campo).toBe("experiencia_ventas");
   });
+
+  it("despues del aviso del adjunto repite la pregunta pendiente (como ultimo mensaje)", () => {
+    const rs = charlar([...HASTA_VENTAS, { texto: null, adjuntos: ["file"] }]);
+    const r = rs[rs.length - 1];
+
+    expect(r.mensajes.length).toBeLessThanOrEqual(3);
+    expect(r.mensajes[r.mensajes.length - 1].tipo).toBe("texto");
+    expect(ultimoTexto(r)).toMatch(/experiencia en ventas/i);
+    expect(ultimoTexto(r)).not.toBe(textos(r)[0]);
+  });
 });
 
 describe("postulacion de vendedor: pureza, tono y persistencia", () => {

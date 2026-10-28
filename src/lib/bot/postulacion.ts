@@ -182,6 +182,8 @@ export function adjuntoEnPostulacion(t: Turno): void {
   }
   decir(t, variante(t, "postula-adjunto", T.postulacionAdjunto(reclutador(t))));
   mostrarContactoReclutador(t, p.datos);
+  // Sin repetir lo que falta, quien manda el CV da por terminada la charla y la postulacion queda a medias.
+  if (campo !== null) repetirPregunta(t, p, campo);
 }
 
 /** Pregunta el proximo dato, o cierra la postulacion si ya no falta ninguno. */

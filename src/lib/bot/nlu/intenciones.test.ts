@@ -39,6 +39,7 @@ describe("detectarIntenciones — la intencion principal (primera)", () => {
     ["pasame con marcos", "humano"],
     ["me pasas un numero?", "humano"],
     ["sos un bot?", "identidad"],
+    ["sos un agente?", "identidad"],
     ["es una persona la que me atiende?", "identidad"],
     ["avisame cuando entre una hilux", "avisame"],
     ["mostrame mas", "ver_mas"],

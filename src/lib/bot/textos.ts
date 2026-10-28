@@ -391,8 +391,8 @@ export const postulacionSinNombre = (reclutador: string) => [
 
 /** El CV en archivo no entra por Instagram: se manda a Marcos por WhatsApp. */
 export const postulacionAdjunto = (reclutador: string) => [
-  `Por acá no puedo recibir archivos ni fotos 😅 Mandale tu CV a ${reclutador} por WhatsApp 👇 y seguimos con tus datos cuando quieras`,
-  `Los archivos no me llegan bien por acá 🙂 Mandale tu CV a ${reclutador} por WhatsApp 👇 y después seguimos con tu postulación`,
+  `Por acá no puedo recibir archivos ni fotos 😅 Mandale tu CV a ${reclutador} por WhatsApp 👇 y mientras tanto sigo con tus datos 😊`,
+  `Los archivos no me llegan bien por acá 🙂 Mandale tu CV a ${reclutador} por WhatsApp 👇 y yo sigo con tu postulación acá 🙂`,
 ];
 
 /** Instagram tomo el numero como un contacto y no llego como texto: se pide de nuevo, dentro de una frase. */

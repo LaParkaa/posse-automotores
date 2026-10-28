@@ -63,9 +63,25 @@ const MODELOS_QUE_PIDEN_MARCA = new Set(["uno"]);
 const SIGUE_A_UN_NUMERO_QUE_NO_ES_ANIO = new Set(["km", "kms", "kilometros", "kilometro", "pesos", "dolares", "usd", "mil"]);
 const ANTECEDE_A_UN_NUMERO_QUE_NO_ES_ANIO = new Set(["mil", "usd", "u$s", "us"]);
 
-/** Un vehiculo se nombra por el primer token de su modelo ("Amarok V6 Extreme" → "amarok", "XR 150" → "xr"). */
+// Cilindrada ("1.4", "2.0"): la cargan al principio del modelo y no nombra al auto ("Tiguan 1.4" no es el Vento 1.4).
+const ES_CILINDRADA = /^\d[.,]\d$/;
+// "golcito", "golito": el modelo con un diminutivo pegado.
+const DIMINUTIVOS = ["cito", "cita", "ito", "ita"];
+const MIN_LETRAS_DIMINUTIVO = 3;
+
+/**
+ * Un vehiculo se nombra por el primer token de su modelo ("Amarok V6 Extreme" → "amarok", "XR 150" → "xr").
+ * Si el modelo arranca con la cilindrada ("1.8 LTZ"), el nombre sale de la primera palabra del titulo que no
+ * es la marca ("Chevrolet Tracker 1.8 LTZ" → "tracker").
+ */
 function primerTokenModelo(v: VehiculoCatalogo): string {
-  return normalizar(v.modelo).split(" ")[0] ?? "";
+  const modelo = normalizar(v.modelo).split(" ")[0] ?? "";
+  if (!ES_CILINDRADA.test(modelo)) return modelo;
+  const marca = primerTokenMarca(v);
+  const palabra = normalizar(v.nombre)
+    .split(" ")
+    .find((token) => /^\p{L}{3,}$/u.test(token) && token !== marca && ALIAS_MARCA[token] !== marca);
+  return palabra ?? modelo;
 }
 
 /**
@@ -100,7 +116,10 @@ function posicionesQueNombran(v: VehiculoCatalogo, modelo: string, tokens: strin
       return;
     }
     // coincideAprox exige igualdad exacta cuando hay digitos, asi que 206 y 208 nunca se confunden.
-    const coincide = token === modelo || (!NO_APROXIMAR_A_MODELO.has(token) && aproximaNombre(token, modelo, MIN_LETRAS_MODELO_APROX));
+    const coincide =
+      token === modelo ||
+      esDiminutivo(token, modelo) ||
+      (!NO_APROXIMAR_A_MODELO.has(token) && aproximaNombre(token, modelo, MIN_LETRAS_MODELO_APROX));
     if (coincide) posiciones.push(i);
   });
 
@@ -112,6 +131,10 @@ function posicionesQueNombran(v: VehiculoCatalogo, modelo: string, tokens: strin
   return posiciones;
 }
 
+function esDiminutivo(token: string, modelo: string): boolean {
+  return modelo.length >= MIN_LETRAS_DIMINUTIVO && /^\p{L}+$/u.test(modelo) && DIMINUTIVOS.some((sufijo) => token === modelo + sufijo);
+}
+
 function primeroEnDiccionario(tokens: string[], diccionario: Record<string, string>): string | null {
   for (const token of tokens) {
     // Igualdad exacta (el diccionario no tiene prototipo): con tolerancia "Manuel" seria "manual".
@@ -119,6 +142,31 @@ function primeroEnDiccionario(tokens: string[], diccionario: Record<string, stri
     if (valor !== undefined) return valor;
   }
   return null;
+}
+
+/**
+ * "el gol power" con un Gol disponible y otro vendido, o "vento 2014" entre tres Ventos: de los autos del mismo
+ * modelo se queda el del año pedido y, si sigue habiendo varios, el unico disponible. Modelos distintos no se
+ * tocan ("la 206 o la 208" son dos pedidos).
+ */
+function distinguirMismoModelo(ids: string[], catalogo: VehiculoCatalogo[], anio: number | null): string[] {
+  const porId = new Map(catalogo.map((v) => [v.id, v]));
+  const familias = new Map<string, VehiculoCatalogo[]>();
+  for (const id of ids) {
+    const v = porId.get(id);
+    if (v) familias.set(primerTokenModelo(v), [...(familias.get(primerTokenModelo(v)) ?? []), v]);
+  }
+  const elegidos = new Set<string>();
+  for (const autos of familias.values()) {
+    let grupo = autos;
+    if (grupo.length > 1 && anio !== null && grupo.some((v) => v.anio === anio)) grupo = grupo.filter((v) => v.anio === anio);
+    if (grupo.length > 1) {
+      const enVenta = grupo.filter((v) => v.estado === "disponible");
+      if (enVenta.length === 1) grupo = enVenta;
+    }
+    grupo.forEach((v) => elegidos.add(v.id));
+  }
+  return ids.filter((id) => elegidos.has(id));
 }
 
 export function extraerEntidades(texto: string, catalogo: VehiculoCatalogo[]): Entidades {
@@ -191,7 +239,7 @@ export function extraerEntidades(texto: string, catalogo: VehiculoCatalogo[]): E
   const deictico = tokens.length <= MAX_TOKENS_DEICTICO && tokens.some((token) => DEICTICOS.has(token));
 
   return {
-    vehiculoIds,
+    vehiculoIds: distinguirMismoModelo(vehiculoIds, catalogo, anio),
     marca,
     tipos,
     combustible: primeroEnDiccionario(tokens, SINONIMOS_COMBUSTIBLE),

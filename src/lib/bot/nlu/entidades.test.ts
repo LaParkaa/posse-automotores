@@ -279,3 +279,57 @@ describe("decisiones declaradas", () => {
     expect(e("__proto__ hasOwnProperty")).toEqual(vacias);
   });
 });
+
+describe("autos del catalogo real: mismo modelo, cilindrada y diminutivos", () => {
+  const mk = (p: Partial<VehiculoCatalogo> & Pick<VehiculoCatalogo, "id" | "nombre" | "marca" | "modelo" | "anio">): VehiculoCatalogo => ({
+    ...CATALOGO[0],
+    slug: p.id,
+    estado: "disponible",
+    ...p,
+  });
+  const gol10 = mk({ id: "gol10", nombre: "Volkswagen Gol Power 1.6", marca: "Volkswagen", modelo: "Gol Power 1.6", anio: 2010 });
+  const gol07 = mk({ id: "gol07", nombre: "Volkswagen Gol Power 1.6", marca: "Volkswagen", modelo: "Gol Power 1.6", anio: 2007, estado: "vendido" });
+  const vento14 = mk({ id: "v14", nombre: "VW Vento 2.5 AT", marca: "Volkswagen", modelo: "Vento 2.5 AT", anio: 2014, estado: "vendido" });
+  const vento15 = mk({ id: "v15", nombre: "Volkswagen Vento 2.5 Advance", marca: "Volkswagen", modelo: "Vento 2.5 Advance", anio: 2015, estado: "vendido" });
+  const vento17 = mk({ id: "v17", nombre: "Vento 1.4 Dsg", marca: "Volkswagen", modelo: "1.4 Dsg", anio: 2017 });
+  const tiguan = mk({ id: "tig", nombre: "Volkswagen Tiguan", marca: "Volkswagen", modelo: "Tiguan", anio: 2018 });
+  const tracker = mk({ id: "trk", nombre: "Chevrolet Tracker 1.8 LTZ 4x2", marca: "Chevrolet", modelo: "1.8 LTZ 4x2", anio: 2017 });
+  const cat = [gol10, gol07, vento14, vento15, vento17, tiguan, tracker];
+  const ids = (texto: string) => extraerEntidades(texto, cat).vehiculoIds.sort();
+
+  it("'el gol power' con un Gol disponible y otro vendido es el disponible", () => {
+    expect(ids("el gol power")).toEqual(["gol10"]);
+    expect(ids("cuanto el gol ?")).toEqual(["gol10"]);
+  });
+
+  it("si el año pedido es del vendido, es el vendido", () => {
+    expect(ids("el gol 2007")).toEqual(["gol07"]);
+  });
+
+  it("'vento 2014' entre varios Ventos es el de 2014", () => {
+    expect(ids("precio vento 2014")).toEqual(["v14"]);
+  });
+
+  it("'el vento' sin año: si solo uno esta a la venta es ese; si hay dos disponibles sigue ambiguo", () => {
+    expect(ids("tienen el vento?")).toEqual(["v17"]);
+    const otro = mk({ id: "v18", nombre: "Volkswagen Vento 2.0", marca: "Volkswagen", modelo: "Vento 2.0", anio: 2018 });
+    expect(extraerEntidades("tienen el vento?", [...cat, otro]).vehiculoIds.sort()).toEqual(["v14", "v15", "v17", "v18"]);
+  });
+
+  it("un auto con la cilindrada al principio del modelo se nombra por el titulo", () => {
+    expect(ids("tracker")).toEqual(["trk"]);
+    expect(ids("tienen la tracker?")).toEqual(["trk"]);
+  });
+
+  it("la cilindrada suelta no nombra un auto ('tiguan 1.4' no es el Vento 1.4)", () => {
+    expect(ids("el precio de la tiguan 1.4")).toEqual(["tig"]);
+  });
+
+  it("'golcito' es el Gol", () => {
+    expect(ids("que sale el golcito 2010?")).toEqual(["gol10"]);
+  });
+
+  it("modelos distintos no se colapsan ('el gol o la tiguan')", () => {
+    expect(ids("el gol o la tiguan")).toEqual(["gol10", "tig"]);
+  });
+});

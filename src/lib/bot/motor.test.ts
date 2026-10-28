@@ -50,6 +50,95 @@ const urls = (r: ResultadoMotor) => tarjetas(r).flatMap((t) => t.botones.map((b)
 const hayBotonContacto = (r: ResultadoMotor) => urls(r).some((u) => u.startsWith("https://wa.me/5493537662444?text="));
 const titulos = (r: ResultadoMotor) => tarjetas(r).map((t) => t.titulo);
 
+describe("conversaciones reales de Instagram (octubre 2026)", () => {
+  const gol = (id: string, anio: number, estado: VehiculoCatalogo["estado"]): VehiculoCatalogo => ({
+    ...CATALOGO[0], id, slug: id, nombre: "Volkswagen Gol Power 1.6", marca: "Volkswagen", modelo: "Gol Power 1.6", anio, estado,
+    precio_texto: "$9.700.000", tipo: "Hatchback",
+  });
+  const tracker: VehiculoCatalogo = {
+    ...CATALOGO[0], id: "trk", slug: "trk", nombre: "Chevrolet Tracker 1.8 LTZ 4x2", marca: "Chevrolet", modelo: "1.8 LTZ 4x2",
+    anio: 2017, precio_texto: "$17.400.000", tipo: "SUV",
+  };
+  const ventos = [
+    { ...CATALOGO[2], id: "v14", nombre: "VW Vento 2.5 AT", modelo: "Vento 2.5 AT", anio: 2014, estado: "vendido" as const },
+    { ...CATALOGO[2], id: "v17", nombre: "Vento 1.4 Dsg", modelo: "1.4 Dsg", anio: 2017 },
+  ];
+  const catalogo = [...CATALOGO, gol("gol10", 2010, "disponible"), gol("gol07", 2007, "vendido"), tracker, ...ventos];
+
+  it("'Cuánto el gol?' a una historia sin vincular contesta el Gol disponible, sin preguntar por la historia", () => {
+    const [r] = charlar([{ texto: "Cuánto el gol ?", historiaId: "st-x" }], { catalogo });
+
+    expect(r.sesion.paso).toBe("libre");
+    expect(todo(r)).toContain("$9.700.000");
+    expect(todo(r)).not.toMatch(/de la historia/i);
+    expect(r.aprenderHistoria).toEqual({ storyId: "st-x", vehiculoId: "gol10" });
+  });
+
+  it("'El gol power' como respuesta a '¿por cuál auto?' elige el Gol disponible", () => {
+    const [, r] = charlar([{ texto: "Precio?", historiaId: "st-x" }, "El gol power"], { catalogo });
+
+    expect(r.noEntendido).toBe(false);
+    expect(r.sesion.paso).toBe("libre");
+    expect(todo(r)).toContain("$9.700.000");
+  });
+
+  it("'Precio Vento 2014' dice que ese Vento ya se vendio, no vuelve a preguntar por la historia", () => {
+    const [r] = charlar([{ texto: "Precio Vento 2014", historiaId: "st-x" }], { catalogo });
+
+    expect(todo(r)).toMatch(/vendi/i);
+    expect(todo(r)).not.toMatch(/de la historia/i);
+  });
+
+  it("'Tracker' solo (el modelo arranca con la cilindrada) muestra la Tracker", () => {
+    const [r] = charlar(["Tracker"], { catalogo });
+
+    expect(r.noEntendido).toBe(false);
+    expect(todo(r)).toContain("Tracker");
+  });
+
+  it("'¿Qué sale el golcito 2010?' es el Gol y no un Peugeot 206 de 2010", () => {
+    const [r] = charlar(["Hola como va? Que sale el golcito 2010?"], { catalogo });
+
+    expect(todo(r)).toContain("Gol Power");
+    expect(todo(r)).not.toContain("Peugeot 206");
+  });
+
+  it("'Auto' (la respuesta a '¿buscás auto, moto o utilitario?') muestra lo que hay en vez de no entender", () => {
+    const rs = charlar(["Holaa", "Auto"]);
+
+    expect(rs[1].noEntendido).toBe(false);
+    expect(tarjetas(rs[1]).length).toBeGreaterThan(0);
+  });
+
+  it("'autos usados' tambien muestra el catalogo, pero una frase larga sobre un auto no", () => {
+    expect(charlar(["autos usados"])[0].noEntendido).toBe(false);
+    expect(charlar(["mi auto es azul"])[0].noEntendido).toBe(true);
+  });
+
+  it("elegir por marca en vez de numero ('Peugeot') muestra los Peugeot en lugar de repreguntar", () => {
+    const [, r] = charlar([{ texto: "Precio?", historiaId: "st-x" }, "Peugeot"], { catalogo });
+
+    expect(r.noEntendido).toBe(false);
+    expect(r.sesion.paso).toBe("libre");
+    expect(todo(r)).toContain("Peugeot");
+  });
+
+  it("'¿Sos un agente?' se contesta como a '¿sos un bot?': asistente virtual y boton de contacto", () => {
+    const [r] = charlar(["Sos un agente?"]);
+
+    expect(r.noEntendido).toBe(false);
+    expect(todo(r)).toMatch(/asistente virtual/i);
+    expect(hayBotonContacto(r)).toBe(true);
+  });
+
+  it("el saludo usa el nombre sin los adornos del perfil", () => {
+    const [r] = charlar(["Hola"], { perfil: { nombre: "Anitta🌺🌹" } });
+
+    expect(todo(r)).toContain("Anitta");
+    expect(todo(r)).not.toMatch(/🌺|🌹/);
+  });
+});
+
 describe("respuestas a historias (los casos reales)", () => {
   it("historia conocida + 'me decis el precio?' → precio del auto y boton a Marcos", () => {
     const [r] = charlar([{ texto: "hola. me decis el precio?", historiaId: "st-206" }], { historias: { "st-206": "v-206" } });
