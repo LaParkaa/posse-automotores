@@ -14,7 +14,10 @@ import {
   tarjetaContacto,
   tarjetaDe,
   tarjetaEleccion,
+  botonFinanciar,
+  tarjetaFinanciacion,
   tarjetaPostulacion,
+  urlFinanciacion,
   urlImagen,
 } from "./respuestas";
 
@@ -102,15 +105,16 @@ describe("botonContacto y tarjetas", () => {
     expect(decodeURIComponent(botonContacto(null, NEGOCIO).url)).toContain("Quiero consultar por un vehículo");
   });
 
-  it("tarjetaDe lleva foto, datos, precio y los dos botones", () => {
+  it("tarjetaDe lleva foto, datos, precio y los tres botones (web, simulador y Marcos)", () => {
     const t = tarjetaDe(por("v-206"), ctx);
 
     expect(t.titulo).toBe("Peugeot 206 1.6 2011");
     expect(t.subtitulo).toContain("177.000 km");
     expect(t.subtitulo).toContain("$9.500.000");
     expect(t.imagenUrl).toBe("https://img.example/peugeot-206-1-6-2011.jpg");
-    expect(t.botones.map((b) => b.titulo)).toEqual(["Ver en la web", "Hablar con Marcos"]);
+    expect(t.botones.map((b) => b.titulo)).toEqual(["Ver en la web", "Simular mi plan", "Hablar con Marcos"]);
     expect(t.botones[0].url).toBe("https://posse.example/vehiculos/peugeot-206-1-6-2011");
+    expect(t.botones[1].url).toBe("https://posse.example/financiacion?auto=peugeot-206-1-6-2011");
   });
 
   it("sin precio cargado el subtitulo manda a consultarlo con Marcos", () => {
@@ -250,8 +254,38 @@ describe("URLs validas para Instagram (boton y link en texto)", () => {
     });
   }
 
-  it("con https la tarjeta sigue llevando 'Ver en la web'", () => {
-    expect(tarjetaDe(por("v-206"), ctx).botones).toHaveLength(2);
+  it("con https la tarjeta sigue llevando 'Ver en la web' y el simulador", () => {
+    expect(tarjetaDe(por("v-206"), ctx).botones).toHaveLength(3);
+  });
+});
+
+describe("simulador de financiacion", () => {
+  it("el link lleva el auto elegido, o la pagina sola si no hay auto", () => {
+    expect(urlFinanciacion(por("v-206"), "https://posse.example/")).toBe("https://posse.example/financiacion?auto=peugeot-206-1-6-2011");
+    expect(urlFinanciacion(null, "https://posse.example")).toBe("https://posse.example/financiacion");
+  });
+
+  it("sin sitio https no hay link ni boton (Instagram rechazaria la tarjeta)", () => {
+    expect(urlFinanciacion(por("v-206"), "")).toBeNull();
+    expect(urlFinanciacion(por("v-206"), "http://localhost:3000")).toBeNull();
+    expect(botonFinanciar(por("v-206"), { negocio: NEGOCIO, siteUrl: "" })).toBeNull();
+  });
+
+  it("el titulo del boton entra en los 20 caracteres de Instagram", () => {
+    expect(Array.from(botonFinanciar(null, ctx)!.titulo).length).toBeLessThanOrEqual(20);
+  });
+
+  it("la tarjeta de financiacion lleva el simulador y a Marcos", () => {
+    const t = tarjetaFinanciacion(por("v-206"), ctx);
+
+    expect(t.botones.map((b) => b.titulo)).toEqual(["Simular mi plan", "Hablar con Marcos"]);
+    expect(t.titulo).toBe("Peugeot 206 1.6 2011");
+  });
+
+  it("sin auto la tarjeta es general y sin sitio https queda solo Marcos", () => {
+    expect(tarjetaFinanciacion(null, ctx).titulo).toBe("Simulá tu financiación");
+    const sin = tarjetaFinanciacion(null, { negocio: NEGOCIO, siteUrl: "" });
+    expect(sin.botones.map((b) => b.titulo)).toEqual(["Hablar con Marcos"]);
   });
 });
 

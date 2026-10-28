@@ -50,6 +50,69 @@ const urls = (r: ResultadoMotor) => tarjetas(r).flatMap((t) => t.botones.map((b)
 const hayBotonContacto = (r: ResultadoMotor) => urls(r).some((u) => u.startsWith("https://wa.me/5493537662444?text="));
 const titulos = (r: ResultadoMotor) => tarjetas(r).map((t) => t.titulo);
 
+describe("precio y financiacion: se pregunta que vehiculo busca y se manda el simulador", () => {
+  const botonesDe = (r: ResultadoMotor) => tarjetas(r).flatMap((t) => t.botones);
+  const simulador = (r: ResultadoMotor) => botonesDe(r).find((b) => b.titulo === "Simular mi plan");
+
+  it("'Precio?' a una historia nueva pregunta que vehiculo busca, sin mostrar una lista", () => {
+    const [r] = charlar([{ texto: "Precio?", historiaId: "st-nueva" }]);
+
+    expect(textos(r).join("\n")).toMatch(/qué vehículo|por cuál vehículo/i);
+    expect(tarjetas(r)).toHaveLength(0);
+    expect(violacionesDeTono(textos(r).join("\n"))).toEqual([]);
+  });
+
+  it("si escribe el modelo recibe el precio, el cierre de financiacion y el boton del simulador con ese auto", () => {
+    const [, r] = charlar([{ texto: "Precio?", historiaId: "st-nueva" }, "el 206"]);
+
+    expect(todo(r)).toContain("$9.500.000");
+    expect(textos(r).join("\n")).toMatch(/financi/i);
+    expect(simulador(r)?.url).toBe("https://posse.example/financiacion?auto=peugeot-206-1-6-2011");
+    expect(hayBotonContacto(r)).toBe(true);
+  });
+
+  it("un auto sin precio cargado manda a Marcos por el precio y ofrece simular el plan mientras tanto", () => {
+    const [r] = charlar(["cuanto sale la 208?"]);
+
+    expect(textos(r).join("\n")).toContain("Marcos");
+    expect(textos(r).join("\n")).toMatch(/simul/i);
+    expect(simulador(r)?.url).toContain("/financiacion?auto=peugeot-208-style-2023");
+  });
+
+  it("si no escribe un modelo que exista, repregunta pidiendo modelo y año y a la segunda deriva a Marcos", () => {
+    const [, b, c] = charlar([{ texto: "Precio?", historiaId: "st-nueva" }, "asdf", "qwer"]);
+
+    expect(textos(b).join("\n")).toMatch(/modelo y el año/i);
+    expect(textos(b).join("\n")).not.toMatch(/del 1 al/);
+    expect(hayBotonContacto(c)).toBe(true);
+  });
+
+  it("'se puede financiar?' manda el simulador junto al boton de Marcos", () => {
+    const [r] = charlar(["se puede financiar?"]);
+
+    expect(simulador(r)?.url).toBe("https://posse.example/financiacion");
+    expect(hayBotonContacto(r)).toBe(true);
+    expect(botonesDe(r).map((b) => b.titulo)).toEqual(["Simular mi plan", "Hablar con Marcos"]);
+  });
+
+  it("'el vento tiene financiacion?' lleva el auto al simulador", () => {
+    const [r] = charlar(["el vento tiene financiacion?"]);
+
+    expect(simulador(r)?.url).toContain("/financiacion?auto=vw-vento-2-5-advance-2015");
+  });
+
+  it("sin el sitio en https no se ofrece el simulador (el cierre vuelve al contacto de siempre)", () => {
+    const sinSitio = conversar({
+      texto: "cuanto sale la 206?", adjuntos: [], historiaId: null, vehiculoDeHistoria: null, mid: "mid.0",
+      sesion: sesionNueva(AHORA), catalogo: CATALOGO, perfil: null, ahora: AHORA, siteUrl: "", negocio: NEGOCIO,
+    });
+
+    expect(simulador(sinSitio)).toBeUndefined();
+    expect(hayBotonContacto(sinSitio)).toBe(true);
+    expect(textos(sinSitio).join("\n")).not.toMatch(/Simular mi plan/);
+  });
+});
+
 describe("conversaciones reales de Instagram (octubre 2026)", () => {
   const gol = (id: string, anio: number, estado: VehiculoCatalogo["estado"]): VehiculoCatalogo => ({
     ...CATALOGO[0], id, slug: id, nombre: "Volkswagen Gol Power 1.6", marca: "Volkswagen", modelo: "Gol Power 1.6", anio, estado,
@@ -169,21 +232,21 @@ describe("respuestas a historias (los casos reales)", () => {
     expect(todo(r)).toContain("USD 14.500");
   });
 
-  it("historia desconocida sin nombrar el auto → pregunta cual (con la lista) y recuerda la pregunta", () => {
+  it("historia desconocida sin nombrar el auto → pregunta que vehiculo busca (sin lista) y recuerda la pregunta", () => {
     const [r] = charlar([{ texto: "hola que valor tiene?", historiaId: "st-nueva" }]);
 
-    expect(textos(r).join("\n")).toMatch(/historia/i);
-    expect(textos(r).join("\n")).toContain("206");
+    expect(textos(r).join("\n")).toMatch(/qué vehículo|por cuál vehículo/i);
+    expect(tarjetas(r)).toHaveLength(0);
+    expect(r.sesion.mostradosIds).toEqual([]);
     expect(r.sesion.paso).toBe("eligiendo_historia");
     expect(r.sesion.historiaPendienteId).toBe("st-nueva");
     expect(r.sesion.preguntaPendiente).toContain("valor");
     expect(r.aprenderHistoria).toBeNull();
   });
 
-  it("... y cuando el cliente elige, aprende la historia y responde la pregunta pendiente", () => {
-    const [, r] = charlar([{ texto: "hola que valor tiene?", historiaId: "st-nueva" }, "el 2"]);
+  it("... y cuando el cliente escribe el modelo, aprende la historia y responde la pregunta pendiente", () => {
+    const [, r] = charlar([{ texto: "hola que valor tiene?", historiaId: "st-nueva" }, "el 206"]);
 
-    // la lista es: 1 amarok, 2 206, 3 208, 4 vento, 5 kangoo
     expect(r.aprenderHistoria).toEqual({ storyId: "st-nueva", vehiculoId: "v-206" });
     expect(todo(r)).toContain("$9.500.000");
     expect(r.sesion.paso).toBe("libre");
@@ -552,8 +615,12 @@ describe("captacion: casos borde", () => {
 });
 
 describe("historias: casos borde", () => {
+  // La lista numerada solo aparece al corregir una historia ("no es ese"): la primera vez se pide escribir el modelo.
+  const CONOCIDA = { historias: { "st-x": "v-206" } };
+  const corregir = (...mas: string[]) => charlar([{ texto: "precio?", historiaId: "st-x" }, "no es ese", ...mas], CONOCIDA);
+
   it("la lista para elegir son los 5 ultimos cargados, numerados y en orden", () => {
-    const [r] = charlar([{ texto: "precio?", historiaId: "st-x" }]);
+    const [, r] = corregir();
 
     expect(r.sesion.mostradosIds).toEqual(["v-amarok", "v-206", "v-208", "v-vento", "v-kangoo"]);
     expect(titulos(r)[0]).toMatch(/^1\) /);
@@ -563,7 +630,7 @@ describe("historias: casos borde", () => {
 
   it("un vendido en la lista de la historia no se muestra como si se pudiera comprar", () => {
     const catalogo = CATALOGO.map((v) => (v.id === "v-partner" ? { ...v, created_at: "2026-10-10T10:00:00Z" } : v));
-    const [r] = charlar([{ texto: "precio?", historiaId: "st-x" }], { catalogo });
+    const [, r] = charlar([{ texto: "precio?", historiaId: "st-x" }, "no es ese"], { ...CONOCIDA, catalogo });
     const partner = tarjetas(r).find((t) => t.titulo.includes("Partner"))!;
 
     expect(partner.subtitulo).toMatch(/vendi/i);
@@ -571,10 +638,10 @@ describe("historias: casos borde", () => {
   });
 
   it("'el ultimo' elige el quinto de la lista", () => {
-    const [, r] = charlar([{ texto: "precio?", historiaId: "st-x" }, "el ultimo"]);
+    const [, , r] = corregir("el ultimo");
 
     expect(r.aprenderHistoria).toEqual({ storyId: "st-x", vehiculoId: "v-kangoo" });
-    expect(todo(r)).toContain("$11.000.000");
+    expect(r.sesion.vehiculoActualId).toBe("v-kangoo");
   });
 
   it("'ninguno' muestra el catalogo, sale del paso y no aprende nada", () => {

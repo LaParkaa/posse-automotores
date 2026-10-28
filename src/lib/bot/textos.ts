@@ -119,6 +119,9 @@ export const aceptaContacto = (secretaria: string) => [
 /** Respaldo en texto de la tarjeta de contacto (si Instagram la rechaza). */
 export const contactoEnTexto = (secretaria: string, url: string) => `Escribile a ${secretaria} por WhatsApp 💬 ${url}`;
 
+/** Respaldo en texto de la tarjeta de financiacion (si Instagram la rechaza). */
+export const financiacionEnTexto = (url: string) => `Simulá tu plan de financiación acá 💳 ${url}`;
+
 // ---------------------------------------------------------------------------------------------
 // Un auto
 
@@ -149,6 +152,19 @@ export const cierreDisponible = (secretaria: string) => [
   `¿Querés que ${secretaria} te pase más info por WhatsApp? 💬`,
   `Si querés verlo o coordinar, ${secretaria} te atiende por WhatsApp 👇`,
   `¿Te paso con ${secretaria} por WhatsApp para coordinar? 💬`,
+];
+
+/** Cierre de una respuesta de precio: invita a simular el plan de financiacion (el boton va en la tarjeta). */
+export const cierrePrecio = (secretaria: string) => [
+  `¿Lo querés financiar? Tocá "Simular mi plan" y armás tu cuota 👇`,
+  `Si querés financiarlo, simulá tu plan acá abajo, sin compromiso 👇`,
+  `Podés simular tu plan de financiación acá abajo y ${secretaria} te lo confirma 👇`,
+];
+
+/** Cierre cuando el precio no esta cargado: el precio lo pasa la secretaria y, mientras, se puede simular el plan. */
+export const cierreSinPrecioFinanciar = [
+  "Mientras tanto, podés simular tu plan de financiación acá abajo 👇",
+  "Si querés ir viendo cuotas, simulá tu plan acá abajo, sin compromiso 👇",
 ];
 
 export const reservado = (v: VehiculoCatalogo) => [
@@ -219,6 +235,18 @@ export const verMasAgotado = (secretaria: string) => [
 export const cualDeLaHistoria = [
   '¿Por cuál auto de la historia me escribís? 👇\nDecime el número o el nombre (o "otro" si no está)',
   '¿Me contás por cuál auto de la historia me escribís? 😊👇\nPasame el número o el nombre (o "otro" si no está)',
+];
+
+/** Respuesta a una historia que no se conoce y no nombra el auto: se le pregunta que vehiculo busca, para que lo escriba. */
+export const queVehiculoBusca = [
+  '¿Qué vehículo estás buscando? 😊 Escribime el modelo y el año (por ejemplo "Gol 2010") y te paso el precio',
+  '¿Por cuál vehículo me escribís? 😊 Decime el modelo y el año (por ejemplo "Vento 2014") y te cuento todo',
+];
+
+/** El modelo que escribio no esta en el catalogo: se pide de nuevo antes de derivar a la secretaria. */
+export const vehiculoNoEncontrado = [
+  'Mmm, ese no lo encuentro 🤔 ¿Me lo escribís con el modelo y el año? Por ejemplo "Gol 2010"',
+  'No lo encontré 😅 Probá con el modelo y el año, por ejemplo "Vento 2014"',
 ];
 
 export const corregirHistoria = [

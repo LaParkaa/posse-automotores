@@ -107,6 +107,22 @@ export function botonContacto(v: VehiculoCatalogo | null, negocio: Negocio): Bot
 }
 
 /**
+ * Link al simulador de financiacion del sitio, con el auto elegido. Null si el sitio no es https: Instagram
+ * rechaza el boton (y con el, toda la tarjeta) si el link no es absoluto.
+ */
+export function urlFinanciacion(v: VehiculoCatalogo | null, siteUrl: string): string | null {
+  const base = siteUrl.trim().replace(/\/+$/, "");
+  if (!esHttps(base)) return null;
+  return v ? `${base}/financiacion?auto=${encodeURIComponent(v.slug)}` : `${base}/financiacion`;
+}
+
+/** Boton "Simular mi plan" (null si no hay un link valido). */
+export function botonFinanciar(v: VehiculoCatalogo | null, ctx: Contexto): Boton | null {
+  const url = urlFinanciacion(v, ctx.siteUrl);
+  return url ? { titulo: "Simular mi plan", url } : null;
+}
+
+/**
  * Subtitulo "km · combustible · precio". Si no entra en 80, lo que se recorta es km y
  * combustible, nunca el precio: un precio cortado a la mitad es peor que no mostrarlo. Al
  * recortar, el precio pasa adelante para que el "…" quede al final del texto sacrificado.
@@ -131,6 +147,9 @@ export function tarjetaDe(v: VehiculoCatalogo, ctx: Contexto): Tarjeta {
   const precio = precioDe(v) ?? `precio con ${ctx.negocio.secretaria}`;
   const link = linkFicha(v, ctx.siteUrl);
   const botones: Boton[] = [botonContacto(v, ctx.negocio)];
+  // Orden: "Ver en la web", "Simular mi plan", "Hablar con Marcos" (Instagram admite hasta 3 botones).
+  const financiar = botonFinanciar(v, ctx);
+  if (financiar) botones.unshift(financiar);
   if (esHttps(link)) botones.unshift({ titulo: "Ver en la web", url: link });
   return {
     titulo: recortar(`${v.nombre} ${v.anio}`, MAX_TITULO),
@@ -151,6 +170,21 @@ export function tarjetaContacto(v: VehiculoCatalogo | null, ctx: Contexto): Tarj
     subtitulo: recortar(`Escribile a ${negocio.secretaria} y te cuenta todo`, MAX_SUBTITULO),
     imagenUrl: null,
     botones: [botonContacto(v, negocio)],
+  };
+}
+
+/**
+ * Tarjeta de financiacion: el boton lleva al simulador del sitio (con el auto, si lo hay) y el otro a Marcos.
+ * Sin link https valido queda solo el de Marcos, como cualquier tarjeta de contacto.
+ */
+export function tarjetaFinanciacion(v: VehiculoCatalogo | null, ctx: Contexto): Tarjeta {
+  const { negocio } = ctx;
+  const botones = [botonFinanciar(v, ctx), botonContacto(v, negocio)].filter((b): b is Boton => b !== null);
+  return {
+    titulo: recortar(v ? `${v.nombre} ${v.anio}` : "Simulá tu financiación", MAX_TITULO),
+    subtitulo: recortar(`Armá tu plan sin compromiso y ${negocio.secretaria} te lo confirma`, MAX_SUBTITULO),
+    imagenUrl: v ? urlImagen(v, ctx.siteUrl) : null,
+    botones,
   };
 }
 

@@ -5,7 +5,7 @@ import { extraerEntidades, type Entidades } from "./nlu/entidades";
 import { detectarIntenciones, type Intencion } from "./nlu/intenciones";
 import { esSoloEmojis, tokenizar } from "./nlu/normalizar";
 import { adjuntoEnPostulacion, iniciarPostulacion, pasoPostulacion } from "./postulacion";
-import { datosVehiculo, listaNumerada, precioDe, tarjetaEleccion } from "./respuestas";
+import { botonFinanciar, datosVehiculo, listaNumerada, precioDe, tarjetaEleccion } from "./respuestas";
 import { sesionNueva, sesionVigente, type Filtros, type Oferta, type Sesion } from "./sesion";
 import * as T from "./textos";
 import {
@@ -19,6 +19,7 @@ import {
   fijarVehiculo,
   idDeOrdinal,
   mostrarContacto,
+  mostrarFinanciacion,
   mostrarLista,
   nombrados,
   nombreParaSaludo,
@@ -244,7 +245,13 @@ function pasoEligiendoHistoria(t: Turno, texto: string): boolean {
     mostrarContacto(t, null);
     return true;
   }
-  decir(t, variante(t, "historia-repregunta", T.historiaNoEntendida(Math.max(1, s.mostradosIds.length))));
+  // Sin lista de opciones (se le pidio escribir el modelo) no tiene sentido hablar de "el numero del 1 al N".
+  decir(
+    t,
+    s.mostradosIds.length === 0
+      ? variante(t, "historia-no-encontrado", T.vehiculoNoEncontrado)
+      : variante(t, "historia-repregunta", T.historiaNoEntendida(s.mostradosIds.length)),
+  );
   return true;
 }
 
@@ -286,7 +293,15 @@ function respuestaAHistoria(t: Turno, historiaId: string, texto: string, ent: En
   s.preguntaPendiente = texto;
   s.vehiculoActualId = null;
   s.historiaActualId = null;
-  preguntarCualHistoria(t, varios.length > 1 ? varios : recientes(t.e.catalogo, MAX_TARJETAS), T.cualDeLaHistoria, "historia");
+  if (varios.length > 1) {
+    // Nombro varios autos ("el gol o el vento"): las opciones son reales, se muestran para que elija.
+    preguntarCualHistoria(t, varios, T.cualDeLaHistoria, "historia");
+  } else {
+    // No dijo cual: se le pregunta que vehiculo busca para que lo escriba, en vez de mostrarle una lista
+    // de autos que quizas no incluye el que busca (y que muchos no contestan).
+    s.mostradosIds = [];
+    decir(t, variante(t, "historia-que-busca", T.queVehiculoBusca));
+  }
   if (tiene(intenciones, "saludo")) saludarAntes(t);
   return false;
 }
@@ -530,7 +545,11 @@ function responderNegocio(t: Turno, temas: Intencion[], conContacto: boolean): v
     if (deriva && !cuerpo.some((linea) => linea.includes(sec))) lineas.push(variante(t, "cierre-negocio", T.cierreNegocio(sec)));
     decir(t, lineas.join("\n"));
   }
-  if (deriva && conContacto) mostrarContacto(t, autoActual(t));
+  if (deriva && conContacto) {
+    // Con la financiacion de por medio se manda el simulador (mas el boton de Marcos), no solo el contacto.
+    if (temas.includes("financiacion")) mostrarFinanciacion(t, autoActual(t));
+    else mostrarContacto(t, autoActual(t));
+  }
 }
 
 type DatoNegocio = { texto: string | null; tema: string; deriva: boolean };
@@ -623,7 +642,13 @@ function presentarVehiculo(t: Turno, v: VehiculoCatalogo, motivo: "precio" | "in
       : variante(t, "disponible", T.disponible(v));
   const lineas = [apertura, datosVehiculo(v)];
   if (motivo !== "precio") lineas.push(precio ? T.lineaPrecio(precio) : T.lineaSinPrecio(sec));
-  lineas.push(variante(t, "cierre", T.cierreDisponible(sec)));
+  // Cuando preguntan cuanto sale, el cierre invita a simular la financiacion (el boton va en la tarjeta).
+  const hayFinanciacion = botonFinanciar(v, t.ctx) !== null;
+  if (motivo === "precio" && hayFinanciacion) {
+    lineas.push(variante(t, "cierre-financiar", precio ? T.cierrePrecio(sec) : T.cierreSinPrecioFinanciar));
+  } else {
+    lineas.push(variante(t, "cierre", T.cierreDisponible(sec)));
+  }
   decir(t, lineas.join("\n"));
   tarjetas(t, [v]);
   t.s.ofrecio = "contacto";
