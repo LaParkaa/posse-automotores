@@ -1,4 +1,5 @@
 import { AdminShell } from "@/components/admin-shell";
+import { AnunciosInstagram } from "@/components/anuncios-instagram";
 import { EstadisticasVista, PERIODOS } from "@/components/estadisticas-vista";
 import { requireAdminSession } from "@/lib/auth";
 import { resumir, type EventoGuardado } from "@/lib/estadisticas";
@@ -76,6 +77,8 @@ export default async function EstadisticasPage({ searchParams }: { searchParams:
           <EstadisticasVista resumen={resumen} dias={dias} />
         </>
       )}
+
+      <AnunciosInstagram />
     </AdminShell>
   );
 }

@@ -75,9 +75,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       {/* Contenido */}
       <div className="flex flex-1 flex-col">
-        {/* Header mobile */}
-        <header className="flex items-center gap-3 border-b border-white/10 bg-car-black px-4 py-3 lg:hidden">
-          <button onClick={() => setOpen(true)} className="text-car-white/70 hover:text-car-white">
+        {/* Header mobile: fijo arriba, así las 3 rayitas del menú no se pierden al bajar. */}
+        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-white/10 bg-car-black px-4 py-3 lg:hidden">
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Abrir menú"
+            className="grid size-11 place-items-center rounded-lg border border-white/10 bg-car-gray2 text-car-white transition active:scale-95"
+          >
             <Menu size={22} />
           </button>
           <img src="/logo-posse.png" alt="Posse Automotores" className="h-7 w-auto" />
