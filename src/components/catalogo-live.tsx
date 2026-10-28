@@ -11,10 +11,13 @@ import type { Vehiculo } from "@/lib/types";
 export function CatalogoLive({
   vehiculos,
   className,
+  itemClassName,
   vacio,
 }: {
   vehiculos: Vehiculo[];
   className: string;
+  /** Clase de la envoltura de cada card (para un carrusel); sin ella las cards van directo en la grilla. */
+  itemClassName?: string;
   vacio?: React.ReactNode;
 }) {
   const vivos = useVehiculosRealtime(vehiculos);
@@ -31,9 +34,15 @@ export function CatalogoLive({
 
   return (
     <div className={className}>
-      {publicables.map((v) => (
-        <VehicleCard key={v.id} vehiculo={v} />
-      ))}
+      {publicables.map((v) =>
+        itemClassName ? (
+          <div key={v.id} className={itemClassName}>
+            <VehicleCard vehiculo={v} />
+          </div>
+        ) : (
+          <VehicleCard key={v.id} vehiculo={v} />
+        ),
+      )}
     </div>
   );
 }

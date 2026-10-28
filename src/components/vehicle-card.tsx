@@ -1,7 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Vehiculo } from "@/lib/types";
 import { buildWhatsAppUrl } from "@/lib/utils";
-import { VehicleThumbnail } from "@/components/vehicle-thumbnail";
 
 const WaIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="size-4">
@@ -9,53 +9,103 @@ const WaIcon = () => (
   </svg>
 );
 
-export function VehicleCard({ vehiculo }: { vehiculo: Vehiculo }) {
+// Las fotos del bucket de Supabase y las de /public se sirven achicadas por Next (la portada de un auto llegó a pesar
+// 6,7 MB); cualquier otro origen se muestra tal cual para no romper la card.
+const HOST_SUPABASE = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname;
+  } catch {
+    return "";
+  }
+})();
+
+function sePuedeOptimizar(src: string): boolean {
+  if (src.startsWith("/")) return true;
+  try {
+    return HOST_SUPABASE !== "" && new URL(src).hostname === HOST_SUPABASE;
+  } catch {
+    return false;
+  }
+}
+
+// Ancho aproximado de una card según la pantalla: carrusel en el celular, 2 columnas y 3 columnas.
+const SIZES_CARD = "(min-width: 1280px) 400px, (min-width: 640px) 50vw, 86vw";
+
+/** Foto a sangre con degradado oscuro abajo: sobre el degradado van el nombre y "año · km", como en la ficha. */
+function Portada({ vehiculo, className, children }: { vehiculo: Vehiculo; className: string; children: React.ReactNode }) {
   return (
-    <article className="overflow-hidden rounded-lg border border-white/5 bg-car-gray transition-all hover:scale-[1.02] hover:border-car-gold/40 hover:shadow-[0_12px_40px_rgba(201,162,39,0.18)]">
-      <Link href={`/vehiculos/${vehiculo.slug}`} className="relative block">
-        {vehiculo.cover_image_url ? (
-          <VehicleThumbnail
-            src={vehiculo.cover_image_url}
-            alt={vehiculo.nombre}
-            loading="lazy"
-          />
-        ) : (
-          <div className="aspect-video w-full bg-car-gray2" />
-        )}
-        {vehiculo.estado === "reservado" ? (
-          <span className="absolute left-3 top-3 rounded bg-amber-400 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-car-black">
-            Reservado
-          </span>
-        ) : (
-          vehiculo.badge && (
-            <span className="absolute left-3 top-3 rounded bg-car-gold px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-car-black">
-              {vehiculo.badge}
-            </span>
-          )
-        )}
+    <div className={`relative overflow-hidden bg-car-gray2 ${className}`}>
+      {vehiculo.cover_image_url && (
+        <Image
+          src={vehiculo.cover_image_url}
+          alt={vehiculo.nombre}
+          fill
+          sizes={SIZES_CARD}
+          unoptimized={!sePuedeOptimizar(vehiculo.cover_image_url)}
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-car-black via-car-black/45 to-transparent" />
+      {children}
+    </div>
+  );
+}
+
+function Etiqueta({ className, children }: { className: string; children: React.ReactNode }) {
+  return (
+    <span className={`absolute left-3 top-3 rounded px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${className}`}>
+      {children}
+    </span>
+  );
+}
+
+export function VehicleCard({ vehiculo }: { vehiculo: Vehiculo }) {
+  const specs = [
+    ["Combustible", vehiculo.combustible],
+    ["Transmisión", vehiculo.transmision],
+    ["Tipo", vehiculo.tipo],
+  ].filter(([, valor]) => Boolean(valor)) as string[][];
+
+  return (
+    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-white/5 bg-car-gray transition-all hover:border-car-gold/40 hover:shadow-[0_12px_40px_rgba(201,162,39,0.18)]">
+      <Link href={`/vehiculos/${vehiculo.slug}`} className="block">
+        <Portada vehiculo={vehiculo} className="aspect-[4/5]">
+          {vehiculo.estado === "reservado" ? (
+            <Etiqueta className="bg-amber-400 text-car-black">Reservado</Etiqueta>
+          ) : (
+            vehiculo.badge && <Etiqueta className="bg-car-gold text-car-black">{vehiculo.badge}</Etiqueta>
+          )}
+          <div className="absolute inset-x-0 bottom-0 p-5">
+            <h3 className="font-condensed text-4xl font-black italic leading-[1.05] text-car-white [text-shadow:0_2px_12px_rgba(0,0,0,0.6)]">
+              {vehiculo.nombre}
+            </h3>
+            <p className="mt-2 text-base text-car-white/70">
+              {vehiculo.anio} · {vehiculo.kilometraje}
+            </p>
+          </div>
+        </Portada>
       </Link>
-      <div className="p-5 space-y-4">
-        <div>
-          <p className="font-condensed text-xl font-black italic text-car-white leading-tight">
-            {vehiculo.nombre}
-          </p>
-          <p className="mt-1 text-sm text-car-muted">{vehiculo.anio} · {vehiculo.kilometraje}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {[vehiculo.combustible, vehiculo.transmision, vehiculo.tipo].filter(Boolean).map((s) => (
-            <span key={s} className="rounded-full bg-car-gray2 px-3 py-1 text-xs text-car-muted">{s}</span>
-          ))}
-        </div>
-        <p className="font-condensed text-2xl font-black text-car-gold">{vehiculo.precio_texto}</p>
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        {specs.length > 0 && (
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-white/10 bg-white/[0.04] p-4">
+            {specs.map(([label, valor]) => (
+              <div key={label}>
+                <dt className="text-[11px] uppercase tracking-wide text-car-muted">{label}</dt>
+                <dd className="mt-0.5 text-sm font-semibold text-car-white">{valor}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        <p className="mt-auto font-condensed text-3xl font-black text-car-gold">{vehiculo.precio_texto}</p>
         {vehiculo.estado === "reservado" ? (
-          <p className="flex w-full items-center justify-center rounded border border-amber-400/40 bg-amber-400/10 py-3 text-center text-sm font-bold uppercase tracking-wide text-amber-400">
+          <p className="flex w-full items-center justify-center rounded-lg border border-amber-400/40 bg-amber-400/10 py-3 text-center text-sm font-bold uppercase tracking-wide text-amber-400">
             Reservado · consultá por similares
           </p>
         ) : (
           <Link
             href={buildWhatsAppUrl(vehiculo)}
             target="_blank" rel="noopener"
-            className="flex w-full items-center justify-center gap-2 rounded bg-[#25D366] py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#1da851]"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#1da851]"
           >
             <WaIcon /> Consultar por WhatsApp
           </Link>
@@ -67,25 +117,16 @@ export function VehicleCard({ vehiculo }: { vehiculo: Vehiculo }) {
 
 export function VehicleCardVendido({ vehiculo }: { vehiculo: Vehiculo }) {
   return (
-    <article className="overflow-hidden rounded-lg border border-white/5 bg-car-gray opacity-70 grayscale">
-      <div className="relative">
-        {vehiculo.cover_image_url ? (
-          <VehicleThumbnail
-            src={vehiculo.cover_image_url}
-            alt={vehiculo.nombre}
-            loading="lazy"
-          />
-        ) : (
-          <div className="aspect-video w-full bg-car-gray2" />
-        )}
-        <span className="absolute left-3 top-3 rounded bg-car-muted px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
-          Vendido
-        </span>
-      </div>
-      <div className="p-4">
-        <p className="font-condensed text-lg font-black italic text-car-white">{vehiculo.nombre}</p>
-        <p className="mt-1 text-sm text-car-muted">{vehiculo.anio}</p>
-      </div>
+    <article className="group overflow-hidden rounded-2xl border border-white/5 bg-car-gray opacity-70 grayscale">
+      <Portada vehiculo={vehiculo} className="aspect-[4/3]">
+        <Etiqueta className="bg-car-muted text-white">Vendido</Etiqueta>
+        <div className="absolute inset-x-0 bottom-0 p-4">
+          <p className="font-condensed text-2xl font-black italic leading-tight text-car-white [text-shadow:0_2px_12px_rgba(0,0,0,0.6)]">
+            {vehiculo.nombre}
+          </p>
+          <p className="mt-1 text-sm text-car-white/70">{vehiculo.anio}</p>
+        </div>
+      </Portada>
     </article>
   );
 }

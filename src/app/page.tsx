@@ -8,6 +8,12 @@ import { getVehiculosDisponibles, getVehiculosVendidos } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
+// Brillo dorado suave para los títulos de sección.
+const TITULO_BRILLO = "[text-shadow:0_0_28px_rgba(201,162,39,0.3)]";
+// Botón dorado con volumen: se "hunde" al tocarlo.
+const BOTON_DORADO_3D =
+  "inline-flex items-center gap-2 rounded-xl border border-[#f0d36b]/40 bg-gradient-to-b from-[#ecc94b] to-car-gold px-8 py-4 font-condensed text-lg font-black uppercase tracking-wide text-car-black shadow-[0_5px_0_#8a6f14,0_12px_24px_rgba(201,162,39,0.35)] transition active:translate-y-[3px] active:shadow-[0_2px_0_#8a6f14]";
+
 const CarIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-7">
     <path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/>
@@ -47,22 +53,22 @@ export default async function Home() {
           </video>
           <div className="absolute inset-0 bg-black/45" />
           <div className="relative z-10 max-w-3xl lg:-translate-y-8">
-            <span className="mb-6 inline-block rounded-full border border-car-gold bg-car-gold/15 px-4 py-1.5 text-xs font-bold uppercase tracking-[3px] text-car-gold">
+            <span className="mb-6 inline-block rounded-full border border-car-gold/60 bg-car-gold/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[2px] sm:px-4 sm:text-xs sm:tracking-[3px] text-car-gold shadow-[0_0_20px_rgba(201,162,39,0.25)] backdrop-blur-sm">
               Justiniano Posse · Córdoba · Argentina
             </span>
-            <h1 className="font-condensed text-6xl font-black italic leading-none tracking-tight text-car-white sm:text-8xl">
-              <span className="text-car-gold">POSSE</span><br />AUTOMOTORES
+            <h1 className="font-condensed text-[3.2rem] font-black italic leading-none tracking-tight text-car-white [text-shadow:0_4px_24px_rgba(0,0,0,0.55)] min-[400px]:text-6xl sm:text-8xl">
+              <span className="bg-gradient-to-b from-[#f4d35e] to-[#b8901c] bg-clip-text text-transparent [filter:drop-shadow(0_0_18px_rgba(201,162,39,0.45))]">POSSE</span><br />AUTOMOTORES
             </h1>
             <p className="mt-4 font-condensed text-xl font-bold italic uppercase tracking-[4px] text-car-white/50">
               Usados &amp; 0km
             </p>
             <p className="mt-6 text-lg text-car-white/80">Tu inversión en buenas manos.</p>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-              <Link href="/catalogo" className="flex items-center gap-3 rounded border-2 border-white/35 bg-white/10 px-8 py-4 font-condensed text-lg font-bold uppercase tracking-wide text-car-white backdrop-blur-sm transition hover:border-car-gold hover:bg-car-gold/20 hover:text-car-gold">
+            <div className="mx-auto mt-10 flex max-w-sm flex-col items-center justify-center gap-4 sm:max-w-none sm:flex-row">
+              <Link href="/catalogo" className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/35 bg-white/10 px-8 py-4 font-condensed text-lg font-bold uppercase tracking-wide text-car-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition hover:border-car-gold hover:bg-car-gold/20 hover:text-car-gold active:scale-[0.98] sm:w-auto">
                 <CarIcon /> Ver catálogo
               </Link>
               <Link href={waUrl} target="_blank" rel="noopener"
-                className="flex items-center gap-3 rounded bg-[#25D366] px-8 py-4 font-condensed text-lg font-bold uppercase tracking-wide text-white shadow-[0_4px_24px_rgba(37,211,102,0.3)] transition hover:bg-[#1da851]">
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#7df0a8]/40 bg-gradient-to-b from-[#34e07a] to-[#1fb457] px-8 py-4 font-condensed text-lg font-bold uppercase tracking-wide text-white shadow-[0_5px_0_#127a38,0_12px_28px_rgba(37,211,102,0.4)] transition active:translate-y-[3px] active:shadow-[0_2px_0_#127a38] sm:w-auto">
                 Consultanos ahora
               </Link>
             </div>
@@ -74,7 +80,7 @@ export default async function Home() {
         </section>
 
         {/* STRIP */}
-        <section className="border-y-2 border-car-gold bg-gradient-to-r from-[#1a1200] to-[#2a1f00] px-5 py-5">
+        <section className="border-y-2 border-car-gold bg-gradient-to-r from-[#1a1200] via-[#2e2300] to-[#1a1200] px-5 py-5 shadow-[0_0_40px_rgba(201,162,39,0.18)]">
           <div className="mx-auto grid max-w-5xl grid-cols-2 gap-4 sm:grid-cols-4">
             {[
               ["4.9★", "Google"],
@@ -83,7 +89,7 @@ export default async function Home() {
               ["✓", "Financiación"],
             ].map(([num, label]) => (
               <div key={label} className="text-center">
-                <p className="font-condensed text-3xl font-black italic text-car-gold">{num}</p>
+                <p className="font-condensed text-3xl font-black italic text-car-gold [text-shadow:0_0_18px_rgba(201,162,39,0.5)]">{num}</p>
                 <p className="text-xs uppercase tracking-wide text-car-muted">{label}</p>
               </div>
             ))}
@@ -95,7 +101,7 @@ export default async function Home() {
           <section className="mx-auto max-w-7xl px-5 py-20">
             <div className="mb-10 text-center">
               <p className="font-condensed text-sm font-bold italic uppercase tracking-[4px] text-car-gold">Nuestro stock</p>
-              <h2 className="mt-2 font-condensed text-4xl font-black italic text-car-white">
+              <h2 className={`mt-2 font-condensed text-4xl font-black italic text-car-white ${TITULO_BRILLO}`}>
                 Vehículos <span className="text-car-gold">disponibles</span>
               </h2>
               <div className="mx-auto mt-4 h-0.5 w-12 bg-car-gold" />
@@ -106,7 +112,7 @@ export default async function Home() {
             />
             {disponibles.length > 3 && (
               <div className="mt-10 text-center">
-                <Link href="/catalogo" className="inline-flex items-center gap-2 rounded bg-car-gold px-8 py-3 font-condensed font-bold uppercase tracking-wide text-car-black transition hover:bg-car-gold-dark">
+                <Link href="/catalogo" className={BOTON_DORADO_3D}>
                   Ver catálogo completo
                 </Link>
               </div>
@@ -119,7 +125,7 @@ export default async function Home() {
           <div className="mx-auto grid max-w-5xl gap-16 lg:grid-cols-2 lg:items-center">
             <div>
               <p className="font-condensed text-sm font-bold italic uppercase tracking-[4px] text-car-gold">Quiénes somos</p>
-              <h2 className="mt-2 font-condensed text-4xl font-black italic text-car-white">
+              <h2 className={`mt-2 font-condensed text-4xl font-black italic text-car-white ${TITULO_BRILLO}`}>
                 Tu concesionaria de <span className="text-car-gold">confianza</span>
               </h2>
               <div className="mt-4 h-0.5 w-12 bg-car-gold" />
@@ -144,8 +150,8 @@ export default async function Home() {
                 ["👥", "Atención personalizada", "Te acompañamos en todo el proceso"],
                 ["📍", "Presencia local", "En el corazón de Justiniano Posse"],
               ].map(([icon, title, desc], i) => (
-                <div key={title} className={`rounded-lg border border-car-gold/15 bg-car-gray2 p-6 text-center transition hover:border-car-gold hover:-translate-y-1 ${i === 0 ? "col-span-2" : ""}`}>
-                  <p className="mb-2 text-2xl">{icon}</p>
+                <div key={title} className={`rounded-2xl border border-car-gold/25 bg-gradient-to-b from-[#1f2740] to-car-gray2 p-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_28px_rgba(0,0,0,0.4)] transition hover:-translate-y-1 hover:border-car-gold hover:shadow-[0_0_28px_rgba(201,162,39,0.25)] ${i === 0 ? "col-span-2" : ""}`}>
+                  <p className="mb-2 text-4xl [filter:drop-shadow(0_0_12px_rgba(201,162,39,0.5))]">{icon}</p>
                   <p className="font-condensed font-bold text-car-white">{title}</p>
                   <p className="mt-1 text-xs text-car-muted">{desc}</p>
                 </div>
@@ -159,24 +165,35 @@ export default async function Home() {
           <div className="mx-auto max-w-5xl">
             <div className="mb-12 text-center">
               <p className="font-condensed text-sm font-bold italic uppercase tracking-[4px] text-car-gold">Ventajas</p>
-              <h2 className="mt-2 font-condensed text-4xl font-black italic text-car-white">
+              <h2 className={`mt-2 font-condensed text-4xl font-black italic text-car-white ${TITULO_BRILLO}`}>
                 Por qué <span className="text-car-gold">elegirnos</span>
               </h2>
               <div className="mx-auto mt-4 h-0.5 w-12 bg-car-gold" />
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
               {[
                 ["💳", "Financiación", "Opciones adaptadas a tu posibilidad. Cuotas accesibles."],
                 ["🛡️", "Garantía", "Todos nuestros usados pasan control exhaustivo."],
                 ["📄", "Trámites", "Nos encargamos de toda la documentación."],
                 ["💬", "Atención 24hs", "Respondemos por WhatsApp sin demoras."],
-              ].map(([icon, title, desc]) => (
-                <div key={title} className="rounded-lg border border-car-gold/12 bg-car-gray p-8 text-center transition hover:border-car-gold hover:-translate-y-1.5 hover:shadow-[0_8px_32px_rgba(201,162,39,0.1)]">
-                  <p className="mb-4 text-3xl">{icon}</p>
-                  <p className="font-condensed text-lg font-black text-car-white">{title}</p>
-                  <p className="mt-2 text-sm leading-6 text-car-muted">{desc}</p>
-                </div>
-              ))}
+              ].map(([icon, title, desc]) => {
+                const tarjeta = (
+                  <div className="h-full rounded-2xl border border-[#4c6fff]/35 bg-gradient-to-b from-[#1b2547] to-[#10172b] p-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_0_26px_rgba(76,111,255,0.18),0_12px_28px_rgba(0,0,0,0.45)] transition hover:-translate-y-1.5 hover:border-car-gold hover:shadow-[0_0_32px_rgba(201,162,39,0.3)] sm:p-8">
+                    <p className="mb-3 text-5xl [filter:drop-shadow(0_0_14px_rgba(201,162,39,0.55))] sm:mb-4">{icon}</p>
+                    <p className="font-condensed text-xl font-black text-car-white">{title}</p>
+                    <p className="mt-2 text-sm leading-6 text-car-muted">{desc}</p>
+                    {title === "Financiación" && (
+                      <p className="mt-3 font-condensed text-sm font-bold uppercase tracking-wide text-car-gold">Simulá tu plan ›</p>
+                    )}
+                  </div>
+                );
+                // La tarjeta de financiación lleva al simulador.
+                return title === "Financiación" ? (
+                  <Link key={title} href="/financiacion" className="block">{tarjeta}</Link>
+                ) : (
+                  <div key={title}>{tarjeta}</div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -187,7 +204,7 @@ export default async function Home() {
             <div className="mx-auto max-w-7xl">
               <div className="mb-10 text-center">
                 <p className="font-condensed text-sm font-bold italic uppercase tracking-[4px] text-car-gold">Historial</p>
-                <h2 className="mt-2 font-condensed text-4xl font-black italic text-car-white">
+                <h2 className={`mt-2 font-condensed text-4xl font-black italic text-car-white ${TITULO_BRILLO}`}>
                   Ya <span className="text-car-gold">vendidos</span>
                 </h2>
                 <div className="mx-auto mt-4 h-0.5 w-12 bg-car-gold" />
@@ -204,34 +221,34 @@ export default async function Home() {
           <div className="mx-auto grid max-w-5xl gap-16 lg:grid-cols-2">
             <div>
               <p className="font-condensed text-sm font-bold italic uppercase tracking-[4px] text-car-gold">Encontranos</p>
-              <h2 className="mt-2 font-condensed text-4xl font-black italic text-car-white">Contacto</h2>
+              <h2 className={`mt-2 font-condensed text-4xl font-black italic text-car-white ${TITULO_BRILLO}`}>Contacto</h2>
               <div className="mt-4 h-0.5 w-12 bg-car-gold" />
-              <table className="mt-8 w-full">
+              <table className="mt-8 w-full rounded-2xl border border-car-gold/30 bg-gradient-to-b from-[#252c42]/80 to-car-gray/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_0_32px_rgba(201,162,39,0.18)]">
                 <tbody>
                   {[
                     ["Lunes a Viernes", "9:00 – 13:00 / 16:00 – 20:00"],
                     ["Sábados", "9:00 – 13:00"],
                     ["Domingos", "Cerrado"],
                   ].map(([dia, hora]) => (
-                    <tr key={dia} className="border-b border-white/5">
-                      <td className="py-3 text-sm text-car-muted">{dia}</td>
-                      <td className={`py-3 text-sm font-semibold ${hora === "Cerrado" ? "text-car-gold" : "text-car-white"}`}>{hora}</td>
+                    <tr key={dia} className="[&:not(:last-child)]:border-b [&:not(:last-child)]:border-white/5">
+                      <td className="py-4 pl-5 text-sm text-car-muted">{dia}</td>
+                      <td className={`py-4 pr-5 text-sm font-semibold ${hora === "Cerrado" ? "text-car-gold" : "text-car-white"}`}>{hora}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <div className="mt-8 flex flex-col gap-4">
                 <Link href={waUrl} target="_blank" rel="noopener" className="flex items-center gap-3 text-car-white/70 transition hover:text-car-white">
-                  <span className="grid size-11 place-items-center rounded-lg border border-car-gold/20 bg-car-gray2 text-xl">📱</span>
+                  <span className="grid size-14 place-items-center rounded-xl border border-car-gold/35 bg-gradient-to-b from-[#252c42] to-car-gray text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_0_18px_rgba(201,162,39,0.25)]">📱</span>
                   +54 9 3537 66-2444
                 </Link>
                 <Link href="https://maps.google.com/?q=Justiniano+Posse+Córdoba" target="_blank" rel="noopener" className="flex items-center gap-3 text-car-white/70 transition hover:text-car-white">
-                  <span className="grid size-11 place-items-center rounded-lg border border-car-gold/20 bg-car-gray2 text-xl">📍</span>
+                  <span className="grid size-14 place-items-center rounded-xl border border-car-gold/35 bg-gradient-to-b from-[#252c42] to-car-gray text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_0_18px_rgba(201,162,39,0.25)]">📍</span>
                   Justiniano Posse, Córdoba
                 </Link>
               </div>
             </div>
-            <div className="overflow-hidden rounded-lg border border-car-gold/20">
+            <div className="overflow-hidden rounded-2xl border-2 border-car-gold/60 shadow-[0_0_36px_rgba(201,162,39,0.25)]">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d27292.!2d-62.677!3d-33.876!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95cc6d!2sJustiniano+Posse%2C+C%C3%B3rdoba!5e0!3m2!1ses!2sar!4v1"
                 width="100%" height="100%" style={{ minHeight: 280, border: 0, filter: "invert(90%) hue-rotate(180deg)" }}
