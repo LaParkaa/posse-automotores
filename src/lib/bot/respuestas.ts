@@ -1,5 +1,6 @@
 import { buildWhatsAppUrlInstagram, buildWhatsAppUrlPostulacion, type DatosPostulacionMensaje } from "../utils";
 import type { Negocio } from "./negocio";
+import { descripcionDelUsado, type UsadoDelCliente } from "./nlu/usado";
 import type { Boton, Perfil, Tarjeta, VehiculoCatalogo } from "./types";
 
 export type Contexto = { negocio: Negocio; siteUrl: string };
@@ -110,15 +111,25 @@ export function botonContacto(v: VehiculoCatalogo | null, negocio: Negocio): Bot
  * Link al simulador de financiacion del sitio, con el auto elegido. Null si el sitio no es https: Instagram
  * rechaza el boton (y con el, toda la tarjeta) si el link no es absoluto.
  */
-export function urlFinanciacion(v: VehiculoCatalogo | null, siteUrl: string): string | null {
+export function urlFinanciacion(v: VehiculoCatalogo | null, siteUrl: string, usado: UsadoDelCliente | null = null): string | null {
   const base = siteUrl.trim().replace(/\/+$/, "");
   if (!esHttps(base)) return null;
-  return v ? `${base}/financiacion?auto=${encodeURIComponent(v.slug)}` : `${base}/financiacion`;
+  // El usado que el cliente ofrece viaja en el link: el simulador abre con "entrego mi usado" ya completado.
+  const partes: string[] = [];
+  if (v) partes.push(`auto=${encodeURIComponent(v.slug)}`);
+  if (usado?.modelo) {
+    partes.push(`usado=${encodeURIComponent(usado.modelo)}`);
+    if (usado.anio) partes.push(`usadoAnio=${usado.anio}`);
+  } else if (usado) {
+    // Dijo que entrega un usado pero no cual: igual el simulador abre con "entrego mi usado: Sí".
+    partes.push("permuta=1");
+  }
+  return partes.length > 0 ? `${base}/financiacion?${partes.join("&")}` : `${base}/financiacion`;
 }
 
 /** Boton "Simular mi plan" (null si no hay un link valido). */
-export function botonFinanciar(v: VehiculoCatalogo | null, ctx: Contexto): Boton | null {
-  const url = urlFinanciacion(v, ctx.siteUrl);
+export function botonFinanciar(v: VehiculoCatalogo | null, ctx: Contexto, usado: UsadoDelCliente | null = null): Boton | null {
+  const url = urlFinanciacion(v, ctx.siteUrl, usado);
   return url ? { titulo: "Simular mi plan", url } : null;
 }
 
@@ -177,12 +188,16 @@ export function tarjetaContacto(v: VehiculoCatalogo | null, ctx: Contexto): Tarj
  * Tarjeta de financiacion: el boton lleva al simulador del sitio (con el auto, si lo hay) y el otro a Marcos.
  * Sin link https valido queda solo el de Marcos, como cualquier tarjeta de contacto.
  */
-export function tarjetaFinanciacion(v: VehiculoCatalogo | null, ctx: Contexto): Tarjeta {
+export function tarjetaFinanciacion(v: VehiculoCatalogo | null, ctx: Contexto, usado: UsadoDelCliente | null = null): Tarjeta {
   const { negocio } = ctx;
-  const botones = [botonFinanciar(v, ctx), botonContacto(v, negocio)].filter((b): b is Boton => b !== null);
+  const botones = [botonFinanciar(v, ctx, usado), botonContacto(v, negocio)].filter((b): b is Boton => b !== null);
+  const suUsado = usado ? descripcionDelUsado(usado) : null;
   return {
     titulo: recortar(v ? `${v.nombre} ${v.anio}` : "Simulá tu financiación", MAX_TITULO),
-    subtitulo: recortar(`Armá tu plan sin compromiso y ${negocio.secretaria} te lo confirma`, MAX_SUBTITULO),
+    subtitulo: recortar(
+      suUsado ? `Con tu ${suUsado} como parte de pago` : `Armá tu plan sin compromiso y ${negocio.secretaria} te lo confirma`,
+      MAX_SUBTITULO,
+    ),
     imagenUrl: v ? urlImagen(v, ctx.siteUrl) : null,
     botones,
   };

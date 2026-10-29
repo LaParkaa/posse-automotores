@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FloatingWhatsApp } from "@/components/floating-whatsapp";
 import { SimuladorFinanciacion } from "@/components/simulador-financiacion";
+import { usadoDeUrl } from "@/lib/financiacion";
 import { getVehiculosDisponibles } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +13,12 @@ export const metadata: Metadata = {
   description: "Contanos qué auto querés, cuánto querés financiar y en cuántas cuotas, y te armamos una propuesta por WhatsApp.",
 };
 
-export default async function FinanciacionPage({ searchParams }: { searchParams: Promise<{ auto?: string }> }) {
-  const { auto } = await searchParams;
+export default async function FinanciacionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ auto?: string; usado?: string; usadoAnio?: string; permuta?: string }>;
+}) {
+  const { auto, ...paramsUsado } = await searchParams;
   const vehiculos = await getVehiculosDisponibles();
   const autos = vehiculos.map((v) => ({
     slug: v.slug,
@@ -34,7 +39,7 @@ export default async function FinanciacionPage({ searchParams }: { searchParams:
           Simulá tu <span className="text-car-gold">Plan</span>
         </h1>
         <div className="mb-8 mt-4 h-0.5 w-12 bg-car-gold" />
-        <SimuladorFinanciacion autos={autos} autoInicial={auto} />
+        <SimuladorFinanciacion autos={autos} autoInicial={auto} usadoInicial={usadoDeUrl(paramsUsado)} />
       </main>
       <SiteFooter />
       <FloatingWhatsApp />

@@ -1,6 +1,10 @@
 import { AdminShell } from "@/components/admin-shell";
+import { AnunciosInstagram } from "@/components/anuncios-instagram";
 import { EstadisticasVista, PERIODOS } from "@/components/estadisticas-vista";
+import { ResumenBotVista } from "@/components/resumen-bot";
 import { requireAdminSession } from "@/lib/auth";
+import { cargarDatosBot } from "@/lib/bot-datos";
+import { resumirBot } from "@/lib/conversaciones";
 import { resumir, type EventoGuardado } from "@/lib/estadisticas";
 import { createAdminSupabaseClient } from "@/lib/supabase";
 
@@ -51,6 +55,15 @@ export default async function EstadisticasPage({ searchParams }: { searchParams:
     haceDias(0),
   );
 
+  // El bot de Instagram: si sus tablas no se pueden leer, la sección no se muestra y el resto de la pantalla sigue andando.
+  let resumenBot = null;
+  try {
+    const datos = await cargarDatosBot(supabase, dias);
+    resumenBot = resumirBot(datos.mensajes, datos.leads, dias, haceDias(0));
+  } catch (e) {
+    console.error("[estadisticas] Bot:", e instanceof Error ? e.message : e);
+  }
+
   return (
     <AdminShell>
       <div className="mb-6">
@@ -76,6 +89,14 @@ export default async function EstadisticasPage({ searchParams }: { searchParams:
           <EstadisticasVista resumen={resumen} dias={dias} />
         </>
       )}
+
+      {resumenBot && (
+        <div className="mt-8">
+          <ResumenBotVista resumen={resumenBot} titulo="Bot de Instagram" verConversaciones />
+        </div>
+      )}
+
+      <AnunciosInstagram />
     </AdminShell>
   );
 }

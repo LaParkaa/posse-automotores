@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { BarChart3, Car, LayoutDashboard, LogOut, Users, Menu, X, Smartphone } from "lucide-react";
+import { BarChart3, Car, LayoutDashboard, LogOut, MessageSquare, Users, Menu, X, Smartphone } from "lucide-react";
 
 const navItems = [
   { href: "/panel", label: "Panel de stock", icon: Smartphone },
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/vehiculos", label: "Vehículos", icon: Car },
   { href: "/admin/leads", label: "Leads (Bot)", icon: Users },
+  { href: "/admin/conversaciones", label: "Conversaciones", icon: MessageSquare },
   { href: "/admin/estadisticas", label: "Estadísticas", icon: BarChart3 },
 ];
 
@@ -74,10 +75,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Contenido */}
-      <div className="flex flex-1 flex-col">
-        {/* Header mobile */}
-        <header className="flex items-center gap-3 border-b border-white/10 bg-car-black px-4 py-3 lg:hidden">
-          <button onClick={() => setOpen(true)} className="text-car-white/70 hover:text-car-white">
+      {/* min-w-0: sin esto un texto largo en una sola línea ensancha toda la página en el celular. */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Header mobile: fijo arriba, así las 3 rayitas del menú no se pierden al bajar. */}
+        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-white/10 bg-car-black px-4 py-3 lg:hidden">
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Abrir menú"
+            className="grid size-11 place-items-center rounded-lg border border-white/10 bg-car-gray2 text-car-white transition active:scale-95"
+          >
             <Menu size={22} />
           </button>
           <img src="/logo-posse.png" alt="Posse Automotores" className="h-7 w-auto" />

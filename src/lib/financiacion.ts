@@ -48,6 +48,21 @@ export function montoDeTexto(texto: string): number {
   return cifras === "" ? 0 : Number(cifras);
 }
 
+export type UsadoInicial = { modelo: string; anio: string };
+
+/**
+ * Lo que el link trae del usado del cliente (?usado=Chevrolet Corsa&usadoAnio=2010, o ?permuta=1 si solo dijo que
+ * entrega uno) para abrir el simulador con "entrego mi usado: Sí" ya completado. Todo viene de la dirección, así que
+ * se limpia: null si el link no habla de ningún usado.
+ */
+export function usadoDeUrl(params: { usado?: string; usadoAnio?: string; permuta?: string }): UsadoInicial | null {
+  const modelo = limpiar(params.usado ?? "");
+  const anio = limpiar(params.usadoAnio ?? "");
+  const anioValido = /^\d{4}$/.test(anio) && Number(anio) >= ANIO_MIN && Number(anio) <= new Date().getFullYear() + 1 ? anio : "";
+  if (modelo === "" && params.permuta !== "1") return null;
+  return { modelo, anio: modelo === "" ? "" : anioValido };
+}
+
 export function validar(s: SolicitudFinanciacion, anioActual = new Date().getFullYear()): ErroresFinanciacion {
   const errores: ErroresFinanciacion = {};
   if (limpiar(s.auto) === "") errores.auto = "Elegí el auto que te interesa";

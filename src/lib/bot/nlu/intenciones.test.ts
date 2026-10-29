@@ -29,6 +29,8 @@ describe("detectarIntenciones — la intencion principal (primera)", () => {
     ["financiasion en cuotas", "financiacion"],
     ["toman usados?", "permuta"],
     ["tengo un usado para entregar", "permuta"],
+    ["Tengo un chevrolt corsa 2010 para entregar", "permuta"],
+    ["entrego mi gol 2012", "permuta"],
     ["formas de pago", "pagos"],
     ["a que hora abren?", "horarios"],
     ["donde estan?", "ubicacion"],
