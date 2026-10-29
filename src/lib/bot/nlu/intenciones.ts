@@ -1,4 +1,5 @@
 import { coincideAprox, esSoloEmojis, normalizar } from "./normalizar";
+import { ofreceUsado } from "./usado";
 import { aplicarFrases } from "./vocabulario";
 
 // El orden del tipo es la prioridad: "empleo" y "humano" ganan sobre todo (pedir trabajo manda sobre pedir
@@ -277,6 +278,8 @@ const REGLAS: Regla[] = [
       "tomas mi",
     ],
     palabras: ["permuta", "permutan", "permutas"],
+    // "tengo un chevrolt corsa 2010 para entregar": ofrece su auto, no pregunta por uno del stock.
+    extra: ({ tokens }) => ofreceUsado(tokens),
   },
   {
     intencion: "pagos",

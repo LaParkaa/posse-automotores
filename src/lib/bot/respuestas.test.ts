@@ -476,3 +476,32 @@ describe("tarjetaPostulacion", () => {
     expect(decodeURIComponent(t.botones[0].url.split("?text=")[1])).toContain("puesto de vendedor");
   });
 });
+
+describe("simulador con el usado del cliente", () => {
+  it("el link lleva el modelo y el año del usado, junto con el auto si lo hay", () => {
+    expect(urlFinanciacion(null, "https://posse.example", { modelo: "Chevrolet Corsa", anio: 2010 })).toBe(
+      "https://posse.example/financiacion?usado=Chevrolet%20Corsa&usadoAnio=2010",
+    );
+    expect(urlFinanciacion(por("v-206"), "https://posse.example", { modelo: "Gol", anio: null })).toBe(
+      "https://posse.example/financiacion?auto=peugeot-206-1-6-2011&usado=Gol",
+    );
+  });
+
+  it("sin modelo avisa solo que entrega un usado, y sin usado el link es el de siempre", () => {
+    expect(urlFinanciacion(null, "https://posse.example", { modelo: null, anio: null })).toBe("https://posse.example/financiacion?permuta=1");
+    expect(urlFinanciacion(null, "https://posse.example")).toBe("https://posse.example/financiacion");
+  });
+
+  it("escapa lo que escribio el cliente", () => {
+    const url = urlFinanciacion(null, "https://posse.example", { modelo: "Fiat Uno & Co?", anio: null })!;
+
+    expect(new URL(url).searchParams.get("usado")).toBe("Fiat Uno & Co?");
+  });
+
+  it("la tarjeta nombra su usado en el subtitulo", () => {
+    const t = tarjetaFinanciacion(null, ctx, { modelo: "Chevrolet Corsa", anio: 2010 });
+
+    expect(t.subtitulo).toBe("Con tu Chevrolet Corsa 2010 como parte de pago");
+    expect(t.botones[0].url).toContain("usado=Chevrolet%20Corsa");
+  });
+});

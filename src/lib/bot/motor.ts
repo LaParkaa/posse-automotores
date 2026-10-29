@@ -3,6 +3,7 @@ import { avisame, iniciarCaptacion, ofrecerAviso, pasoCaptacion } from "./captac
 import type { Negocio } from "./negocio";
 import { extraerEntidades, type Entidades } from "./nlu/entidades";
 import { detectarIntenciones, type Intencion } from "./nlu/intenciones";
+import { descripcionDelUsado, extraerUsado, type UsadoDelCliente } from "./nlu/usado";
 import { esSoloEmojis, tokenizar } from "./nlu/normalizar";
 import { adjuntoEnPostulacion, iniciarPostulacion, pasoPostulacion } from "./postulacion";
 import { botonFinanciar, datosVehiculo, listaNumerada, precioDe, tarjetaEleccion } from "./respuestas";
@@ -94,7 +95,10 @@ const CHARLA_EN_HISTORIA = new Set<Intencion>(["desconocida", "saludo", "cortesi
 const ESCAPAN_DE_HISTORIA = new Set<Intencion>([
   "empleo", "humano", "identidad", "avisame", "catalogo", "ver_mas", ...TEMAS_NEGOCIO,
 ]);
-const PALABRAS_GENERICAS = new Set(["auto", "autos", "coche", "coches", "vehiculo", "vehiculos", "usado", "usados", "un", "algun", "de", "los", "el"]);
+// Menciono que entrega un usado pero sin decir cual.
+const USADO_SIN_DATOS: UsadoDelCliente = { modelo: null, anio: null };
+const marcasDelCatalogo = (t: Turno) => [...new Set(t.e.catalogo.map((v) => v.marca.trim()))];
+const PALABRAS_GENERICAS =new Set(["auto", "autos", "coche", "coches", "vehiculo", "vehiculos", "usado", "usados", "un", "algun", "de", "los", "el"]);
 const MAX_TOKENS_PEDIDO_GENERICO = 3;
 const NINGUNO = new Set(["ninguno", "ninguna", "ningun", "otro", "otra"]);
 // Unicas frases que dicen "ese no es el auto de la historia"; una frase larga ya es otra cosa ("ese no me gusta tanto").
@@ -389,10 +393,13 @@ function despacharIntencion(
     return false;
   }
   if (temas.length > 0) {
+    // "tengo un chevrolt corsa 2010 para entregar": ese Corsa es del cliente, no uno del stock. Se le saca el modelo y
+    // el año para abrirle el simulador con su usado ya cargado.
+    const usado = temas.includes("permuta") ? (extraerUsado(texto, marcasDelCatalogo(t)) ?? USADO_SIN_DATOS) : null;
     // "el vento tiene financiacion?": el boton de Marcos tiene que hablar del Vento, no de un auto viejo o de ninguno.
     const nombradosAca = nombrados(t, ent);
-    if (nombradosAca.length === 1) fijarVehiculo(t, nombradosAca[0].id);
-    responderNegocio(t, temas, true);
+    if (nombradosAca.length === 1 && usado?.modelo == null) fijarVehiculo(t, nombradosAca[0].id);
+    responderNegocio(t, temas, true, usado);
     return false;
   }
 
@@ -526,15 +533,20 @@ function mostrarVarios(t: Turno, vehiculos: VehiculoCatalogo[]): void {
 }
 
 /** Datos del negocio: el texto de negocio.ts o, si esta pendiente (null), que lo confirma la secretaria. */
-function responderNegocio(t: Turno, temas: Intencion[], conContacto: boolean): void {
+function responderNegocio(t: Turno, temas: Intencion[], conContacto: boolean, usado: UsadoDelCliente | null = null): void {
   const n = t.e.negocio;
   const sec = n.secretaria;
   const datos = temas.slice(0, 3).map((tema) => datoDeNegocio(tema, n));
   const pendientes = datos.filter((d) => d.texto === null);
   // Financiacion y permuta son interes real de compra: siempre van con el boton, aunque esten cargadas.
   const deriva = datos.some((d) => d.deriva || d.texto === null);
+  const suUsado = usado ? descripcionDelUsado(usado) : null;
 
-  if (pendientes.length === datos.length) {
+  if (suUsado !== null && conContacto && temas.every((tema) => tema === "permuta" || tema === "financiacion")) {
+    // Contó que auto tiene: se le agradece, va lo que el negocio dice de las permutas y se le abre el simulador.
+    const lineas = [variante(t, "gracias-usado", T.graciasPorTuUsado(suUsado)), n.permutas, variante(t, "arma-plan-usado", T.armaTuPlanConUsado)];
+    decir(t, lineas.filter((l): l is string => l !== null).join("\n"));
+  } else if (pendientes.length === datos.length) {
     decir(t, variante(t, "pendiente", T.todoPendiente(unirTemas(datos.map((d) => d.tema)), sec)));
   } else {
     // Pegado a la respuesta de un auto ya hubo un "te cuento": no se repite.
@@ -546,8 +558,8 @@ function responderNegocio(t: Turno, temas: Intencion[], conContacto: boolean): v
     decir(t, lineas.join("\n"));
   }
   if (deriva && conContacto) {
-    // Con la financiacion de por medio se manda el simulador (mas el boton de Marcos), no solo el contacto.
-    if (temas.includes("financiacion")) mostrarFinanciacion(t, autoActual(t));
+    // Con la financiacion o un usado de por medio se manda el simulador (mas el boton de Marcos), no solo el contacto.
+    if (temas.includes("financiacion") || usado !== null) mostrarFinanciacion(t, autoActual(t), usado);
     else mostrarContacto(t, autoActual(t));
   }
 }

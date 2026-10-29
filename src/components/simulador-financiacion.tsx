@@ -14,6 +14,7 @@ import {
   type EstadoUsado,
   type Plazo,
   type SolicitudFinanciacion,
+  type UsadoInicial,
 } from "@/lib/financiacion";
 
 export type AutoParaFinanciar = {
@@ -105,12 +106,21 @@ const WaIcon = () => (
  * Formulario de tres pasos que no calcula cuotas: junta los datos y abre WhatsApp con el mensaje armado para
  * Marcos. Las fotos del usado no se pueden adjuntar desde un link de WhatsApp, así que se piden en el chat.
  */
-export function SimuladorFinanciacion({ autos, autoInicial }: { autos: AutoParaFinanciar[]; autoInicial?: string }) {
+export function SimuladorFinanciacion({
+  autos,
+  autoInicial,
+  usadoInicial = null,
+}: {
+  autos: AutoParaFinanciar[];
+  autoInicial?: string;
+  /** Si el cliente ya contó qué auto entrega (por el bot), el formulario abre con "Sí" y esos datos. */
+  usadoInicial?: UsadoInicial | null;
+}) {
   const [autoSlug, setAutoSlug] = useState(autos.some((a) => a.slug === autoInicial) ? (autoInicial as string) : "");
   const [monto, setMonto] = useState(0);
-  const [conPermuta, setConPermuta] = useState(false);
-  const [modelo, setModelo] = useState("");
-  const [anio, setAnio] = useState("");
+  const [conPermuta, setConPermuta] = useState(usadoInicial !== null);
+  const [modelo, setModelo] = useState(usadoInicial?.modelo ?? "");
+  const [anio, setAnio] = useState(usadoInicial?.anio ?? "");
   const [km, setKm] = useState("");
   const [estado, setEstado] = useState<EstadoUsado | null>(null);
   const [conFotos, setConFotos] = useState(false);

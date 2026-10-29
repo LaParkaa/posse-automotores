@@ -259,6 +259,18 @@ export const historiaNoEntendida = (cantidad: number) => [
   `Mmm, no lo encontré 🤔 ¿Me pasás el número (del 1 al ${cantidad}) o el modelo?`,
 ];
 
+/** El cliente cuenta que tiene un auto para entregar y dice cual es ("tengo un corsa 2010 para entregar"). */
+export const graciasPorTuUsado = (usado: string) => [
+  `¡Dale! 🙌 Gracias por contarme de tu ${usado}`,
+  `¡Buenísimo! 😊 Tomo nota de tu ${usado}`,
+];
+
+/** Invita al simulador, que abre con el usado ya cargado. */
+export const armaTuPlanConUsado = [
+  "Armá tu plan con tu usado ya cargado y mirá cuánto te queda por financiar 👇",
+  "Simulá tu financiación con tu usado ya cargado, sin compromiso 👇",
+];
+
 export const historiaNinguno = [
   "Dale 😊 Mirá lo que tengo ahora 👇 Si no está, contame cuál era",
   "¡Sin problema! Te muestro lo que hay 👇 Si no lo ves, decime el modelo 😊",

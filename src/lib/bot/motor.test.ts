@@ -1114,3 +1114,73 @@ describe("tono en los flujos corregidos", () => {
     expect(sesion).toEqual(copia);
   });
 });
+
+describe("el cliente ofrece su usado para entregar (caso real: 'tengo un chevrolt corsa 2010 para entregar')", () => {
+  const chevrolet: VehiculoCatalogo = {
+    ...CATALOGO[0], id: "v-tracker", slug: "chevrolet-tracker-2017", nombre: "Chevrolet Tracker 1.8 LTZ", marca: "Chevrolet",
+    modelo: "Tracker", anio: 2017, precio_texto: "$17.400.000",
+  };
+  const catalogo = [...CATALOGO, chevrolet];
+  const simulador = (r: ResultadoMotor) => tarjetas(r).flatMap((t) => t.botones).find((b) => b.titulo === "Simular mi plan");
+
+  it("no lo toma por una busqueda en el stock: no muestra 'lo mas parecido'", () => {
+    const [r] = charlar(["Tengo un chevrolt corsa 2010 para entregar"], { catalogo });
+
+    expect(todo(r)).not.toMatch(/lo m[aá]s parecido|no tengo exactamente/i);
+    expect(todo(r)).not.toContain("Tracker");
+    expect(r.sesion.vehiculoActualId).toBeNull();
+  });
+
+  it("le agradece, nombra su auto y le manda el simulador con su usado cargado", () => {
+    const [r] = charlar(["Tengo un chevrolt corsa 2010 para entregar"], { catalogo });
+
+    expect(textos(r).join("\n")).toContain("Chevrolet Corsa 2010");
+    expect(textos(r).join("\n")).toMatch(/plan/i);
+    expect(simulador(r)?.url).toBe("https://posse.example/financiacion?usado=Chevrolet%20Corsa&usadoAnio=2010");
+    expect(hayBotonContacto(r)).toBe(true);
+    expect(violacionesDeTono(textos(r).join("\n"))).toEqual([]);
+  });
+
+  it("la tarjeta dice que va con su usado", () => {
+    const [r] = charlar(["Tengo un chevrolt corsa 2010 para entregar"], { catalogo });
+
+    expect(tarjetas(r)[0].subtitulo).toBe("Con tu Chevrolet Corsa 2010 como parte de pago");
+  });
+
+  it("si venian hablando de un auto, el simulador lo lleva junto con el usado", () => {
+    const [, r] = charlar(["cuanto sale la 206?", "tengo un gol 2012 para entregar"], { catalogo });
+
+    expect(simulador(r)?.url).toBe("https://posse.example/financiacion?auto=peugeot-206-1-6-2011&usado=Gol&usadoAnio=2012");
+  });
+
+  it("su auto no cambia el auto del que se venia hablando", () => {
+    const [, r] = charlar(["cuanto sale la 206?", "tengo un vento 2012 para entregar"], { catalogo });
+
+    expect(r.sesion.vehiculoActualId).toBe("v-206");
+  });
+
+  it("si dice solo 'tengo un usado para entregar' abre el simulador con el usado en Si", () => {
+    const [r] = charlar(["tengo un usado para entregar"], { catalogo });
+
+    expect(simulador(r)?.url).toBe("https://posse.example/financiacion?permuta=1");
+  });
+
+  it("'toman usados?' tambien manda el simulador con el usado en Si", () => {
+    const [r] = charlar(["toman usados?"], { catalogo });
+
+    expect(simulador(r)?.url).toBe("https://posse.example/financiacion?permuta=1");
+  });
+
+  it("plata para entregar no es un usado: se trata como un anticipo (financiacion) y no como el auto de nadie", () => {
+    const [r] = charlar(["tengo 2 millones para entregar y quiero financiar el resto"], { catalogo });
+
+    expect(textos(r).join("\n")).not.toMatch(/gracias por contarme/i);
+    expect(simulador(r)?.url).not.toContain("usado=");
+  });
+
+  it("un cliente que pregunta por un auto del stock sigue viendo el auto (no se rompio la busqueda)", () => {
+    const [r] = charlar(["tienen el tracker?"], { catalogo });
+
+    expect(todo(r)).toContain("Tracker");
+  });
+});

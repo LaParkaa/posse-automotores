@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { armarMensaje, formatearMonto, montoDeTexto, urlFinanciacion, validar, type SolicitudFinanciacion } from "./financiacion";
+import { armarMensaje, formatearMonto, montoDeTexto, urlFinanciacion, usadoDeUrl, validar, type SolicitudFinanciacion } from "./financiacion";
 import { WHATSAPP_LOCAL } from "./utils";
 
 const BASE: SolicitudFinanciacion = {
@@ -113,5 +113,31 @@ describe("urlFinanciacion", () => {
     const url = urlFinanciacion(CON_PERMUTA);
     expect(url.startsWith(`https://wa.me/${WHATSAPP_LOCAL}?text=`)).toBe(true);
     expect(decodeURIComponent(url.split("?text=")[1])).toBe(armarMensaje(CON_PERMUTA));
+  });
+});
+
+describe("usadoDeUrl", () => {
+  it("toma el modelo y el año que trae el link", () => {
+    expect(usadoDeUrl({ usado: "Chevrolet Corsa", usadoAnio: "2010" })).toEqual({ modelo: "Chevrolet Corsa", anio: "2010" });
+  });
+
+  it("sin año deja el año vacio, y con un año inventado lo descarta", () => {
+    expect(usadoDeUrl({ usado: "Hilux" })).toEqual({ modelo: "Hilux", anio: "" });
+    expect(usadoDeUrl({ usado: "Hilux", usadoAnio: "1850" })).toEqual({ modelo: "Hilux", anio: "" });
+    expect(usadoDeUrl({ usado: "Hilux", usadoAnio: "dos mil" })).toEqual({ modelo: "Hilux", anio: "" });
+  });
+
+  it("?permuta=1 abre el simulador con el usado en Si pero sin datos", () => {
+    expect(usadoDeUrl({ permuta: "1" })).toEqual({ modelo: "", anio: "" });
+  });
+
+  it("si el link no habla de un usado devuelve null", () => {
+    expect(usadoDeUrl({})).toBeNull();
+    expect(usadoDeUrl({ usado: "   ", permuta: "0" })).toBeNull();
+  });
+
+  it("limpia lo que viene de la direccion: espacios, saltos de linea y largo", () => {
+    expect(usadoDeUrl({ usado: "  Gol\n\nPower  " })?.modelo).toBe("Gol Power");
+    expect(usadoDeUrl({ usado: "x".repeat(200) })?.modelo.length).toBe(60);
   });
 });
