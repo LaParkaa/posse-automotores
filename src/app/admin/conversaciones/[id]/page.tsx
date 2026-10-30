@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin-shell";
 import { ChatConversacion } from "@/components/chat-conversacion";
+import { EnviarCardAuto } from "@/components/enviar-card-auto";
 import { requireAdminSession } from "@/lib/auth";
+import { obtenerCatalogo } from "@/lib/bot/catalogo";
 import { dejoDatos, traerChat, traerPerfil } from "@/lib/bot-datos";
 import { esCierrePostulacion, fechaHora, nombreDeConversacion } from "@/lib/conversaciones";
 import { createAdminSupabaseClient } from "@/lib/supabase";
@@ -18,7 +20,15 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
   if (!ID_INSTAGRAM.test(id)) notFound();
 
   const db = createAdminSupabaseClient();
-  const [mensajes, perfil, conDatos] = await Promise.all([traerChat(db, id), traerPerfil(db, id), dejoDatos(db, id)]);
+  const [mensajes, perfil, conDatos, catalogo] = await Promise.all([
+    traerChat(db, id),
+    traerPerfil(db, id),
+    dejoDatos(db, id),
+    obtenerCatalogo(db),
+  ]);
+  const enVenta = (catalogo ?? [])
+    .filter((v) => v.estado !== "vendido")
+    .map((v) => ({ id: v.id, nombre: v.nombre, anio: v.anio }));
   if (mensajes.length === 0) notFound();
 
   const nombre = nombreDeConversacion(id, perfil);
@@ -47,6 +57,8 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
           )}
         </div>
       </div>
+
+      <EnviarCardAuto igUserId={id} autos={enVenta} />
 
       <div className="rounded-lg border border-white/10 bg-car-black p-4 sm:p-6">
         <ChatConversacion mensajes={mensajes} />

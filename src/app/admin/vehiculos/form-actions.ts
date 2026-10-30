@@ -1,6 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { limpiarMediaDeVendido } from "@/lib/media-vendidos";
 import { createAdminSupabaseClient } from "@/lib/supabase";
 import { buildSlug } from "@/lib/utils";
 import { siguienteSlugLibre } from "@/lib/slug";
@@ -204,6 +205,9 @@ export async function updateVehiculo(id: string, formData: FormData) {
     console.error("guardando vehiculo:", error);
     return { ok: false as const, error: mensajeDeError(error) };
   }
+
+  // Un vendido solo muestra la portada: el resto de fotos y los videos se borran para liberar espacio.
+  if (estado === "vendido") await limpiarMediaDeVendido(supabase, id);
 
   revalidatePath("/admin/vehiculos");
   revalidatePath("/");

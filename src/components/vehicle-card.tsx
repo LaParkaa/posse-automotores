@@ -12,9 +12,24 @@ const WaIcon = () => (
 
 // Ancho aproximado de una card según la pantalla: carrusel en el celular, 2 columnas y 3 columnas.
 const SIZES_CARD = "(min-width: 1280px) 400px, (min-width: 640px) 50vw, 86vw";
+// Los vendidos son historial: van chicos y comprimidos para que no pesen en la página.
+const SIZES_VENDIDO = "(min-width: 1024px) 300px, (min-width: 640px) 45vw, 90vw";
+const CALIDAD_VENDIDO = 40;
 
 /** Foto a sangre con degradado oscuro abajo: sobre el degradado van el nombre y "año · km", como en la ficha. */
-function Portada({ vehiculo, className, children }: { vehiculo: Vehiculo; className: string; children: React.ReactNode }) {
+function Portada({
+  vehiculo,
+  className,
+  children,
+  sizes = SIZES_CARD,
+  calidad,
+}: {
+  vehiculo: Vehiculo;
+  className: string;
+  children: React.ReactNode;
+  sizes?: string;
+  calidad?: number;
+}) {
   return (
     <div className={`relative overflow-hidden bg-car-gray2 ${className}`}>
       {vehiculo.cover_image_url && (
@@ -22,7 +37,8 @@ function Portada({ vehiculo, className, children }: { vehiculo: Vehiculo; classN
           src={vehiculo.cover_image_url}
           alt={vehiculo.nombre}
           fill
-          sizes={SIZES_CARD}
+          sizes={sizes}
+          quality={calidad}
           unoptimized={!sePuedeOptimizar(vehiculo.cover_image_url)}
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -101,7 +117,7 @@ export function VehicleCard({ vehiculo }: { vehiculo: Vehiculo }) {
 export function VehicleCardVendido({ vehiculo }: { vehiculo: Vehiculo }) {
   return (
     <article className="group overflow-hidden rounded-2xl border border-white/5 bg-car-gray opacity-70 grayscale">
-      <Portada vehiculo={vehiculo} className="aspect-[4/3]">
+      <Portada vehiculo={vehiculo} className="aspect-[4/3]" sizes={SIZES_VENDIDO} calidad={CALIDAD_VENDIDO}>
         <Etiqueta className="bg-car-muted text-white">Vendido</Etiqueta>
         <div className="absolute inset-x-0 bottom-0 p-4">
           <p className="font-condensed text-2xl font-black italic leading-tight text-car-white [text-shadow:0_2px_12px_rgba(0,0,0,0.6)]">

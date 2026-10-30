@@ -9,6 +9,8 @@ import { getVehiculosDisponibles, getVehiculosVendidos } from "@/lib/data";
 export const dynamic = "force-dynamic";
 
 // Brillo dorado suave para los títulos de sección.
+// La landing muestra pocos vendidos; el historial completo vive en /vendidos.
+const VENDIDOS_EN_LANDING = 3;
 const TITULO_BRILLO = "[text-shadow:0_0_28px_rgba(201,162,39,0.3)]";
 // Botón dorado con volumen: se "hunde" al tocarlo.
 const BOTON_DORADO_3D =
@@ -209,9 +211,19 @@ export default async function Home() {
                 </h2>
                 <div className="mx-auto mt-4 h-0.5 w-12 bg-car-gold" />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {vendidos.slice(0, 8).map((v) => <VehicleCardVendido key={v.id} vehiculo={v} />)}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {vendidos.slice(0, VENDIDOS_EN_LANDING).map((v) => <VehicleCardVendido key={v.id} vehiculo={v} />)}
               </div>
+              {vendidos.length > VENDIDOS_EN_LANDING && (
+                <div className="mt-8 text-center">
+                  <Link
+                    href="/vendidos"
+                    className="inline-block rounded-lg border border-car-gold/50 px-6 py-3 text-sm font-bold uppercase tracking-wide text-car-gold transition hover:bg-car-gold hover:text-car-black"
+                  >
+                    Ver todos los vendidos ({vendidos.length})
+                  </Link>
+                </div>
+              )}
             </div>
           </section>
         )}

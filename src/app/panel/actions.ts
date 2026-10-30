@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { requireAdminSession } from "@/lib/auth";
+import { limpiarMediaDeVendido } from "@/lib/media-vendidos";
 import { createAdminSupabaseClient } from "@/lib/supabase";
 
 export type ResultadoAccion = { ok: true } | { ok: false; error: string };
@@ -50,12 +51,15 @@ export async function marcarVendido(
   id: string,
   datos: { precio: number | null; nota: string | null }
 ): Promise<ResultadoAccion> {
-  return actualizar(id, {
+  const resultado = await actualizar(id, {
     estado: "vendido",
     sold_at: new Date().toISOString(),
     sale_price: datos.precio,
     sale_notes: datos.nota,
   });
+  // Un vendido solo muestra la portada: el resto de fotos y los videos se borran para liberar espacio.
+  if (resultado.ok && (await limpiarMediaDeVendido(createAdminSupabaseClient(), id)) > 0) revalidar();
+  return resultado;
 }
 
 export async function deshacerVenta(id: string): Promise<ResultadoAccion> {

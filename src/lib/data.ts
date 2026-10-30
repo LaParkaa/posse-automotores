@@ -82,6 +82,7 @@ export async function getVehiculosVendidos(): Promise<Vehiculo[]> {
       .select("*")
       .eq("estado", "vendido")
       .is("deleted_at", null)
+      .order("sold_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data;
