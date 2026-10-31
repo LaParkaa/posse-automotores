@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { visitasDeAnuncios } from "@/lib/anuncios";
 import type { Resumen } from "@/lib/estadisticas";
 
 export const PERIODOS = [
@@ -99,6 +100,7 @@ function HoraPorHora({ horas }: { horas: Resumen["porHora"] }) {
 /** El tablero de estadísticas (sin pedir datos: recibe el resumen ya armado). */
 export function EstadisticasVista({ resumen, dias }: { resumen: Resumen; dias: number }) {
   const r = resumen;
+  const deAnuncios = visitasDeAnuncios();
   const maxDia = Math.max(1, ...r.porDia.map((d) => Math.max(d.visitas, d.consultas)));
   const totalDispositivos = r.dispositivos.celular + r.dispositivos.compu;
   // En muchos días las etiquetas no entran: se muestra una cada tanto.
@@ -122,7 +124,11 @@ export function EstadisticasVista({ resumen, dias }: { resumen: Resumen; dias: n
       </nav>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi titulo="Visitas" valor={r.visitas} detalle="Páginas vistas" />
+        <Kpi
+          titulo="Visitas totales"
+          valor={r.visitas + deAnuncios}
+          detalle={deAnuncios > 0 ? `${r.visitas} del sitio + ${deAnuncios} de anuncios de Instagram` : "Páginas vistas"}
+        />
         <Kpi titulo="Visitantes" valor={r.visitantes} detalle="Personas distintas" />
         <Kpi
           titulo="Consultas por WhatsApp"

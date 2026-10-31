@@ -1,7 +1,7 @@
 /**
  * Anuncios pagos de Instagram, con los números tal cual los muestra Instagram en "Insights". Se cargan a mano
  * (copiando de la pantalla del anuncio) porque Instagram y el sitio miden distinto: no se suman a las visitas que
- * cuenta el sitio. Para sumar otro anuncio, agregar un elemento a la lista.
+ * cuenta el sitio salvo en el KPI "Visitas totales" de Estadísticas. Para sumar otro anuncio, agregar un elemento a la lista.
  */
 export type AnuncioInstagram = {
   titulo: string;
@@ -53,6 +53,11 @@ export const ANUNCIOS_INSTAGRAM: AnuncioInstagram[] = [
 export function pesos(monto: number): string {
   const redondo = Number.isInteger(monto);
   return `$${monto.toLocaleString("es-AR", { minimumFractionDigits: redondo ? 0 : 2, maximumFractionDigits: 2 })}`;
+}
+
+/** Suma de "Visitas al sitio web" de todos los anuncios (para el total de Estadísticas). */
+export function visitasDeAnuncios(anuncios: Pick<AnuncioInstagram, "visitasSitio">[] = ANUNCIOS_INSTAGRAM): number {
+  return anuncios.reduce((total, a) => total + a.visitasSitio, 0);
 }
 
 /** Qué parte del tope se gastó, de 0 a 100. */

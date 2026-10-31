@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANUNCIOS_INSTAGRAM, pesos, porcentajeGastado } from "./anuncios";
+import { ANUNCIOS_INSTAGRAM, pesos, porcentajeGastado, visitasDeAnuncios } from "./anuncios";
 
 describe("anuncios cargados a mano", () => {
   it("el costo por visita coincide con gasto / visitas (detecta un numero mal copiado)", () => {
@@ -32,5 +32,12 @@ describe("porcentajeGastado", () => {
     expect(porcentajeGastado({ gasto: 7979.4, presupuesto: 10000 })).toBe(80);
     expect(porcentajeGastado({ gasto: 12000, presupuesto: 10000 })).toBe(100);
     expect(porcentajeGastado({ gasto: 100, presupuesto: 0 })).toBe(0);
+  });
+});
+
+describe("visitasDeAnuncios", () => {
+  it("suma las visitas al sitio de todos los anuncios", () => {
+    expect(visitasDeAnuncios([{ visitasSitio: 143 }, { visitasSitio: 20 }])).toBe(163);
+    expect(visitasDeAnuncios([])).toBe(0);
   });
 });
