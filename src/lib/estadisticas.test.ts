@@ -103,4 +103,38 @@ describe("resumir", () => {
     expect(r.origenes).toEqual([{ origen: "instagram", cantidad: 2 }, { origen: "google", cantidad: 1 }]);
     expect(r.dispositivos).toEqual({ celular: 2, compu: 2 });
   });
+
+  describe("ultimas 24 horas (dias = 1)", () => {
+    it("arma 24 horas en hora argentina, terminando en la hora actual", () => {
+      const r = resumir([], AUTOS, 1, AHORA);
+
+      expect(r.porHora).toHaveLength(24);
+      expect(r.porHora[23]).toMatchObject({ etiqueta: "15 h" });
+      expect(r.porHora[0]).toMatchObject({ etiqueta: "16 h" });
+    });
+
+    it("reparte visitas, consultas y simulaciones por hora", () => {
+      const r = resumir(
+        [
+          ev("visita", { creado: "2026-10-27T07:10:00Z" }), // 4:10 en Argentina
+          ev("visita", { creado: "2026-10-27T07:59:00Z" }), // 4:59
+          ev("simulacion", { creado: "2026-10-27T07:30:00Z" }),
+          ev("whatsapp", { creado: "2026-10-27T08:05:00Z" }), // 5:05
+        ],
+        AUTOS, 1, AHORA,
+      );
+
+      const cuatro = r.porHora.find((h) => h.etiqueta === "4 h");
+      const cinco = r.porHora.find((h) => h.etiqueta === "5 h");
+      expect(cuatro).toMatchObject({ visitas: 2, simulaciones: 1, consultas: 0 });
+      expect(cinco).toMatchObject({ visitas: 0, consultas: 1 });
+      expect([r.visitas, r.consultas, r.simulaciones]).toEqual([2, 1, 1]);
+    });
+
+    it("no cuenta lo de hace mas de 24 horas aunque sea del dia anterior", () => {
+      const r = resumir([ev("visita", { creado: "2026-10-26T17:30:00Z" })], AUTOS, 1, AHORA);
+
+      expect(r.visitas).toBe(0);
+    });
+  });
 });

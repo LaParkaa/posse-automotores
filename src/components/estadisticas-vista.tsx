@@ -2,9 +2,10 @@ import Link from "next/link";
 import type { Resumen } from "@/lib/estadisticas";
 
 export const PERIODOS = [
-  { dias: 7, texto: "7 días" },
-  { dias: 30, texto: "30 días" },
-  { dias: 90, texto: "90 días" },
+  { dias: 1, texto: "Últimas 24 horas" },
+  { dias: 7, texto: "Últimos 7 días" },
+  { dias: 30, texto: "Últimos 30 días" },
+  { dias: 90, texto: "Últimos 90 días" },
 ] as const;
 
 const NOMBRE_ORIGEN: Record<string, string> = {
@@ -42,6 +43,59 @@ function Barras({ items, color }: { items: Array<{ texto: string; cantidad: numb
   );
 }
 
+/** Las últimas 24 horas: cuánta gente entró en cada hora (sirve para ver el efecto de una historia de Instagram). */
+function HoraPorHora({ horas }: { horas: Resumen["porHora"] }) {
+  const max = Math.max(1, ...horas.map((h) => Math.max(h.visitas, h.consultas, h.simulaciones)));
+  const series = [
+    { clave: "visitas", color: "bg-car-gold" },
+    { clave: "simulaciones", color: "bg-[#4c6fff]" },
+    { clave: "consultas", color: "bg-[#25D366]" },
+  ] as const;
+
+  return (
+    <section className="rounded-lg border border-white/10 bg-car-gray2 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-condensed text-xl font-black italic text-car-white">Hora por hora</h2>
+        <p className="flex gap-4 text-xs text-car-muted">
+          <span><span className="mr-1 inline-block size-2 rounded-sm bg-car-gold" />Visitas</span>
+          <span><span className="mr-1 inline-block size-2 rounded-sm bg-[#4c6fff]" />Simulaciones</span>
+          <span><span className="mr-1 inline-block size-2 rounded-sm bg-[#25D366]" />Consultas</span>
+        </p>
+      </div>
+      <div className="mt-4 overflow-x-auto">
+        <div className="min-w-[640px]">
+          <div className="flex h-44 items-end gap-1" role="img" aria-label="Visitas, simulaciones y consultas por hora">
+            {horas.map((h) => (
+              <div
+                key={h.hora}
+                className="flex h-full flex-1 flex-col justify-end"
+                title={`${h.etiqueta.replace(" h", "")}:00 a ${h.etiqueta.replace(" h", "")}:59 · ${h.visitas} visitas, ${h.simulaciones} simulaciones, ${h.consultas} consultas`}
+              >
+                <span className="mb-0.5 text-center text-[10px] font-semibold text-car-gold">{h.visitas > 0 ? h.visitas : ""}</span>
+                <div className="flex flex-1 items-end justify-center gap-px">
+                  {series.map((s) => (
+                    <div
+                      key={s.clave}
+                      className={`w-full max-w-2 rounded-t ${s.color}`}
+                      style={{ height: `${(h[s.clave] / max) * 100}%`, minHeight: h[s.clave] > 0 ? 2 : 0 }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-1 text-[10px] text-car-muted">
+            {horas.map((h) => (
+              <span key={h.hora} className="flex-1 text-center">{h.etiqueta.replace(" h", "")}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-car-muted">Hora argentina. La última barra es la hora en curso. El número de arriba son las visitas de esa hora.</p>
+    </section>
+  );
+}
+
 /** El tablero de estadísticas (sin pedir datos: recibe el resumen ya armado). */
 export function EstadisticasVista({ resumen, dias }: { resumen: Resumen; dias: number }) {
   const r = resumen;
@@ -62,7 +116,7 @@ export function EstadisticasVista({ resumen, dias }: { resumen: Resumen; dias: n
               p.dias === dias ? "border-car-gold bg-car-gold/10 text-car-white" : "border-white/15 text-car-white/70 hover:border-car-gold/50"
             }`}
           >
-            Últimos {p.texto}
+            {p.texto}
           </Link>
         ))}
       </nav>
@@ -78,6 +132,7 @@ export function EstadisticasVista({ resumen, dias }: { resumen: Resumen; dias: n
         <Kpi titulo="Simulaciones" valor={r.simulaciones} detalle="Financiación" />
       </section>
 
+      {dias === 1 ? <HoraPorHora horas={r.porHora} /> : (
       <section className="rounded-lg border border-white/10 bg-car-gray2 p-4">
         <div className="flex items-center justify-between">
           <h2 className="font-condensed text-xl font-black italic text-car-white">Día por día</h2>
@@ -100,6 +155,7 @@ export function EstadisticasVista({ resumen, dias }: { resumen: Resumen; dias: n
           ))}
         </div>
       </section>
+      )}
 
       <section>
         <h2 className="font-condensed text-xl font-black italic text-car-white">Autos más consultados</h2>
