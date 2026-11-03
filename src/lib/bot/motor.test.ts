@@ -1184,3 +1184,62 @@ describe("el cliente ofrece su usado para entregar (caso real: 'tengo un chevrol
     expect(todo(r)).toContain("Tracker");
   });
 });
+
+describe("conversaciones reales de Instagram (noviembre 2026)", () => {
+  const ecosport = (id: string, nombre: string, modelo: string, anio: number): VehiculoCatalogo => ({
+    ...CATALOGO[0], id, slug: id, nombre, marca: "Ford", modelo, anio, tipo: "SUV", precio_texto: "$17.500.000",
+  });
+  const catalogo = [
+    ...CATALOGO,
+    ecosport("eco15", "Ford EcoSport Titanium", "EcoSport Titanium", 2015),
+    ecosport("eco17", "Eco sport 1.6", "Eco sport 1.6", 2017),
+  ];
+
+  it("'me podrías pasar un contacto, gracias' da el WhatsApp de Marcos y no un 'de nada'", () => {
+    const [r] = charlar(["Buenas tardes me podrías pasar un contacto gracias"]);
+
+    expect(hayBotonContacto(r)).toBe(true);
+    expect(textos(r).join("\n")).not.toMatch(/de nada/i);
+  });
+
+  it("'necesito un celular para hacer una consulta' tambien pide el contacto", () => {
+    const [r] = charlar(["Necesito un celular para hacer una consulta"]);
+
+    expect(r.noEntendido).toBe(false);
+    expect(hayBotonContacto(r)).toBe(true);
+  });
+
+  it("'Taos 2015' (un modelo que no hay) no muestra los 2015 como si fueran lo pedido", () => {
+    const [r] = charlar(["Taos 2015"]);
+
+    expect(titulos(r).length).toBeGreaterThan(0);
+    expect(textos(r).join("\n")).toMatch(/no tengo exactamente|con eso justo|eso exacto/i);
+    expect(textos(r).join("\n")).not.toMatch(/mirá lo que tengo|te muestro lo que hay|dale, mirá estos/i);
+  });
+
+  it("'Taos 2015' como respuesta a '¿qué vehículo buscás?' tampoco lo muestra como exacto", () => {
+    const [, r] = charlar([{ texto: "La taos que publicaste recien", historiaId: "st-x" }, "Taos 2015"]);
+
+    expect(textos(r).join("\n")).toMatch(/no tengo exactamente|con eso justo|eso exacto/i);
+  });
+
+  it("'2015' solo sigue siendo un pedido exacto", () => {
+    const [r] = charlar(["2015"]);
+
+    expect(textos(r).join("\n")).toMatch(/mirá lo que tengo|te muestro lo que hay|dale, mirá estos/i);
+  });
+
+  it("'esco' es la EcoSport: se muestran las dos para elegir en vez de pedir el modelo otra vez", () => {
+    const [r] = charlar([{ texto: "La Ford esco la vendieron??", historiaId: "st-x" }], { catalogo });
+
+    expect(r.sesion.paso).toBe("eligiendo_historia");
+    expect(titulos(r).join("\n")).toMatch(/EcoSport/i);
+    expect(titulos(r)).toHaveLength(2);
+  });
+
+  it("'Ford esco 2016' (despues de que no se entendio) tambien ofrece las dos EcoSport", () => {
+    const [, r] = charlar([{ texto: "Precio?", historiaId: "st-x" }, "Ford esco 2016"], { catalogo });
+
+    expect(titulos(r)).toHaveLength(2);
+  });
+});

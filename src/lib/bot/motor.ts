@@ -4,7 +4,8 @@ import type { Negocio } from "./negocio";
 import { extraerEntidades, type Entidades } from "./nlu/entidades";
 import { detectarIntenciones, type Intencion } from "./nlu/intenciones";
 import { descripcionDelUsado, extraerUsado, type UsadoDelCliente } from "./nlu/usado";
-import { esSoloEmojis, tokenizar } from "./nlu/normalizar";
+import { coincideAprox, esSoloEmojis, tokenizar } from "./nlu/normalizar";
+import { ALIAS_MARCA } from "./nlu/vocabulario";
 import { adjuntoEnPostulacion, iniciarPostulacion, pasoPostulacion } from "./postulacion";
 import { botonFinanciar, datosVehiculo, listaNumerada, precioDe, tarjetaEleccion } from "./respuestas";
 import { sesionNueva, sesionVigente, type Filtros, type Oferta, type Sesion } from "./sesion";
@@ -100,6 +101,15 @@ const USADO_SIN_DATOS: UsadoDelCliente = { modelo: null, anio: null };
 const marcasDelCatalogo = (t: Turno) => [...new Set(t.e.catalogo.map((v) => v.marca.trim()))];
 const PALABRAS_GENERICAS =new Set(["auto", "autos", "coche", "coches", "vehiculo", "vehiculos", "usado", "usados", "un", "algun", "de", "los", "el"]);
 const MAX_TOKENS_PEDIDO_GENERICO = 3;
+// Para saber si un pedido corto nombra un modelo que no existe (ver `nombraModeloQueNoHay`).
+const PEDIDO_CORTO = new Set<Intencion>(["desconocida", "saludo", "catalogo"]);
+const MAX_TOKENS_PEDIDO_CORTO = 4;
+const RELLENO_DE_PEDIDO = new Set([
+  "hola", "buenas", "tardes", "dias", "noches", "favor", "busco", "buscando", "quiero", "quisiera", "necesito", "estoy",
+  "tienen", "tenes", "tenga", "tengan", "hay", "algo", "algun", "alguna", "otro", "otra", "para", "como", "modelo", "anio",
+  "nuevo", "nuevos", "nueva", "nuevas", "usado", "usados", "auto", "autos", "vehiculo", "vehiculos", "coche", "coches",
+  "color", "rojo", "negro", "blanco", "gris", "azul", "verde", "plata", "economico", "barato", "chico", "grande", "familiar",
+]);
 const NINGUNO = new Set(["ninguno", "ninguna", "ningun", "otro", "otra"]);
 // Unicas frases que dicen "ese no es el auto de la historia"; una frase larga ya es otra cosa ("ese no me gusta tanto").
 const FRASES_CORRECCION = ["ese no", "esa no", "no es ese", "no es esa", "no era ese", "no era esa"];
@@ -220,6 +230,12 @@ function pasoEligiendoHistoria(t: Turno, texto: string): boolean {
     resolverHistoria(t, elegido);
     return true;
   }
+  // "esco": nombra dos autos (las dos EcoSport); se le muestran para que elija en vez de tirarle toda la marca.
+  const varios = nombrados(t, ent);
+  if (varios.length > 1) {
+    preguntarCualHistoria(t, varios, T.cualDeLaHistoria, "historia");
+    return true;
+  }
 
   if (tokenizar(texto).some((p) => NINGUNO.has(p)) || tiene(intenciones, "negacion")) {
     // No era ninguno de los ultimos: no se aprende nada y se le muestra lo que hay.
@@ -237,7 +253,7 @@ function pasoEligiendoHistoria(t: Turno, texto: string): boolean {
   if (Object.keys(filtros).length > 0) {
     salirDelPaso(s);
     s.historiaActualId = null;
-    mostrarBusqueda(t, filtros, texto, T.listaExacta);
+    mostrarBusqueda(t, filtros, texto, nombraModeloQueNoHay(texto, ent, intenciones) ? T.listaRelajada : T.listaExacta);
     return true;
   }
 
@@ -430,7 +446,9 @@ function despacharIntencion(
   }
   const filtros = filtrosDeEntidades(ent);
   if (hay("catalogo") || Object.keys(filtros).length > 0) {
-    mostrarBusqueda(t, filtros, texto, T.listaExacta);
+    // "Taos 2022": el modelo no esta en el catalogo; mostrar los 2022 como si fueran lo pedido engaña.
+    const encabezado = nombraModeloQueNoHay(texto, ent, intenciones) ? T.listaRelajada : T.listaExacta;
+    mostrarBusqueda(t, filtros, texto, encabezado);
     return false;
   }
   // "ok gracias" cierra la charla: no es un "si" a lo ultimo que se ofrecio.
@@ -465,6 +483,21 @@ function despacharIntencion(
   }
   noEntendido(t, fallosPrevios);
   return false;
+}
+
+/**
+ * Pedido corto con una palabra que no es nada conocido ("taos 2022", "busco ka"): casi seguro es un modelo que no
+ * esta en el catalogo. Solo con marca y año como filtros: con tipo, combustible o transmision la palabra de mas
+ * puede ser cualquier adjetivo.
+ */
+function nombraModeloQueNoHay(texto: string, ent: Entidades, intenciones: Intencion[]): boolean {
+  if (ent.vehiculoIds.length > 0 || ent.tipos.length > 0 || ent.combustible !== null || ent.transmision !== null) return false;
+  if (!intenciones.every((i) => PEDIDO_CORTO.has(i))) return false;
+  const tokens = tokenizar(texto);
+  if (tokens.length > MAX_TOKENS_PEDIDO_CORTO) return false;
+  const marca = ent.marca === null ? null : (tokenizar(ent.marca)[0] ?? null);
+  const esDeMarca = (p: string) => marca !== null && (p === marca || ALIAS_MARCA[p] === marca || coincideAprox(p, marca));
+  return tokens.some((p) => /^\p{L}{4,}$/u.test(p) && !RELLENO_DE_PEDIDO.has(p) && ALIAS_MARCA[p] === undefined && !esDeMarca(p));
 }
 
 /** Mensaje corto hecho solo de palabras que dicen "un auto" en general; no restringen el tipo ni nombran un modelo. */
