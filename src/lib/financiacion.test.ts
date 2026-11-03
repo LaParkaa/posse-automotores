@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { armarMensaje, formatearMonto, montoDeTexto, urlFinanciacion, usadoDeUrl, validar, type SolicitudFinanciacion } from "./financiacion";
+import { armarMensaje, esNavegadorInterno, urlFinanciacion, usadoDeUrl, validar, type SolicitudFinanciacion } from "./financiacion";
 import { WHATSAPP_LOCAL } from "./utils";
 
 const BASE: SolicitudFinanciacion = {
   auto: "Volkswagen Gol Power 1.6 (2010)",
-  monto: 6_000_000,
   conPermuta: false,
   permuta: { modelo: "", anio: "", km: "", estado: null, conFotos: false },
   plazo: 24,
@@ -17,16 +16,14 @@ const CON_PERMUTA: SolicitudFinanciacion = {
   permuta: { modelo: "Peugeot 208", anio: "2018", km: "85000", estado: "Excelente", conFotos: false },
 };
 
-describe("montos", () => {
-  it("formatea con puntos de miles y signo $", () => {
-    expect(formatearMonto(6_000_000)).toBe("$6.000.000");
+describe("esNavegadorInterno", () => {
+  it("reconoce los navegadores internos de Instagram y Facebook", () => {
+    expect(esNavegadorInterno("Mozilla/5.0 (iPhone) AppleWebKit Mobile/15E148 Instagram 300.0.0")).toBe(true);
+    expect(esNavegadorInterno("Mozilla/5.0 (Linux; Android 13) [FB_IAB/FB4A;FBAV/450.0]")).toBe(true);
   });
 
-  it("lee lo que se escribe en el campo", () => {
-    expect(montoDeTexto("$ 6.000.000")).toBe(6_000_000);
-    expect(montoDeTexto("6000000")).toBe(6_000_000);
-    expect(montoDeTexto("")).toBe(0);
-    expect(montoDeTexto("abc")).toBe(0);
+  it("no confunde un navegador común", () => {
+    expect(esNavegadorInterno("Mozilla/5.0 (Windows NT 10.0) Chrome/120.0 Safari/537.36")).toBe(false);
   });
 });
 
@@ -36,9 +33,9 @@ describe("validar", () => {
     expect(validar(CON_PERMUTA)).toEqual({});
   });
 
-  it("pide auto, monto y nombre", () => {
-    const errores = validar({ ...BASE, auto: " ", monto: 0, nombre: "J" });
-    expect(Object.keys(errores).sort()).toEqual(["auto", "monto", "nombre"]);
+  it("pide auto y nombre", () => {
+    const errores = validar({ ...BASE, auto: " ", nombre: "J" });
+    expect(Object.keys(errores).sort()).toEqual(["auto", "nombre"]);
   });
 
   it("los datos del usado solo se exigen si hay permuta", () => {
@@ -64,7 +61,6 @@ describe("armarMensaje", () => {
         "¡Hola Marcos! Quiero solicitar una simulación de financiación:",
         "",
         "🚗 Auto a comprar: Volkswagen Gol Power 1.6 (2010)",
-        "💰 Monto a financiar: $6.000.000",
         "🔄 Entrega usado: No",
         "🗓️ Plazo deseado: 24 cuotas",
         "👤 Nombre: Juan Pérez",
@@ -72,6 +68,19 @@ describe("armarMensaje", () => {
         "Quedo a la espera de tu respuesta.",
       ].join("\n"),
     );
+  });
+
+  it("no pide ni menciona un monto", () => {
+    expect(armarMensaje(BASE)).not.toMatch(/monto|\$/i);
+  });
+
+  it("sin emojis (navegador interno) queda el mismo texto sin los dibujitos", () => {
+    const mensaje = armarMensaje({ ...CON_PERMUTA, permuta: { ...CON_PERMUTA.permuta, conFotos: true } }, false);
+    expect(mensaje).not.toMatch(/\p{Extended_Pictographic}/u);
+    expect(mensaje).toContain("Auto a comprar: Volkswagen Gol Power 1.6 (2010)");
+    expect(mensaje).toContain("Entrega usado: Sí (Peugeot 208 - Año 2018 - 85.000 km - Estado: Excelente)");
+    expect(mensaje).toContain("Plazo deseado: 24 cuotas");
+    expect(mensaje).toContain("Nota: Te adjunto las fotos");
   });
 
   it("con permuta lleva los datos del usado", () => {
