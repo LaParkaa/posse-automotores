@@ -7,8 +7,7 @@ import { registrarEvento } from "@/lib/rastreo";
 import {
   ESTADOS,
   PLAZOS,
-  formatearMonto,
-  montoDeTexto,
+  esNavegadorInterno,
   urlFinanciacion,
   validar,
   type EstadoUsado,
@@ -117,7 +116,6 @@ export function SimuladorFinanciacion({
   usadoInicial?: UsadoInicial | null;
 }) {
   const [autoSlug, setAutoSlug] = useState(autos.some((a) => a.slug === autoInicial) ? (autoInicial as string) : "");
-  const [monto, setMonto] = useState(0);
   const [conPermuta, setConPermuta] = useState(usadoInicial !== null);
   const [modelo, setModelo] = useState(usadoInicial?.modelo ?? "");
   const [anio, setAnio] = useState(usadoInicial?.anio ?? "");
@@ -134,7 +132,6 @@ export function SimuladorFinanciacion({
     autoSlug === OTRO_AUTO ? "Todavía no elegí un auto" : (autos.find((a) => a.slug === autoSlug)?.etiqueta ?? "");
   const solicitud: SolicitudFinanciacion = {
     auto: etiquetaAuto,
-    monto,
     conPermuta,
     permuta: { modelo, anio, km, estado, conFotos },
     plazo,
@@ -152,7 +149,7 @@ export function SimuladorFinanciacion({
       requestAnimationFrame(() => formulario.current?.querySelector<HTMLElement>("[data-error=true]")?.scrollIntoView({ behavior: "smooth", block: "center" }));
       return;
     }
-    const url = urlFinanciacion(solicitud);
+    const url = urlFinanciacion(solicitud, !esNavegadorInterno(navigator.userAgent));
     // Es la señal más fuerte de interés: alguien que armó su plan para este auto.
     registrarEvento("simulacion", autoSlug === OTRO_AUTO ? null : autoSlug);
     setEnlace(url);
@@ -182,20 +179,6 @@ export function SimuladorFinanciacion({
             <option value={OTRO_AUTO}>Otro / todavía no elegí</option>
           </select>
           <Error texto={errores.auto} />
-        </div>
-        <div className="mt-4" data-error={Boolean(errores.monto)}>
-          <label htmlFor="monto" className="mb-2 block text-base text-car-white/90">Monto que querés financiar (ARS)</label>
-          <input
-            id="monto"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="$6.000.000"
-            value={monto > 0 ? formatearMonto(monto) : ""}
-            onChange={(e) => setMonto(montoDeTexto(e.target.value))}
-            aria-invalid={Boolean(errores.monto)}
-            className={`${CAMPO} ${errores.monto ? CAMPO_ERROR : ""}`}
-          />
-          <Error texto={errores.monto} />
         </div>
       </section>
 

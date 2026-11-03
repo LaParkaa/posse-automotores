@@ -55,6 +55,13 @@ const NO_APROXIMAR_A_MODELO = new Set([
   "cosa", "cosas", "casa", "casas", "foco", "focos", "siesta", "fiestas", "patio", "rango", "danger",
 ]);
 
+// Distintas formas de escribir un mismo modelo: el cliente dice "esco" o "eco sport" y en el catalogo figura "EcoSport".
+// Cada grupo son los primeros tokens con que puede aparecer, tanto en el mensaje como en el modelo cargado.
+const MODELOS_EQUIVALENTES: string[][] = [["ecosport", "eco", "esco", "ecosp"]];
+
+const esAliasDeModelo = (token: string, modelo: string) =>
+  MODELOS_EQUIVALENTES.some((grupo) => grupo.includes(token) && grupo.includes(modelo));
+
 // Palabras tan comunes que, solas, no nombran un auto: "uno" aparece en "tenes uno de nafta?".
 const MODELOS_QUE_PIDEN_MARCA = new Set(["uno"]);
 
@@ -119,6 +126,7 @@ function posicionesQueNombran(v: VehiculoCatalogo, modelo: string, tokens: strin
     const coincide =
       token === modelo ||
       esDiminutivo(token, modelo) ||
+      esAliasDeModelo(token, modelo) ||
       (!NO_APROXIMAR_A_MODELO.has(token) && aproximaNombre(token, modelo, MIN_LETRAS_MODELO_APROX));
     if (coincide) posiciones.push(i);
   });

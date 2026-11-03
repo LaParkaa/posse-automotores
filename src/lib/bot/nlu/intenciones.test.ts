@@ -40,6 +40,9 @@ describe("detectarIntenciones — la intencion principal (primera)", () => {
     ["quiero hablar con un vendedor", "humano"],
     ["pasame con marcos", "humano"],
     ["me pasas un numero?", "humano"],
+    ["Buenas tardes me podrías pasar un contacto gracias", "humano"],
+    ["Necesito un celular para hacer una consulta", "humano"],
+    ["la vendieron?", "disponibilidad"],
     ["sos un bot?", "identidad"],
     ["sos un agente?", "identidad"],
     ["es una persona la que me atiende?", "identidad"],
@@ -247,5 +250,11 @@ describe("detectarIntenciones — empleo (postulacion de vendedor)", () => {
 
     expect(intenciones).toContain("empleo");
     expect(intenciones).not.toContain("negacion");
+  });
+});
+
+describe("detectarIntenciones — contacto ofrecido por el cliente", () => {
+  it("'te dejo mi contacto' lo ofrece el cliente: no pide hablar con nadie", () => {
+    expect(detectarIntenciones("te dejo mi contacto")).not.toContain("humano");
   });
 });

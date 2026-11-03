@@ -99,6 +99,11 @@ function pideAlDueno(tokens: string[]): boolean {
 function pideNumero(tokens: string[]): boolean {
   return tokens.some((token, i) => token === "numero" && tokens[i + 1] !== "de");
 }
+
+/** "me pasas un contacto?" lo pide; "te dejo mi contacto" lo ofrece, y eso no es pedir a nadie. */
+function pideContacto(tokens: string[]): boolean {
+  return tokens.some((token, i) => token === "contacto" && !POSESIVOS.has(tokens[i - 1]));
+}
 const AFIRMACION_PRIMER_TOKEN = new Set([
   "si",
   "sii",
@@ -184,8 +189,8 @@ const REGLAS: Regla[] = [
       "numero de contacto",
     ],
     palabras: ["vendedor", "vendedora", "asesor", "asesora", "secretaria", "telefono", "whatsapp", "llamame"],
-    exactas: ["marcos", "wsp", "wasap", "cel"],
-    extra: ({ tokens }) => pideNumero(tokens) || pideAlDueno(tokens),
+    exactas: ["marcos", "wsp", "wasap", "cel", "celu", "celular"],
+    extra: ({ tokens }) => pideNumero(tokens) || pideAlDueno(tokens) || pideContacto(tokens),
   },
   {
     intencion: "identidad",
@@ -324,6 +329,8 @@ const REGLAS: Regla[] = [
       "esta vendido",
       "esta vendida",
     ],
+    // "la vendieron?": pregunta si el auto sigue, igual que "se vendio".
+    exactas: ["vendieron", "vendio"],
   },
   {
     intencion: "info",
