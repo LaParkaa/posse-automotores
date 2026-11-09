@@ -12,6 +12,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 10;
 
+// Tope por consulta a la base: la ruta dura 10 s (maxDuration) y el pedido hace varias consultas seguidas.
+const TOPE_CONSULTA_MS = 2000;
+
 const SIN_CACHE = { "Cache-Control": "no-store" };
 
 function json(cuerpo: unknown, status = 200) {
@@ -20,7 +23,7 @@ function json(cuerpo: unknown, status = 200) {
 
 /** Las dependencias reales del chat. Se arman por pedido: en serverless no hay estado entre invocaciones. */
 function crearDepsChat(request: Request): DepsChat {
-  const db = createBotSupabaseClient();
+  const db = createBotSupabaseClient(TOPE_CONSULTA_MS);
   return {
     catalogo: () => obtenerCatalogo(db),
     cargarEstado: (v) => cargarEstadoWeb(db, v, new Date()),

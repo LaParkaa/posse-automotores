@@ -144,17 +144,29 @@ describe("camino feliz", () => {
     expect(f.filas[0].nota).toBeNull();
   });
 
-  it("inicio: guarda solo las filas del asistente (el saludo no es un mensaje del cliente)", async () => {
+  it("inicio es solo lectura: contesta pero no guarda mensajes, estado ni lead, ni repitiendo el pedido", async () => {
     const f = crear();
     const r = await procesarChat({ visitante: V, pagina: "ficha", slug: P206.slug, inicio: true }, f.deps);
-    expect(f.filas.length).toBe(r.mensajes.length);
-    expect(f.filas.every((x) => x.role === "assistant")).toBe(true);
-    expect(f.mocks.guardarEstado).toHaveBeenCalledTimes(1);
+    expect(r.mensajes.length).toBeGreaterThan(0);
+    for (let i = 0; i < 5; i++) await procesarChat({ visitante: V, pagina: "ficha", slug: P206.slug, inicio: true }, f.deps);
+    expect(f.mocks.guardarMensajes).not.toHaveBeenCalled();
+    expect(f.mocks.guardarEstado).not.toHaveBeenCalled();
+    expect(f.mocks.guardarLead).not.toHaveBeenCalled();
+    expect(f.filas).toEqual([]);
+    expect(f.estados.size).toBe(0);
+  });
+
+  it("inicio igual pasa por los topes (con el visitante en el tope, deriva a Marcos)", async () => {
+    const f = crear();
+    f.mocks.contar.mockImplementation(async (_d: Date, v?: string) => (v ? LIMITES.porVisitante : 0));
+    const r = await procesarChat({ visitante: V, pagina: "catalogo", slug: null, inicio: true }, f.deps);
+    expect(cierres(r)[0].url).toBe(URL_MARCOS);
+    expect(f.mocks.catalogo).not.toHaveBeenCalled();
   });
 
   it("las tarjetas se guardan como 'Mostró: <titulos>' y los titulos", async () => {
     const f = crear();
-    const r = await procesarChat({ visitante: V, pagina: "ficha", slug: P206.slug, inicio: true }, f.deps);
+    const r = await procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "amarok" }, f.deps);
     const tarjetas = r.mensajes.find((m): m is Extract<MensajeWeb, { tipo: "tarjetas" }> => m.tipo === "tarjetas")!;
     const filaTarjetas = f.filas.find((x) => x.tipo === "tarjetas")!;
     expect(filaTarjetas.content).toBe(`Mostró: ${tarjetas.tarjetas.map((t) => t.titulo).join(", ")}`);
@@ -278,12 +290,20 @@ describe("fallas", () => {
     expect(f.mocks.guardarEstado).toHaveBeenCalledTimes(1);
   });
 
-  it("si cargarEstado lanza, se trata como charla nueva y contesta", async () => {
+  it("si cargarEstado lanza, contesta como charla nueva pero NO pisa el estado guardado (sí guarda los mensajes)", async () => {
     const f = crear();
     f.mocks.cargarEstado.mockRejectedValue(new Error("boom"));
     const r = await procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "hola" }, f.deps);
     expect(r.mensajes.length).toBeGreaterThan(0);
     expect(console.error).toHaveBeenCalled();
+    expect(f.mocks.guardarEstado).not.toHaveBeenCalled();
+    expect(f.mocks.guardarMensajes).toHaveBeenCalledTimes(1);
+  });
+
+  it("si cargarEstado devuelve null (no hay fila) el estado se guarda", async () => {
+    const f = crear();
+    await procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "hola" }, f.deps);
+    expect(f.mocks.guardarEstado).toHaveBeenCalledTimes(1);
   });
 
   it("si lo inesperado revienta (mid lanza), devuelve RESPUESTA_FALLA y no lanza", async () => {
@@ -349,5 +369,66 @@ describe("lead", () => {
     expect(r.mensajes).toHaveLength(3);
     expect(cierres(r)[0].url).toBe(URL_MARCOS);
     expect(f.filas.filter((x) => x.role === "assistant").map((x) => x.tipo)).toEqual(["texto", "texto", "cierre"]);
+  });
+});
+
+describe("presupuesto de tiempo", () => {
+  const nunca = () => new Promise<never>(() => {});
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("si el catalogo no responde nunca, a los presupuestoMs devuelve RESPUESTA_FALLA sin guardar nada", async () => {
+    const f = crear({ catalogo: nunca, presupuestoMs: 20 });
+    const r = await procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "hola" }, f.deps);
+    expect(r).toEqual(RESPUESTA_FALLA(NEGOCIO));
+    expect(f.mocks.guardarMensajes).not.toHaveBeenCalled();
+    expect(f.mocks.guardarEstado).not.toHaveBeenCalled();
+  });
+
+  it("si contar no responde nunca, tambien devuelve RESPUESTA_FALLA", async () => {
+    const f = crear({ presupuestoMs: 20 });
+    f.mocks.contar.mockImplementation(nunca);
+    const r = await procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "hola" }, f.deps);
+    expect(r).toEqual(RESPUESTA_FALLA(NEGOCIO));
+    expect(f.mocks.catalogo).not.toHaveBeenCalled();
+  });
+
+  it("si el catalogo llega tarde (pasado el presupuesto) no se guarda nada despues", async () => {
+    let soltar!: (v: typeof CATALOGO) => void;
+    const tarde = new Promise<typeof CATALOGO>((res) => (soltar = res));
+    const f = crear({ catalogo: () => tarde, presupuestoMs: 20 });
+    const r = await procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "hola" }, f.deps);
+    expect(r).toEqual(RESPUESTA_FALLA(NEGOCIO));
+    soltar(CATALOGO);
+    await new Promise((res) => setTimeout(res, 20));
+    expect(f.mocks.guardarMensajes).not.toHaveBeenCalled();
+    expect(f.mocks.guardarEstado).not.toHaveBeenCalled();
+  });
+
+  it("el presupuesto por defecto es 8000 ms y no queda ningun timer pendiente al terminar", async () => {
+    vi.useFakeTimers();
+    const f = crear();
+    const pendiente = procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "hola" }, f.deps);
+    await vi.advanceTimersByTimeAsync(0);
+    const r = await pendiente;
+    expect(r.mensajes.length).toBeGreaterThan(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("al agotarse el tiempo tampoco queda un timer pendiente, y a los 7999 ms todavia espera", async () => {
+    vi.useFakeTimers();
+    const f = crear({ catalogo: nunca });
+    let listo = false;
+    const pendiente = procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "hola" }, f.deps).then((r) => {
+      listo = true;
+      return r;
+    });
+    await vi.advanceTimersByTimeAsync(7999);
+    expect(listo).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await pendiente).toEqual(RESPUESTA_FALLA(NEGOCIO));
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { procesarChat, RESPUESTA_FALLA } from "@/lib/bot/web/chat";
 import { LIMITES } from "@/lib/bot/web/limites";
 import { NEGOCIO } from "@/lib/bot/negocio";
+import { createBotSupabaseClient } from "@/lib/supabase";
 import { POST, dynamic, maxDuration, runtime } from "./route";
 
 vi.mock("@/lib/supabase", () => ({ createBotSupabaseClient: vi.fn(() => ({ centinela: true })) }));
@@ -78,6 +79,11 @@ describe("POST /api/chat", () => {
     expect(pedido).toEqual({ visitante: valido.visitante, pagina: "catalogo", slug: null, texto: "hola" });
     expect(deps.siteUrl).toBe("http://localhost:3000");
     expect(deps.negocio).toBe(NEGOCIO);
+  });
+
+  it("el cliente de Supabase del chat usa un tope por consulta de 2000 ms", async () => {
+    await post(JSON.stringify(valido));
+    expect(createBotSupabaseClient).toHaveBeenCalledWith(2000);
   });
 
   it("usa SITE_URL si esta definida y un mid distinto en cada pedido", async () => {
