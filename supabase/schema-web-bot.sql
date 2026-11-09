@@ -8,8 +8,13 @@ create table if not exists public.web_sesiones (
   visitante text primary key,
   estado jsonb not null default '{}',
   guion jsonb not null default '{}',
+  ficha text,
   actualizado timestamptz not null default now()
 );
+
+-- "ficha": slug de la ultima ficha desde la que escribio (null en el catalogo). Si la tabla ya se creo sin esta
+-- columna, esta linea la agrega.
+alter table public.web_sesiones add column if not exists ficha text;
 
 -- Un mensaje por fila.
 -- tipo: texto = burbuja comun · tarjetas = autos con foto y botones · cierre = el mensaje armado para Marcos.

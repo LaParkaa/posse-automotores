@@ -73,7 +73,7 @@ export function normalizarGuion(crudo: unknown): Guion {
   return { flujo, paso, datos };
 }
 
-function normalizarEstado(crudo: unknown, ahora: Date): EstadoWeb | null {
+export function normalizarEstado(crudo: unknown, ahora: Date): EstadoWeb | null {
   if (typeof crudo !== "object" || crudo === null || Array.isArray(crudo)) return null;
   const c = crudo as Record<string, unknown>;
   const sesion = normalizarSesion(c.sesion, ahora);
