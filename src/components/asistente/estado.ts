@@ -23,8 +23,13 @@ export type AccionChat =
   | { tipo: "abrir" }
   | { tipo: "cerrar" }
   | { tipo: "enviar"; texto: string }
-  | { tipo: "recibir"; respuesta: RespuestaChat }
-  | { tipo: "fallo"; negocio: { whatsappUrl: string } };
+  /** Pide el saludo (`inicio`): queda pendiente sin burbuja del cliente. */
+  | { tipo: "iniciar" }
+  /** `saludo: true` cuando es la respuesta al `inicio`: desde ahí no se vuelve a saludar en la pestaña. */
+  | { tipo: "recibir"; respuesta: RespuestaChat; saludo?: true }
+  | { tipo: "fallo"; negocio: { whatsappUrl: string } }
+  /** Lo leído de sessionStorage al montar; no pisa una charla que ya empezó. */
+  | { tipo: "restaurar"; guardado: EstadoChat };
 
 export const CLAVE_CHAT = "posse_chat";
 export const CLAVE_GLOBO = "posse_chat_globo";
@@ -42,6 +47,15 @@ export const estadoInicial: EstadoChat = {
 
 const TEXTO_FALLO = "Uy, ahora no te pude responder. Escribile directo a Marcos por WhatsApp y te contesta él.";
 const TEXTO_CIERRE_FALLO = "Hablar con Marcos por WhatsApp";
+
+/** El cierre muestra el mensaje que va a llegar a Marcos: el `text` del link (o una línea genérica si no trae). */
+function textoDelLink(url: string): string {
+  try {
+    return new URL(url).searchParams.get("text")?.trim() || TEXTO_CIERRE_FALLO;
+  } catch {
+    return TEXTO_CIERRE_FALLO;
+  }
+}
 
 /** Ids correlativos `b<n>`: el siguiente es el mayor número en uso más uno (no choca tras recortar o restaurar). */
 function siguienteNumero(burbujas: Burbuja[]): number {
@@ -71,10 +85,14 @@ export function reducirChat(e: EstadoChat, a: AccionChat): EstadoChat {
         pendiente: true,
         burbujas: agregar(e.burbujas, [{ de: "cliente", mensaje: { tipo: "texto", texto: a.texto } }]),
       };
+    case "iniciar":
+      if (e.pendiente || e.saludado) return e;
+      return { ...e, pendiente: true };
     case "recibir":
       return {
         ...e,
         pendiente: false,
+        saludado: e.saludado || a.saludo === true,
         sugerencias: a.respuesta.sugerencias,
         burbujas: agregar(
           e.burbujas,
@@ -89,10 +107,13 @@ export function reducirChat(e: EstadoChat, a: AccionChat): EstadoChat {
           { de: "asistente", mensaje: { tipo: "texto", texto: TEXTO_FALLO } },
           {
             de: "asistente",
-            mensaje: { tipo: "cierre", texto: TEXTO_CIERRE_FALLO, url: a.negocio.whatsappUrl, vehiculoSlug: null },
+            mensaje: { tipo: "cierre", texto: textoDelLink(a.negocio.whatsappUrl), url: a.negocio.whatsappUrl, vehiculoSlug: null },
           },
         ]),
       };
+    case "restaurar":
+      if (e.burbujas.length > 0 || e.saludado || e.pendiente) return e;
+      return { ...a.guardado, abierto: e.abierto, pendiente: false };
   }
 }
 
@@ -140,6 +161,17 @@ function mensajeValido(m: unknown): m is Burbuja["mensaje"] {
 
 function burbujaValida(b: unknown): b is Burbuja {
   return esObjeto(b) && esTexto(b.id) && (b.de === "cliente" || b.de === "asistente") && mensajeValido(b.mensaje);
+}
+
+const MAX_MENSAJES_RESPUESTA = 10;
+
+/** Valida la respuesta de POST /api/chat antes de mostrarla. `null` si no tiene la forma esperada. */
+export function leerRespuesta(dato: unknown): RespuestaChat | null {
+  if (!esObjeto(dato) || !Array.isArray(dato.mensajes) || !Array.isArray(dato.sugerencias)) return null;
+  if (dato.mensajes.length === 0 || dato.mensajes.length > MAX_MENSAJES_RESPUESTA) return null;
+  if (dato.sugerencias.length > MAX_MENSAJES_RESPUESTA * 2) return null;
+  if (!dato.mensajes.every(mensajeValido) || !dato.sugerencias.every(esOpcionId)) return null;
+  return { mensajes: dato.mensajes as MensajeWeb[], sugerencias: dato.sugerencias as OpcionId[] };
 }
 
 /** Lee lo guardado validando la forma (el storage lo puede tocar cualquiera). `null` si no sirve. */

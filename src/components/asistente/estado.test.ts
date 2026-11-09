@@ -5,6 +5,7 @@ import {
   globoYaMostrado,
   guardarChatEnSesion,
   leerChatGuardado,
+  leerRespuesta,
   marcarGloboMostrado,
   reducirChat,
   serializarChat,
@@ -226,5 +227,96 @@ describe("sessionStorage", () => {
   it("con storage roto el globo cuenta como mostrado y marcar no lanza", () => {
     expect(globoYaMostrado(storageRoto)).toBe(true);
     expect(() => marcarGloboMostrado(storageRoto)).not.toThrow();
+  });
+});
+
+describe("reducirChat: saludo y restauración", () => {
+  const respuesta = {
+    mensajes: [{ tipo: "texto" as const, texto: "Hola, soy el asistente" }],
+    sugerencias: ["financiar" as const],
+  };
+
+  it("iniciar queda pendiente sin burbuja del cliente", () => {
+    const e = reducirChat(estadoInicial, { tipo: "iniciar" });
+    expect(e.pendiente).toBe(true);
+    expect(e.burbujas).toEqual([]);
+  });
+
+  it("iniciar no hace nada si ya saludó o hay algo pendiente", () => {
+    const saludado = { ...estadoInicial, saludado: true };
+    expect(reducirChat(saludado, { tipo: "iniciar" })).toBe(saludado);
+    const pendiente = { ...estadoInicial, pendiente: true };
+    expect(reducirChat(pendiente, { tipo: "iniciar" })).toBe(pendiente);
+  });
+
+  it("recibir con saludo marca saludado; sin saludo no lo toca", () => {
+    const iniciado = reducirChat(estadoInicial, { tipo: "iniciar" });
+    const con = reducirChat(iniciado, { tipo: "recibir", respuesta, saludo: true });
+    expect(con.saludado).toBe(true);
+    expect(con.pendiente).toBe(false);
+    expect(con.burbujas).toHaveLength(1);
+    expect(reducirChat(iniciado, { tipo: "recibir", respuesta }).saludado).toBe(false);
+  });
+
+  it("si el saludo falla, sigue sin saludar (se reintenta en la próxima apertura)", () => {
+    const iniciado = reducirChat(estadoInicial, { tipo: "iniciar" });
+    const e = reducirChat(iniciado, { tipo: "fallo", negocio: { whatsappUrl: WA } });
+    expect(e.saludado).toBe(false);
+    expect(e.pendiente).toBe(false);
+  });
+
+  it("restaurar trae lo guardado y conserva si está abierto", () => {
+    const guardado = { ...estadoInicial, saludado: true, burbujas: [{ id: "b0", de: "asistente" as const, mensaje: respuesta.mensajes[0] }] };
+    const abierto = { ...estadoInicial, abierto: true };
+    const e = reducirChat(abierto, { tipo: "restaurar", guardado });
+    expect(e).toEqual({ ...guardado, abierto: true, pendiente: false });
+  });
+
+  it("restaurar no pisa una charla ya empezada", () => {
+    const empezado = reducirChat(estadoInicial, { tipo: "enviar", texto: "hola" });
+    expect(reducirChat(empezado, { tipo: "restaurar", guardado: { ...estadoInicial, saludado: true } })).toBe(empezado);
+  });
+});
+
+describe("leerRespuesta", () => {
+  it("acepta una respuesta bien formada", () => {
+    const r = {
+      mensajes: [
+        { tipo: "texto", texto: "Hola" },
+        { tipo: "cierre", texto: "Hola Marcos", url: WA, vehiculoSlug: null },
+      ],
+      sugerencias: ["seguir", "marcos"],
+    };
+    expect(leerRespuesta(r)).toEqual(r);
+  });
+
+  it.each([
+    null,
+    "hola",
+    [[]],
+    { mensajes: [], sugerencias: [] },
+    { mensajes: [{ tipo: "texto", texto: "Hola" }] },
+    { mensajes: [{ tipo: "texto", texto: 1 }], sugerencias: [] },
+    { mensajes: [{ tipo: "html", texto: "<b>" }], sugerencias: [] },
+    { mensajes: [{ tipo: "texto", texto: "Hola" }], sugerencias: ["hackear"] },
+    { mensajes: Array.from({ length: 11 }, () => ({ tipo: "texto", texto: "x" })), sugerencias: [] },
+    { error: "Pedido inválido" },
+  ])("rechaza %j", (r) => {
+    expect(leerRespuesta(r)).toBeNull();
+  });
+});
+
+describe("reducirChat: cierre del fallo", () => {
+  it("la burbuja muestra el mismo mensaje que lleva el link (como los cierres del servidor)", () => {
+    const url = `https://wa.me/5493537662444?text=${encodeURIComponent("Hola, te escribo desde la web. Quiero consultar por un vehículo.")}`;
+    const e = reducirChat(estadoInicial, { tipo: "fallo", negocio: { whatsappUrl: url } });
+    const cierre = e.burbujas[e.burbujas.length - 1].mensaje;
+    expect(cierre).toMatchObject({ tipo: "cierre", url, texto: "Hola, te escribo desde la web. Quiero consultar por un vehículo." });
+  });
+
+  it("si el link no trae texto, queda una línea genérica", () => {
+    const e = reducirChat(estadoInicial, { tipo: "fallo", negocio: { whatsappUrl: "https://wa.me/5493537662444" } });
+    const cierre = e.burbujas[e.burbujas.length - 1].mensaje;
+    expect(cierre).toMatchObject({ tipo: "cierre", texto: "Hablar con Marcos por WhatsApp" });
   });
 });
