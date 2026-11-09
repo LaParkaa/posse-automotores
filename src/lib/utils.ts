@@ -43,6 +43,24 @@ export function buildWhatsAppUrlInstagram(
   );
 }
 
+/**
+ * Link de WhatsApp para el cierre desde el asistente de la web. Misma idea que el de Instagram: el mensaje
+ * dice de donde viene y por que auto. Sin emojis, para que lleguen igual en cualquier navegador.
+ */
+export function buildWhatsAppUrlWeb(
+  vehiculo: Pick<Vehiculo, "nombre" | "tipo"> | null,
+): string {
+  const base = `https://wa.me/${WHATSAPP_LOCAL}?text=`;
+  if (!vehiculo) {
+    return base + encodeURIComponent("Hola, te escribo desde la web. Quiero consultar por un vehículo.");
+  }
+  const articulo = vehiculo.tipo === "Moto" ? "la" : "el";
+  return (
+    base +
+    encodeURIComponent(`Hola, te escribo desde la web. Me interesa ${articulo} ${vehiculo.nombre}. ¿Sigue disponible?`)
+  );
+}
+
 // Instagram acepta botones con links de hasta unos 2000 caracteres: se deja margen.
 const MAX_URL_POSTULACION = 1700;
 const LARGO_RESPUESTA_INICIAL = 160;
@@ -54,7 +72,7 @@ const MAX_NOMBRE_EN_LINK = 80;
  * Lo que escribio el candidato, apto para el link: sin emojis ni simbolos (WhatsApp no los interpreta bien
  * al abrir el link desde Instagram y salen como "?"), sin invisibles, en una sola linea y con tope de largo.
  */
-function limpioParaLink(texto: string | null | undefined, max: number): string {
+export function limpioParaLink(texto: string | null | undefined, max: number): string {
   const limpio = (texto ?? "")
     .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\u{FE0F}\u{200D}]/gu, "")
     .replace(/\s+/g, " ")

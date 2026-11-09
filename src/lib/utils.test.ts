@@ -3,6 +3,8 @@ import {
   buildWhatsAppUrl,
   buildWhatsAppUrlInstagram,
   buildWhatsAppUrlPostulacion,
+  buildWhatsAppUrlWeb,
+  limpioParaLink,
   WHATSAPP_LOCAL,
   WHATSAPP_RECLUTADOR,
 } from "./utils";
@@ -165,5 +167,22 @@ describe("buildWhatsAppUrlPostulacion", () => {
 
   it("va al WhatsApp de Marcos", () => {
     expect(buildWhatsAppUrlPostulacion(COMPLETO, MARCOS).startsWith(`https://wa.me/${WHATSAPP_LOCAL}?text=`)).toBe(true);
+  });
+});
+
+describe("buildWhatsAppUrlWeb", () => {
+  it("dice que viene de la web y nombra el auto (con 'la' para motos)", () => {
+    expect(decodeURIComponent(buildWhatsAppUrlWeb({ nombre: "Peugeot 206 1.6", tipo: "Hatchback" }).split("?text=")[1])).toBe(
+      "Hola, te escribo desde la web. Me interesa el Peugeot 206 1.6. ¿Sigue disponible?",
+    );
+    expect(decodeURIComponent(buildWhatsAppUrlWeb({ nombre: "Honda XR 150", tipo: "Moto" }).split("?text=")[1])).toContain("la Honda XR 150");
+  });
+});
+
+describe("limpioParaLink", () => {
+  it("saca emojis, junta espacios y recorta", () => {
+    expect(limpioParaLink("  Hola   🚗 mundo ", 50)).toBe("Hola mundo");
+    expect(limpioParaLink(null, 5)).toBe("");
+    expect(limpioParaLink("abcdef", 3)).toBe("abc");
   });
 });
