@@ -168,6 +168,27 @@ function chipsBase(c: Ctx, s: Sesion): OpcionId[] {
   return sugerenciasPara({ pagina: c.pagina, tieneAuto: v !== null, ofrecio: s.ofrecio });
 }
 
+// Opciones de los guiones de financiar y usado (también chips viejos de esos pasos): no van con un auto que no está.
+const OPCIONES_DE_COMPRA = new Set<OpcionId>([
+  "financiar", "ver_financiacion", "usado", "anticipo_sin", "anticipo_hasta_3", "anticipo_mas_3", "anticipo_solo_usado",
+  "cuotas_12", "cuotas_24", "cuotas_36", "cuotas_48",
+]);
+
+/** El auto actual si ya se vendió o está reservado (no se arma un pedido de financiación ni de permuta por él). */
+function autoNoDisponible(c: Ctx, s: Sesion): VehiculoCatalogo | null {
+  const v = autoDe(c, s.vehiculoActualId);
+  return v && v.estado !== "disponible" ? v : null;
+}
+
+/** Igual que el guion "disponible" con un vendido o reservado: lo dice, ofrece buscar otro y deja el guion. */
+function yaNoEsta(v: VehiculoCatalogo, s: Sesion): Cuerpo {
+  const frase =
+    v.estado === "vendido"
+      ? `${mayuscula(elAuto(v))} ya se vendió. Si querés, te muestro otros parecidos.`
+      : `${mayuscula(elAuto(v))} figura como reservado por ahora. Si querés, te muestro otros parecidos.`;
+  return { mensajes: [texto(frase)], sugerencias: ["buscar", "marcos"], sesion: s, guion: guionNuevo(), lead: null, noEntendido: false };
+}
+
 const sinPaso = (s: Sesion): Sesion => {
   if (s.paso === "libre") return s;
   const copia = structuredClone(s);
@@ -254,6 +275,8 @@ function opcion(c: Ctx, op: OpcionId, sesion: Sesion, guion: Guion): Cuerpo {
       sugerencias: [],
     };
   }
+  const noEsta = OPCIONES_DE_COMPRA.has(op) ? autoNoDisponible(c, s) : null;
+  if (noEsta) return yaNoEsta(noEsta, s);
   const r = avanzarGuion(guion, { opcion: op }, ctxGuion(guion, autoDe(c, s.vehiculoActualId), c));
   if (r.mensajes.length === 0) {
     return { ...base, guion: guionNuevo(), mensajes: [texto(SIN_RESPUESTA)], sugerencias: chipsBase(c, s) };
@@ -351,6 +374,9 @@ function libre(c: Ctx, t: string, sesion: Sesion): Cuerpo {
   const hablaDeFinanciar =
     intenciones.includes("financiacion") && !intenciones.some((i) => NO_ARRANCAN_GUION.has(i));
   if (!hablaDeFinanciar || r.noEntendido || cuerpo.sesion.paso !== "libre") return cuerpo;
+  // "quiero financiarlo" sobre un vendido o reservado: no se arranca el guion (ni se ofrece simular ese auto).
+  const noEsta = autoNoDisponible(c, cuerpo.sesion);
+  if (noEsta) return yaNoEsta(noEsta, cuerpo.sesion);
 
   // "quiero financiarlo, tengo un bmw 2016 para entregar": la respuesta del motor y, abajo, la primera pregunta del
   // guion. El usado queda guardado para sumarlo al mensaje para Marcos.
@@ -377,7 +403,7 @@ export function responderWeb(
   const ahora = deps.ahora();
   const previo = normalizarEstado(estado, ahora);
   let sesion = previo?.sesion ?? sesionNueva(ahora);
-  const guion = previo?.guion ?? guionNuevo();
+  let guion = previo?.guion ?? guionNuevo();
 
   // 1. Página: un slug que no está en el catálogo se trata como el catálogo.
   const autoFicha = entrada.pagina === "ficha" && entrada.slug ? (catalogo.find((v) => v.slug === entrada.slug) ?? null) : null;
@@ -401,6 +427,10 @@ export function responderWeb(
     cuerpo = opcion(c, entrada.opcion, sesion, guion);
   } else {
     const t = sanearTexto(entrada.texto ?? "").trim();
+    // Un guion de financiar o usado sobre un auto que ya no está (cambió de ficha a un vendido) no sigue: el texto va
+    // al motor como charla libre (y "financiar" ahí tampoco arranca el guion para ese auto).
+    const cortado = (guion.flujo === "financiar" || guion.flujo === "usado") && autoNoDisponible(c, sesion) !== null;
+    if (cortado) guion = guionNuevo();
     const pendiente = preguntaPendiente(guion, ctxGuion(guion, autoDe(c, sesion.vehiculoActualId), c));
     if (t === "") {
       // Nada para leer: se repite lo que se estaba preguntando, o se invita a escribir.

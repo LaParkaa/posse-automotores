@@ -221,6 +221,90 @@ describe("cambio de ficha", () => {
   });
 });
 
+describe("autos vendidos o reservados: no se arma financiacion ni permuta por ellos", () => {
+  const XR150 = CAT.find((v) => v.id === "v-xr150")!;
+  const sinGuion = (s: SalidaAsistente) => {
+    expect(s.estado.guion.flujo).not.toBe("financiar");
+    expect(s.estado.guion.flujo).not.toBe("usado");
+    expect(cierreDe(s)).toBeUndefined();
+  };
+
+  it("vendido + 'quiero financiarlo' dice que se vendio y ofrece buscar", () => {
+    const s = responder({ pagina: "ficha", slug: PARTNER.slug, texto: "quiero financiarlo" });
+    sinGuion(s);
+    expect(todoElTexto(s)).toContain("ya se vendió");
+    expect(s.respuesta.sugerencias).toEqual(["buscar", "marcos"]);
+    expect(tarjetasDe(s).some((t) => t.botones.some((b) => b.titulo === "Simular mi plan"))).toBe(false);
+  });
+
+  it("vendido + opcion 'financiar'", () => {
+    const s = responder({ pagina: "ficha", slug: PARTNER.slug, opcion: "financiar" });
+    sinGuion(s);
+    expect(todoElTexto(s)).toContain("ya se vendió");
+    expect(s.respuesta.sugerencias).toEqual(["buscar", "marcos"]);
+  });
+
+  it("reservado + opcion 'financiar'", () => {
+    const s = responder({ pagina: "ficha", slug: XR150.slug, opcion: "financiar" });
+    sinGuion(s);
+    expect(todoElTexto(s)).toContain("reservad");
+    expect(s.respuesta.sugerencias).toEqual(["buscar", "marcos"]);
+  });
+
+  it("chips viejos (usado, ver_financiacion, anticipo, cuotas) sobre un vendido tampoco siguen el guion", () => {
+    const estado: EstadoWeb = {
+      sesion: { ...sesionNueva(AHORA), vehiculoActualId: PARTNER.id },
+      guion: { flujo: "financiar", paso: "cuotas", datos: { anticipo: "sin anticipo" } },
+      ficha: PARTNER.slug,
+    };
+    for (const opcion of ["usado", "ver_financiacion", "anticipo_hasta_3", "cuotas_24"] as const) {
+      const s = responder({ pagina: "ficha", slug: PARTNER.slug, opcion }, estado);
+      sinGuion(s);
+      expect(s.respuesta.sugerencias).toEqual(["buscar", "marcos"]);
+    }
+  });
+
+  it("si cambia a la ficha de un vendido en medio del guion de financiar, el guion no sigue", () => {
+    const estado: EstadoWeb = {
+      sesion: { ...sesionNueva(AHORA), vehiculoActualId: P206.id },
+      guion: { flujo: "financiar", paso: "anticipo", datos: {} },
+      ficha: P206.slug,
+    };
+    const s = responder({ pagina: "ficha", slug: PARTNER.slug, texto: "tengo 2 palos" }, estado);
+    sinGuion(s);
+    expect(todoElTexto(s)).toContain("ya se vendió");
+  });
+});
+
+describe("el estado de entrada no se modifica", () => {
+  it("inicio, paso de captacion, texto no entendido y pregunta suelta en el anticipo", () => {
+    const casos: [Entrada, EstadoWeb][] = [
+      [
+        { pagina: "ficha", slug: VENTO.slug, inicio: true },
+        { sesion: { ...sesionNueva(AHORA), vehiculoActualId: P206.id, paso: "pidiendo_telefono", lead: { nombre: "Ana" } }, guion: { flujo: null, paso: null, datos: {} }, ficha: P206.slug },
+      ],
+      [
+        { pagina: "catalogo", slug: null, texto: "Juan" },
+        { sesion: { ...sesionNueva(AHORA), paso: "pidiendo_nombre", lead: { motivo: "avisame cuando entre un gol" } }, guion: { flujo: null, paso: null, datos: {} } },
+      ],
+      [
+        { pagina: "catalogo", slug: null, texto: "asdkj qwe" },
+        { sesion: { ...sesionNueva(AHORA), fallos: 1, mostradosIds: ["v-206"] }, guion: { flujo: null, paso: null, datos: {} }, ficha: null },
+      ],
+      [
+        { pagina: "ficha", slug: P206.slug, texto: "cuánto sale" },
+        { sesion: { ...sesionNueva(AHORA), vehiculoActualId: P206.id }, guion: { flujo: "financiar", paso: "anticipo", datos: { usado: "Bmw 2016" } }, ficha: P206.slug },
+      ],
+    ];
+    for (const [entrada, estado] of casos) {
+      const antes = JSON.stringify(estado);
+      const s = responder(entrada, estado);
+      expect(JSON.stringify(estado)).toBe(antes);
+      expect(s.estado).not.toBe(estado);
+    }
+  });
+});
+
 describe("canal web: nada menciona Instagram en una charla entera", () => {
   it("captacion, financiacion, disponible y Marcos encadenando el estado", () => {
     const pasos: Entrada[] = [
