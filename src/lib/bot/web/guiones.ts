@@ -57,7 +57,7 @@ function cierre(detalle: string[], ctx: ContextoGuion): ResultadoGuion {
       texto(`Listo, armé el mensaje para ${ctx.negocio.secretaria}. Revisalo y tocá el botón para enviarlo por WhatsApp.`),
       { tipo: "cierre", texto: t, url, vehiculoSlug: ctx.vehiculo?.slug ?? null },
     ],
-    sugerencias: CHIPS_CIERRE,
+    sugerencias: [...CHIPS_CIERRE],
   };
 }
 
@@ -149,7 +149,7 @@ function sugerenciasDe(g: Guion, ctx: ContextoGuion): OpcionId[] {
         ? ["anticipo_solo_usado", "anticipo_hasta_3", "anticipo_mas_3"]
         : ["anticipo_sin", "anticipo_hasta_3", "anticipo_mas_3"];
     case "cuotas":
-      return CHIPS_CUOTAS;
+      return [...CHIPS_CUOTAS];
     case "confirmar":
       return ["confirmar_si", "ver_financiacion"];
     default:
@@ -206,7 +206,8 @@ export function avanzarGuion(
     return sinCambios(g);
   }
 
-  const dicho = (entrada.texto ?? "").trim().slice(0, MAX_RESPUESTA);
+  // Se corta por caracteres (no por unidades UTF-16): así nunca queda media pareja suplente.
+  const dicho = Array.from((entrada.texto ?? "").trim()).slice(0, MAX_RESPUESTA).join("").trim();
   if (!dicho) return sinCambios(g);
   switch (g.paso) {
     case "anticipo":

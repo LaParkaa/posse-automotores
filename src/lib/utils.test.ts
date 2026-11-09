@@ -185,4 +185,17 @@ describe("limpioParaLink", () => {
     expect(limpioParaLink(null, 5)).toBe("");
     expect(limpioParaLink("abcdef", 3)).toBe("abc");
   });
+
+  it("saca banderas, keycaps y caracteres de etiqueta", () => {
+    expect(limpioParaLink("vivo en \u{1F1E6}\u{1F1F7} ok 1️⃣", 50)).toBe("vivo en ok 1");
+    expect(limpioParaLink("bandera \u{1F3F4}\u{E0067}\u{E0062}\u{E007F} fin", 50)).toBe("bandera fin");
+  });
+
+  it("saca mitades de par suplente sueltas y deja los pares completos", () => {
+    expect(limpioParaLink("\ud800 hola", 50)).toBe("hola");
+    expect(limpioParaLink("hola \udc00", 50)).toBe("hola");
+    expect(limpioParaLink("a\ud83d😀b", 50)).toBe("ab");
+    expect(limpioParaLink("\u{1D7D9} ok", 50)).toBe("\u{1D7D9} ok");
+    expect(() => encodeURIComponent(limpioParaLink("x\ud800y\udc00z", 50))).not.toThrow();
+  });
 });

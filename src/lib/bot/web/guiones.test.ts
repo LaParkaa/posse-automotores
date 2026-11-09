@@ -66,6 +66,32 @@ describe("avanzarGuion: financiar", () => {
     expect(cierre.texto).toContain("Anticipo: tengo 2 palos.");
   });
 
+  it("un caracter astral justo en el tope de largo no rompe el link", () => {
+    const r1 = avanzarGuion(guionNuevo(), { opcion: "financiar" }, ctx);
+    const r2 = avanzarGuion(r1.guion, { texto: "a".repeat(199) + "\u{1D7D9}" + "x" }, ctx);
+    expect(Array.from(r2.guion.datos.anticipo ?? "")).toHaveLength(200);
+    const r3 = avanzarGuion(r2.guion, { opcion: "cuotas_12" }, ctx);
+    const cierre = ultimo(r3);
+    if (cierre.tipo !== "cierre") throw new Error("no es cierre");
+    expect(cierre.url.startsWith("https://wa.me/")).toBe(true);
+    expect(decodeURIComponent(cierre.url.split("text=")[1])).toBe(cierre.texto);
+  });
+
+  it("un suplente suelto que llega por JSON no tira error", () => {
+    const r1 = avanzarGuion(guionNuevo(), { opcion: "usado" }, ctx);
+    const r2 = avanzarGuion(r1.guion, { texto: "\ud800 hola" }, ctx);
+    const cierre = ultimo(r2);
+    if (cierre.tipo !== "cierre") throw new Error("no es cierre");
+    expect(cierre.texto).toContain("Tengo para entregar: hola.");
+    expect(decodeURIComponent(cierre.url.split("text=")[1])).toBe(cierre.texto);
+  });
+
+  it("las sugerencias no comparten arrays entre llamadas", () => {
+    const a = avanzarGuion(guionNuevo(), { opcion: "marcos" }, ctx).sugerencias;
+    a.push("buscar");
+    expect(avanzarGuion(guionNuevo(), { opcion: "marcos" }, ctx).sugerencias).toEqual(["seguir", "marcos"]);
+  });
+
   it("no muta el guion que recibe", () => {
     const g = avanzarGuion(guionNuevo(), { opcion: "financiar" }, ctx).guion;
     const copia = JSON.parse(JSON.stringify(g));

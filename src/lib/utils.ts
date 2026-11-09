@@ -74,7 +74,13 @@ const MAX_NOMBRE_EN_LINK = 80;
  */
 export function limpioParaLink(texto: string | null | undefined, max: number): string {
   const limpio = (texto ?? "")
-    .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\u{FE0F}\u{200D}]/gu, "")
+    // Mitades de par suplente sueltas (por ejemplo un lone surrogate que llega por JSON): encodeURIComponent tira error con ellas.
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "")
+    // Emojis, banderas (indicadores regionales), keycaps (U+20E3) y caracteres de etiqueta (banderas de regiones).
+    .replace(
+      /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu,
+      "",
+    )
     .replace(/\s+/g, " ")
     .trim();
   return Array.from(limpio).slice(0, max).join("").trim();

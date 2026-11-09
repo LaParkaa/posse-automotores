@@ -42,6 +42,22 @@ describe("armarMensajeMarcos", () => {
     expect(textoDe(r.url)).toBe(r.texto);
   });
 
+  it("saca banderas, keycaps y caracteres de etiqueta del texto y del link", () => {
+    const r = armarMensajeMarcos({ vehiculo: taos, detalle: ["vivo en \u{1F1E6}\u{1F1F7} ok 1️⃣ y \u{1F3F4}\u{E0067}\u{E007F} listo."] });
+    expect(r.texto).toContain("vivo en ok 1 y listo.");
+    expect(r.url).not.toMatch(/%F0%9F%87|%E2%83%A3|%F3%A0|%EF%B8%8F/i);
+    expect(textoDe(r.url)).toBe(r.texto);
+  });
+
+  it("con pares suplentes sueltos no tira error y el link sigue siendo válido", () => {
+    for (const [sucio, esperado] of [["\ud800 hola", "hola"], ["hola \udc00", "hola"], ["x\ud83dy", "xy"]]) {
+      const r = armarMensajeMarcos({ vehiculo: taos, detalle: [sucio] });
+      expect(r.url.startsWith(`https://wa.me/${WHATSAPP_LOCAL}?text=`)).toBe(true);
+      expect(textoDe(r.url)).toBe(r.texto);
+      expect(r.texto).toContain(`Me interesa el Volkswagen Taos 2022. ${esperado} ¿Sigue disponible?`);
+    }
+  });
+
   it("si el detalle es larguísimo el link queda en 1700 o menos y no corta un %XX", () => {
     const r = armarMensajeMarcos({ vehiculo: taos, detalle: ["Tengo para entregar: " + "a".repeat(500)] });
     expect(r.url.length).toBeLessThanOrEqual(1700);
