@@ -60,6 +60,13 @@ describe("resumir", () => {
     expect(r.autos).toEqual([{ slug: "gol-2010", nombre: "Volkswagen Gol Power 1.6", visitas: 2, consultas: 0, simulaciones: 0 }]);
   });
 
+  it("los eventos del chat no se mezclan con visitas, consultas ni simulaciones", () => {
+    const r = resumir([ev("chat_abrio"), ev("chat_whatsapp")], AUTOS, 7, AHORA);
+
+    expect([r.visitas, r.consultas, r.simulaciones]).toEqual([0, 0, 0]);
+    expect(r.autos).toEqual([]);
+  });
+
   it("ordena los autos por consultas, despues simulaciones y despues visitas", () => {
     const r = resumir(
       [
