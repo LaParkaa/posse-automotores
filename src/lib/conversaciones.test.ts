@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { postulacionIntro, postulacionListo } from "./bot/textos";
 import {
-  armarConversaciones, esCierrePostulacion, fechaHora, filtroDeUrl, nombreDeConversacion, resumirBot,
+  armarConversaciones, esCierrePostulacion, fechaHora, filtroDeUrl, nombreDeConversacion, resumirBot, ventanaDeDias,
   type LeadIg, type MensajeIg,
 } from "./conversaciones";
 
@@ -96,6 +96,15 @@ describe("resumirBot", () => {
 
     expect(r.porDia.find((d) => d.dia === "2026-10-27")?.personas).toBe(1);
     expect(r.personas).toBe(1);
+  });
+});
+
+describe("ventanaDeDias", () => {
+  it("desde es la medianoche argentina del primer día: ese instante entra y un segundo antes no", () => {
+    const v = ventanaDeDias(3, AHORA);
+    expect(v.desde).toBe("2026-10-25T03:00:00.000Z");
+    expect(v.enVentana(v.desde)).toBe(true);
+    expect(v.enVentana("2026-10-25T02:59:59.000Z")).toBe(false);
   });
 });
 

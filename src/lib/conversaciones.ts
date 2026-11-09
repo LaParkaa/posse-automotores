@@ -1,4 +1,4 @@
-import { toArDay } from "./metrics";
+import { AR_OFFSET_MS, toArDay } from "./metrics";
 
 /**
  * Conversaciones del bot de Instagram para el admin: la lista de personas, los números del bot y el reconocimiento
@@ -77,6 +77,8 @@ export function ventanaDeDias(dias: number, ahora: string) {
   const hoy = toArDay(ahora).getTime();
   const primero = hoy - (dias - 1) * DIA_MS;
   return {
+    /** El instante (ISO) en que empieza el primer día: su medianoche argentina. Sirve para cortar una consulta. */
+    desde: new Date(primero + AR_OFFSET_MS).toISOString(),
     /** Una entrada por día, del más viejo al de hoy. */
     dias: Array.from({ length: dias }, (_, i) => {
       const d = new Date(primero + i * DIA_MS);

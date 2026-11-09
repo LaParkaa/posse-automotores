@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cargarDatosWeb, traerChatWeb } from "./bot-datos";
 
 type Llamada = { metodo: string; args: unknown[] };
@@ -125,6 +125,29 @@ describe("cargarDatosWeb", () => {
   it("un conteo de leads nulo cuenta como cero", async () => {
     const { db } = dbFalsa((tabla) => (tabla === "leads" ? { count: null, error: null } : { data: [], error: null }));
     expect((await cargarDatosWeb(db, 7)).leadsWeb).toBe(0);
+  });
+});
+
+describe("cargarDatosWeb: corte de los leads", () => {
+  afterEach(() => vi.useRealTimers());
+
+  const gteDeLeads = async (dias: number) => {
+    const { db, consultas } = dbFalsa((tabla) => (tabla === "leads" ? { count: 1, error: null } : { data: [], error: null }));
+    await cargarDatosWeb(db, dias);
+    return desde(consultas.find((c) => c.tabla === "leads")!.llamadas, "gte");
+  };
+
+  it("cuenta los leads desde la medianoche argentina del primer día, igual que el resto del resumen", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-10T15:00:00.000Z")); // 12:00 en Argentina
+    expect(await gteDeLeads(1)).toEqual([["created_at", "2026-11-10T03:00:00.000Z"]]);
+    expect(await gteDeLeads(3)).toEqual([["created_at", "2026-11-08T03:00:00.000Z"]]);
+  });
+
+  it("justo después de la medianoche argentina el día de hoy recién empieza", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-10T03:05:00.000Z")); // 00:05 en Argentina
+    expect(await gteDeLeads(1)).toEqual([["created_at", "2026-11-10T03:00:00.000Z"]]);
   });
 });
 

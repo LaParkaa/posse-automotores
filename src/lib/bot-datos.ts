@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventoChat, MensajeWebFila } from "./bot/web/estadisticas";
-import type { LeadIg, MensajeIg, PerfilIg } from "./conversaciones";
+import { ventanaDeDias, type LeadIg, type MensajeIg, type PerfilIg } from "./conversaciones";
 
 /**
  * Lectura de las tablas del bot para el admin (solo servidor, con la clave de servicio). Todo se calcula en cada
@@ -94,7 +94,7 @@ export async function dejoDatos(db: SupabaseClient, igUserId: string): Promise<b
 export type DatosWeb = {
   mensajes: MensajeWebFila[];
   eventos: EventoChat[];
-  /** Leads que dejaron sus datos desde la página (desde un día antes del período: el corte fino es en hora argentina). */
+  /** Leads que dejaron sus datos desde la página (desde la medianoche argentina del primer día, el mismo corte que el resto del resumen). */
   leadsWeb: number;
   /** Hubo más filas que el tope: se muestran las más recientes. */
   truncado: boolean;
@@ -135,6 +135,8 @@ async function contarLeadsWeb(db: SupabaseClient, desde: string): Promise<number
 export async function cargarDatosWeb(db: SupabaseClient, dias: number): Promise<DatosWeb> {
   // Un día de más: el corte exacto se hace después, en hora argentina.
   const desde = haceDias(dias + 1);
+  // Los leads solo llegan como número, así que se cortan ya en la consulta, en el mismo instante que `enVentana`.
+  const desdeLeads = ventanaDeDias(dias, new Date().toISOString()).desde;
   const [mensajes, eventos, leadsWeb] = await Promise.all([
     traerPaginado<MensajeWebFila>(
       (a, b) =>
@@ -152,7 +154,7 @@ export async function cargarDatosWeb(db: SupabaseClient, dias: number): Promise<
           .range(a, b),
       "No se pudieron leer los eventos",
     ),
-    contarLeadsWeb(db, desde),
+    contarLeadsWeb(db, desdeLeads),
   ]);
   return {
     mensajes: mensajes.filas,
