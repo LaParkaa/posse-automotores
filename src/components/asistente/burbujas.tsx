@@ -126,7 +126,7 @@ export function BurbujaChat({ burbuja }: { burbuja: Burbuja }) {
       <DelAsistente>
         <div className="-mr-3 flex snap-x gap-2.5 overflow-x-auto pb-1 pr-3">
           {mensaje.tarjetas.map((t, i) => (
-            <TarjetaAuto key={t.slug ?? i} tarjeta={t} />
+            <TarjetaAuto key={`${i}-${t.slug ?? "x"}`} tarjeta={t} />
           ))}
         </div>
       </DelAsistente>

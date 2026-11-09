@@ -40,3 +40,27 @@ export function idDeVisitanteChat(o: {
     o.nuevo()
   );
 }
+
+type Azar = { randomUUID?: () => string; getRandomValues?: <T extends ArrayBufferView | null>(a: T) => T };
+
+/**
+ * Id nuevo al azar. `crypto.randomUUID` solo existe en contextos seguros (https o localhost): probando por la red
+ * local con http no está, así que se cae a `getRandomValues` y, en último caso, a `Math.random`. Nunca lanza.
+ */
+export function idAlAzar(c: Azar | undefined = globalThis.crypto): string {
+  try {
+    if (c?.randomUUID) return c.randomUUID();
+  } catch {
+    /* sigue con lo siguiente */
+  }
+  const bytes = new Uint8Array(16);
+  try {
+    if (c?.getRandomValues) c.getRandomValues(bytes);
+    else throw new Error("sin getRandomValues");
+  } catch {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  // Con getRandomValues falso (tests) los bytes quedan en 0: se mezcla la hora para que igual cambie.
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+}

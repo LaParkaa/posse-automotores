@@ -11,12 +11,14 @@ import {
   guardarChatEnSesion,
   leerRespuesta,
   marcarGloboMostrado,
+  necesitaSaludo,
   reducirChat,
 } from "./estado";
 import { AvatarRobot } from "./robot";
-import { idDeVisitanteChat } from "./visitante";
+import { idAlAzar, idDeVisitanteChat } from "./visitante";
 
-// La ventana (y con ella la foto del robot) se baja recién cuando la persona abre el chat.
+// La ventana se baja recién cuando la persona abre el chat. La cara del robot del botón es una versión chica y
+// diferida (sin `priority`), así no demora el primer pintado de la página.
 const Ventana = dynamic(() => import("./ventana").then((m) => m.Ventana), { ssr: false });
 
 const ID_VENTANA = "asistente-posse";
@@ -60,15 +62,12 @@ function registrarApertura(slug: string | null) {
 export function Asistente({ pagina, slug = null }: { pagina: Pagina; slug?: string | null }) {
   const [estado, despachar] = useReducer(reducirChat, estadoInicial);
   const [globo, setGlobo] = useState(false);
-  const [abrioAhora, setAbrioAhora] = useState(false);
   const lanzador = useRef<HTMLButtonElement>(null);
   const visitante = useRef<string | null>(null);
   const enVuelo = useRef(false);
   const abierto = useRef(false);
   const restaurado = useRef(false);
   const slugDeFicha = pagina === "ficha" ? slug : null;
-  // La foto del robot se baja recién cuando la persona ya usó el chat en esta pestaña.
-  const usado = abrioAhora || estado.burbujas.length > 0;
 
   // Guarda la charla en la pestaña. Va antes que la restauración y saltea el estado inicial: nunca pisa lo guardado
   // con una charla vacía (tampoco con el doble montaje de React en desarrollo).
@@ -102,7 +101,7 @@ export function Asistente({ pagina, slug = null }: { pagina: Pagina; slug?: stri
       local: almacen("localStorage"),
       sesion: almacen("sessionStorage"),
       crear: navigator.doNotTrack !== "1",
-      nuevo: () => crypto.randomUUID(),
+      nuevo: () => idAlAzar(),
     });
     return visitante.current;
   }, []);
@@ -126,7 +125,7 @@ export function Asistente({ pagina, slug = null }: { pagina: Pagina; slug?: stri
         });
         const respuesta = r.status === 200 ? leerRespuesta(await r.json()) : null;
         if (!respuesta) throw new Error("respuesta inválida");
-        despachar({ tipo: "recibir", respuesta, ...("inicio" in cuerpo ? { saludo: true as const } : {}) });
+        despachar({ tipo: "recibir", respuesta });
       } catch {
         despachar({ tipo: "fallo", negocio: { whatsappUrl: buildWhatsAppUrlWeb(null) } });
       } finally {
@@ -139,14 +138,13 @@ export function Asistente({ pagina, slug = null }: { pagina: Pagina; slug?: stri
 
   const abrir = () => {
     setGlobo(false);
-    setAbrioAhora(true);
     const s = almacen("sessionStorage");
     if (s) marcarGloboMostrado(s);
     if (estado.abierto) return;
     despachar({ tipo: "abrir" });
     registrarApertura(slugDeFicha);
-    // El saludo (con la tarjeta del auto) sale la primera vez que se abre en la pestaña.
-    if (!estado.saludado && !estado.pendiente && !enVuelo.current) {
+    // El saludo (con la tarjeta del auto) sale la primera vez que se abre en la pestaña, nunca a mitad de una charla.
+    if (necesitaSaludo(estado) && !enVuelo.current) {
       despachar({ tipo: "iniciar" });
       void pedir({ inicio: true });
     }
@@ -197,7 +195,7 @@ export function Asistente({ pagina, slug = null }: { pagina: Pagina; slug?: stri
         aria-controls={estado.abierto ? ID_VENTANA : undefined}
         className="fixed bottom-5 right-5 z-50 flex size-15 items-center justify-center rounded-full bg-gradient-to-b from-[#24365e] to-[#0f1729] shadow-[0_4px_20px_rgba(201,162,39,0.35)] ring-2 ring-car-gold/70 transition-transform hover:scale-105 sm:bottom-7 sm:right-7"
       >
-        {usado ? <AvatarRobot tam={56} className="ring-0" /> : <RobotDibujado />}
+        <AvatarRobot tam={56} className="ring-0" />
         <span className="absolute right-0.5 top-0.5 size-3.5 rounded-full border-2 border-car-black bg-[#25D366]" aria-hidden="true" />
       </button>
 
@@ -210,23 +208,5 @@ export function Asistente({ pagina, slug = null }: { pagina: Pagina; slug?: stri
         />
       )}
     </>
-  );
-}
-
-/** Cara del robot en SVG para el botón cerrado: no baja la foto hasta que la persona abre el chat. */
-function RobotDibujado() {
-  return (
-    <svg viewBox="0 0 48 48" className="size-11" aria-hidden="true">
-      <path d="M24 3v4" stroke="#9fb8e8" strokeWidth="2" strokeLinecap="round" />
-      <rect x="6" y="7" width="36" height="32" rx="14" fill="#e8edf7" />
-      <rect x="5" y="17" width="4" height="10" rx="2" fill="#3b6fd1" />
-      <rect x="39" y="17" width="4" height="10" rx="2" fill="#3b6fd1" />
-      <rect x="11" y="13" width="26" height="20" rx="9" fill="#0b1020" />
-      <circle cx="18.5" cy="21" r="3.6" fill="#5fb0ff" />
-      <circle cx="29.5" cy="21" r="3.6" fill="#5fb0ff" />
-      <circle cx="19.5" cy="20" r="1.2" fill="#fff" />
-      <circle cx="30.5" cy="20" r="1.2" fill="#fff" />
-      <path d="M18.5 27.5q5.5 3.5 11 0" stroke="#5fb0ff" strokeWidth="2" fill="none" strokeLinecap="round" />
-    </svg>
   );
 }

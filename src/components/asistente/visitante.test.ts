@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLAVE_VISITANTE, CLAVE_VISITANTE_TEMPORAL, idDeVisitanteChat } from "./visitante";
+import { CLAVE_VISITANTE, CLAVE_VISITANTE_TEMPORAL, idAlAzar, idDeVisitanteChat } from "./visitante";
 
 const storageFalso = (inicial: Record<string, string> = {}) => {
   const datos = new Map(Object.entries(inicial));
@@ -68,5 +68,35 @@ describe("idDeVisitanteChat", () => {
   it("sin ningún storage devuelve uno nuevo", () => {
     expect(idDeVisitanteChat({ local: null, sesion: null, crear: true, nuevo })).toBe(OTRO);
     expect(idDeVisitanteChat({ local: storageRoto, sesion: storageRoto, crear: true, nuevo })).toBe(OTRO);
+  });
+});
+
+describe("idAlAzar", () => {
+  const FORMATO = /^[A-Za-z0-9-]{8,64}$/;
+
+  it("usa randomUUID si está", () => {
+    expect(idAlAzar({ randomUUID: () => ID })).toBe(ID);
+  });
+
+  it("sin randomUUID (http en la red local) usa getRandomValues", () => {
+    const id = idAlAzar({ getRandomValues: <T extends ArrayBufferView | null>(a: T) => a });
+    expect(id).toMatch(FORMATO);
+  });
+
+  it("sin crypto no lanza y respeta el formato", () => {
+    expect(idAlAzar(undefined)).toMatch(FORMATO);
+    const a = idAlAzar({});
+    const b = idAlAzar({});
+    expect(a).toMatch(FORMATO);
+    expect(a).not.toBe(b);
+  });
+
+  it("si randomUUID lanza, cae al siguiente", () => {
+    const roto = {
+      randomUUID: (): string => {
+        throw new Error("no");
+      },
+    };
+    expect(idAlAzar(roto)).toMatch(FORMATO);
   });
 });

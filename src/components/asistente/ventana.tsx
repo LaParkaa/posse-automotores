@@ -25,9 +25,9 @@ export function Ventana({ id, estado, onCerrar, onEnviar }: Props) {
   const lista = useRef<HTMLDivElement>(null);
   const { burbujas, sugerencias, pendiente } = estado;
 
-  // Foco al campo al abrir; Esc cierra desde cualquier lado de la página.
+  // Foco al campo al abrir (en pantallas táctiles no: el teclado taparía el saludo). Esc cierra desde cualquier lado.
   useEffect(() => {
-    campo.current?.focus({ preventScroll: true });
+    if (!window.matchMedia("(pointer: coarse)").matches) campo.current?.focus({ preventScroll: true });
     const alTeclear = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCerrar();
     };

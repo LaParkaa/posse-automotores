@@ -6,6 +6,7 @@ import {
   guardarChatEnSesion,
   leerChatGuardado,
   leerRespuesta,
+  necesitaSaludo,
   marcarGloboMostrado,
   reducirChat,
   serializarChat,
@@ -249,13 +250,28 @@ describe("reducirChat: saludo y restauración", () => {
     expect(reducirChat(pendiente, { tipo: "iniciar" })).toBe(pendiente);
   });
 
-  it("recibir con saludo marca saludado; sin saludo no lo toca", () => {
+  it("cualquier respuesta buena marca saludado", () => {
     const iniciado = reducirChat(estadoInicial, { tipo: "iniciar" });
-    const con = reducirChat(iniciado, { tipo: "recibir", respuesta, saludo: true });
+    const con = reducirChat(iniciado, { tipo: "recibir", respuesta });
     expect(con.saludado).toBe(true);
     expect(con.pendiente).toBe(false);
     expect(con.burbujas).toHaveLength(1);
-    expect(reducirChat(iniciado, { tipo: "recibir", respuesta }).saludado).toBe(false);
+  });
+
+  it("si el saludo falló pero después charló bien, no se saluda en el medio de la charla", () => {
+    let e = reducirChat(estadoInicial, { tipo: "iniciar" });
+    e = reducirChat(e, { tipo: "fallo", negocio: { whatsappUrl: WA } });
+    expect(necesitaSaludo(e)).toBe(true);
+    e = reducirChat(e, { tipo: "enviar", texto: "bmw" });
+    e = reducirChat(e, { tipo: "recibir", respuesta });
+    expect(necesitaSaludo(e)).toBe(false);
+    expect(reducirChat(e, { tipo: "iniciar" })).toBe(e);
+  });
+
+  it("una charla restaurada con mensajes del cliente no se vuelve a saludar aunque diga saludado:false", () => {
+    const e = { ...estadoInicial, burbujas: [{ id: "b0", de: "cliente" as const, mensaje: { tipo: "texto" as const, texto: "hola" } }] };
+    expect(necesitaSaludo(e)).toBe(false);
+    expect(reducirChat(e, { tipo: "iniciar" })).toBe(e);
   });
 
   it("si el saludo falla, sigue sin saludar (se reintenta en la próxima apertura)", () => {

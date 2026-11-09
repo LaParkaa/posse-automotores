@@ -25,8 +25,8 @@ export type AccionChat =
   | { tipo: "enviar"; texto: string }
   /** Pide el saludo (`inicio`): queda pendiente sin burbuja del cliente. */
   | { tipo: "iniciar" }
-  /** `saludo: true` cuando es la respuesta al `inicio`: desde ahí no se vuelve a saludar en la pestaña. */
-  | { tipo: "recibir"; respuesta: RespuestaChat; saludo?: true }
+  /** Cualquier respuesta buena cuenta como saludo: no se saluda en el medio de una charla. */
+  | { tipo: "recibir"; respuesta: RespuestaChat }
   | { tipo: "fallo"; negocio: { whatsappUrl: string } }
   /** Lo leído de sessionStorage al montar; no pisa una charla que ya empezó. */
   | { tipo: "restaurar"; guardado: EstadoChat };
@@ -72,6 +72,14 @@ function agregar(burbujas: Burbuja[], nuevas: Omit<Burbuja, "id">[]): Burbuja[] 
   return [...burbujas, ...nuevas.map((b) => ({ id: `b${n++}`, ...b }))];
 }
 
+/**
+ * El saludo (con la tarjeta del auto) va una sola vez, al principio: no si ya saludó, si hay algo en curso o si la
+ * persona ya escribió (por ejemplo, el primer saludo falló y después charló bien).
+ */
+export function necesitaSaludo(e: EstadoChat): boolean {
+  return !e.saludado && !e.pendiente && !e.burbujas.some((b) => b.de === "cliente");
+}
+
 export function reducirChat(e: EstadoChat, a: AccionChat): EstadoChat {
   switch (a.tipo) {
     case "abrir":
@@ -86,13 +94,12 @@ export function reducirChat(e: EstadoChat, a: AccionChat): EstadoChat {
         burbujas: agregar(e.burbujas, [{ de: "cliente", mensaje: { tipo: "texto", texto: a.texto } }]),
       };
     case "iniciar":
-      if (e.pendiente || e.saludado) return e;
-      return { ...e, pendiente: true };
+      return necesitaSaludo(e) ? { ...e, pendiente: true } : e;
     case "recibir":
       return {
         ...e,
         pendiente: false,
-        saludado: e.saludado || a.saludo === true,
+        saludado: true,
         sugerencias: a.respuesta.sugerencias,
         burbujas: agregar(
           e.burbujas,
