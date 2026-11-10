@@ -50,7 +50,7 @@ function frase(etiqueta: string, dicho: string): string {
 }
 
 function cierre(detalle: string[], ctx: ContextoGuion): ResultadoGuion {
-  const { texto: t, url } = armarMensajeMarcos({ vehiculo: ctx.vehiculo, detalle });
+  const { texto: t, url } = armarMensajeMarcos({ vehiculo: ctx.vehiculo, detalle, estado: ctx.vehiculo?.estado });
   return {
     guion: guionNuevo(),
     mensajes: [

@@ -1,4 +1,5 @@
 import { vistaPrevia, ventanaDeDias, type ConversacionResumen } from "../../conversaciones";
+import { ultimoAutoConsultado } from "../../conversaciones-canal";
 import type { TipoEvento } from "../../eventos";
 
 /**
@@ -146,7 +147,7 @@ export function resumirBotWeb(a: {
   };
 }
 
-/** Una fila por visitante, la conversación más reciente primero. Nadie tiene nombre: es "Visitante". */
+/** Una fila por visitante, la conversación más reciente primero. Nadie tiene nombre: es "Visitante", con el último auto de la charla. */
 export function armarConversacionesWeb(mensajes: MensajeWebFila[], conDatos: Set<string>): ConversacionResumen[] {
   const porVisitante = new Map<string, MensajeWebFila[]>();
   for (const m of mensajes) {
@@ -172,6 +173,7 @@ export function armarConversacionesWeb(mensajes: MensajeWebFila[], conDatos: Set
       noEntendidos: orden.filter((m) => m.role === "user" && m.nota === "no_entendido").length,
       postulo: orden.some((m) => m.tipo === "cierre"),
       dejoDatos: conDatos.has(id),
+      autoConsultado: ultimoAutoConsultado(orden),
     });
   }
   return filas.sort((x, y) => y.ultimoMensaje.localeCompare(x.ultimoMensaje));

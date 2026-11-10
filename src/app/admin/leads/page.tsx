@@ -1,6 +1,7 @@
 import { requireAdminSession } from "@/lib/auth";
 import { createAdminSupabaseClient } from "@/lib/supabase";
 import { AdminShell } from "@/components/admin-shell";
+import { origenDeLead } from "@/lib/lead-origen";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function LeadsPage() {
     <AdminShell>
       <div className="mb-6">
         <h1 className="font-condensed text-3xl font-black italic text-car-white">Leads</h1>
-        <p className="mt-1 text-sm text-car-muted">Clientes captados por el bot de Instagram y WhatsApp</p>
+        <p className="mt-1 text-sm text-car-muted">Clientes captados por el bot de Instagram, el asistente de la página y WhatsApp</p>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-white/10">
@@ -58,7 +59,7 @@ export default async function LeadsPage() {
                   {lead.origen === "instagram" ? (
                     <span title={`ID de Instagram: ${lead.instagram_id}`}>Instagram</span>
                   ) : (
-                    "WhatsApp"
+                    origenDeLead(lead.origen)
                   )}
                 </td>
                 <td className="px-4 py-3 text-car-muted">{lead.vehiculo_interes ?? "—"}</td>

@@ -46,7 +46,7 @@ function crear(over: Partial<DepsChat> = {}): Fakes {
     guardarMensajes: vi.fn(async (_v: string, f: FilaMensajeWeb[]) => {
       filas.push(...f);
     }),
-    contar: vi.fn(async (_desde: Date, _visitante?: string) => 0),
+    contar: vi.fn(async () => 0),
     guardarLead: vi.fn(async (_v: string, l: LeadInput) => {
       leads.push(l);
     }),
@@ -135,6 +135,19 @@ describe("camino feliz", () => {
       vehiculo_slug: null,
       nota: "no_entendido",
     });
+  });
+
+  it("desde el catálogo, el auto del que se habló queda en la fila del cliente", async () => {
+    const bmw = { ...CATALOGO[0], id: "v-bmw", slug: "bmw-320i-2018", nombre: "BMW 320i", marca: "BMW", modelo: "320i", anio: 2018 };
+    const f = crear({ catalogo: async () => [...CATALOGO, bmw] });
+    await procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "bmw" }, f.deps);
+    expect(f.filas[0].vehiculo_slug).toBe("bmw-320i-2018");
+  });
+
+  it("desde el catálogo y sin hablar de ningún auto, la fila del cliente no lleva auto", async () => {
+    const f = crear();
+    await procesarChat({ visitante: V, pagina: "catalogo", slug: null, texto: "hola" }, f.deps);
+    expect(f.filas[0].vehiculo_slug).toBeNull();
   });
 
   it("texto libre entendido: sin nota", async () => {
@@ -336,7 +349,7 @@ describe("lead", () => {
 
   it("un lead no nulo se guarda con guardarLead", async () => {
     const f = crear();
-    const r = await hastaElLead(f);
+    await hastaElLead(f);
     expect(f.mocks.guardarLead).toHaveBeenCalledTimes(1);
     expect(f.mocks.guardarLead.mock.calls[0][0]).toBe(V);
     expect(f.leads[0].nombre).toBe("Juan");

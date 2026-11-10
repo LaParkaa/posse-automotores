@@ -26,6 +26,15 @@ describe("armarMensajeMarcos", () => {
     expect(r.texto).not.toContain("¿Sigue disponible?");
   });
 
+  it("si el auto no está disponible no pregunta si sigue disponible", () => {
+    for (const estado of ["vendido", "reservado"] as const) {
+      const r = armarMensajeMarcos({ vehiculo: taos, detalle: ["Quiero financiarlo."], estado });
+      expect(r.texto).toBe("Hola Marcos, te escribo desde la web. Me interesa el Volkswagen Taos 2022. Quiero financiarlo.");
+      expect(textoDe(r.url)).toBe(r.texto);
+    }
+    expect(armarMensajeMarcos({ vehiculo: taos, detalle: [], estado: "disponible" }).texto).toContain("¿Sigue disponible?");
+  });
+
   it("usa 'la' para las motos", () => {
     const r = armarMensajeMarcos({ vehiculo: { nombre: "Honda XR 150", anio: 2022, tipo: "Moto", slug: "x" }, detalle: [] });
     expect(r.texto).toContain("Me interesa la Honda XR 150 2022.");

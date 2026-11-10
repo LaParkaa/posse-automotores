@@ -12,11 +12,14 @@ export function ListaConversaciones({
   filtro,
   dias,
   canal = "instagram",
+  nombresAutos = {},
 }: {
   conversaciones: ConversacionResumen[];
   filtro: FiltroConversaciones;
   dias: number;
   canal?: Canal;
+  /** Slug a nombre del auto (solo la web); si falta el nombre se muestra el slug. */
+  nombresAutos?: Record<string, string>;
 }) {
   const web = canal === "web";
   const etiquetas = ETIQUETAS_CANAL[canal];
@@ -55,6 +58,9 @@ export function ListaConversaciones({
                   <p className="font-semibold text-car-white">{c.nombre}</p>
                   <p className="shrink-0 text-xs text-car-muted">{fechaHora(c.ultimoMensaje)}</p>
                 </div>
+                {c.autoConsultado && (
+                  <p className="mt-0.5 truncate text-xs text-car-gold">Auto: {nombresAutos[c.autoConsultado] || c.autoConsultado}</p>
+                )}
                 <p className="mt-1 truncate text-sm text-car-muted">
                   <span className="text-car-white/60">{c.ultimoEsDelCliente ? `${etiquetas.cliente}: ` : `${etiquetas.bot}: `}</span>
                   {c.ultimoTexto}

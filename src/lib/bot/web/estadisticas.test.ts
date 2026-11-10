@@ -231,6 +231,19 @@ describe("armarConversacionesWeb", () => {
     expect(r[0]).toMatchObject({ noEntendidos: 1, dejoDatos: false, postulo: false, ultimoEsDelCliente: true });
   });
 
+  it("autoConsultado es el último auto con slug de cada visitante, y nada si no hubo ninguno", () => {
+    const mensajes = [
+      msg("a", { created_at: "2026-11-10T10:00:00.000Z", vehiculo_slug: "bmw-320i-2018" }),
+      msg("a", { created_at: "2026-11-10T10:01:00.000Z", role: "assistant" }),
+      msg("a", { created_at: "2026-11-10T10:02:00.000Z", vehiculo_slug: "peugeot-206-1-6-2011" }),
+      msg("a", { created_at: "2026-11-10T10:03:00.000Z", role: "assistant" }),
+      msg("b", { created_at: "2026-11-10T11:00:00.000Z" }),
+    ];
+    const r = armarConversacionesWeb(mensajes, new Set());
+    expect(r.find((c) => c.id === "a")?.autoConsultado).toBe("peugeot-206-1-6-2011");
+    expect(r.find((c) => c.id === "b")?.autoConsultado).toBeNull();
+  });
+
   it("sin mensajes devuelve una lista vacía", () => {
     expect(armarConversacionesWeb([], new Set())).toEqual([]);
   });

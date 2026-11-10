@@ -138,6 +138,20 @@ describe("avanzarGuion: disponible", () => {
     expect(r.guion).toEqual(guionNuevo());
   });
 
+  it("vendido o reservado: Hablar con Marcos no pregunta si sigue disponible", () => {
+    for (const estado of ["vendido", "reservado"] as const) {
+      const r = avanzarGuion(guionNuevo(), { opcion: "marcos" }, conEstado(estado));
+      const cierre = ultimo(r);
+      if (cierre.tipo !== "cierre") throw new Error("no es cierre");
+      expect(cierre.texto).toContain("Me interesa el Volkswagen Vento");
+      expect(cierre.texto).not.toContain("¿Sigue disponible?");
+    }
+    const r = avanzarGuion(guionNuevo(), { opcion: "marcos" }, conEstado("disponible"));
+    const cierre = ultimo(r);
+    if (cierre.tipo !== "cierre") throw new Error("no es cierre");
+    expect(cierre.texto).toContain("¿Sigue disponible?");
+  });
+
   it("reservado: lo dice", () => {
     const r = avanzarGuion(guionNuevo(), { opcion: "disponible" }, conEstado("reservado"));
     expect(textos(r).join(" ")).toContain("reservado");

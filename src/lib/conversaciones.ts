@@ -152,6 +152,8 @@ export type ConversacionResumen = {
   noEntendidos: number;
   postulo: boolean;
   dejoDatos: boolean;
+  /** Solo la página web: slug del último auto de la charla (null si no hubo ninguno). Instagram no lo usa. */
+  autoConsultado?: string | null;
 };
 
 const MAX_VISTA_PREVIA = 90;

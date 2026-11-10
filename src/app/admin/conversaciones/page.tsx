@@ -128,6 +128,7 @@ export default async function ConversacionesPage({
                 filtro={filtro}
                 dias={dias}
                 canal="web"
+                nombresAutos={nombresAutos}
               />
 
               <p className="text-xs leading-5 text-car-muted">

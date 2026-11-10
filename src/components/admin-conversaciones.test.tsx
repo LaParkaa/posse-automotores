@@ -49,6 +49,29 @@ describe("ListaConversaciones", () => {
     expect(html).toContain("Visitante: ");
   });
 
+  it("en la web muestra el auto consultado con su nombre, o con la dirección si no hay nombre", () => {
+    const lista = (nombres?: Record<string, string>) =>
+      renderToStaticMarkup(
+        <ListaConversaciones
+          conversaciones={[conv({ autoConsultado: "bmw-320i-2018" })]}
+          filtro="todas"
+          dias={7}
+          canal="web"
+          nombresAutos={nombres}
+        />,
+      );
+    expect(lista({ "bmw-320i-2018": "BMW 320i" })).toContain("BMW 320i");
+    expect(lista({})).toContain("bmw-320i-2018");
+    expect(
+      renderToStaticMarkup(<ListaConversaciones conversaciones={[conv({ autoConsultado: null })]} filtro="todas" dias={7} canal="web" />),
+    ).not.toContain("Auto: ");
+  });
+
+  it("Instagram queda igual: no muestra ningún auto", () => {
+    const html = renderToStaticMarkup(<ListaConversaciones conversaciones={[conv({})]} filtro="todas" dias={30} />);
+    expect(html).not.toContain("Auto: ");
+  });
+
   it("la web ofrece el filtro Dejaron sus datos y marca la conversación que los dejó", () => {
     const html = renderToStaticMarkup(<ListaConversaciones conversaciones={[conv({ dejoDatos: true })]} filtro="datos" dias={7} canal="web" />);
     expect(html).toContain('href="/admin/conversaciones?dias=7&amp;filtro=datos&amp;canal=web"');

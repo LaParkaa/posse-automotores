@@ -68,6 +68,7 @@ const LARGO_RESPUESTA_MINIMO = 20;
 const PASO_ACHICAR = 20;
 const MAX_NOMBRE_EN_LINK = 80;
 
+// Usa un regex con lookbehind (no lo soporta Safari viejo de iOS): se usa solo del lado del servidor, no importarla desde componentes de cliente.
 /**
  * Lo que escribio el candidato, apto para el link: sin emojis ni simbolos (WhatsApp no los interpreta bien
  * al abrir el link desde Instagram y salen como "?"), sin invisibles, en una sola linea y con tope de largo.

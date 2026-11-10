@@ -176,6 +176,11 @@ async function procesar(pedido: PedidoChat, deps: DepsChat, ctl: { vivo: boolean
 
   // 5. Persistencia: cada parte por separado, para que una falla no tire la otra.
   const ficha = salida.estado.ficha ?? null;
+  // El auto de la fila del cliente es el que quedó como actual (el de la ficha o el que se nombró en el catálogo);
+  // sin eso, el de la ficha; si no hay ninguno, null.
+  const idActual = salida.estado.sesion.vehiculoActualId;
+  const autoActual = idActual ? catalogo.find((v) => v.id === idActual)?.slug : undefined;
+  const slugDelAuto = autoActual ?? ficha;
   const esOpcion = entrada.opcion !== undefined;
   const filas: FilaMensajeWeb[] = [
     {
@@ -183,7 +188,7 @@ async function procesar(pedido: PedidoChat, deps: DepsChat, ctl: { vivo: boolean
       content: esOpcion ? ETIQUETAS_OPCION[entrada.opcion!] : (entrada.texto ?? ""),
       tipo: "texto",
       via: esOpcion ? "opcion" : "texto",
-      vehiculo_slug: ficha,
+      vehiculo_slug: slugDelAuto,
       nota: salida.noEntendido ? "no_entendido" : null,
     },
   ];

@@ -7,7 +7,18 @@ El asistente es el chat que aparece en las fichas de los autos y en el catálogo
 1. Primero la base de datos (paso 1 de abajo).
 2. Después se publica (merge a `main` y deploy en Vercel).
 
-Si se publica antes de correr el SQL, la página no se rompe: el chat contesta igual, pero no recuerda los pasos de una charla ni guarda contactos, y en el admin la pestaña "Página web" de Conversaciones muestra un cuadro de error, y el bloque "Bot de la página" de Estadísticas directamente no aparece (sin error). En cuanto se corre el SQL, todo empieza a funcionar solo.
+**No publiques antes de correr el SQL.** Si se publica antes, el chat contesta, pero el flujo de financiación no se completa: el asistente pierde los pasos y repite siempre las mismas preguntas. Tampoco se guardan los contactos y los eventos del chat se rechazan. Además, en el admin la pestaña "Página web" de Conversaciones muestra un cuadro de error y el bloque "Bot de la página" de Estadísticas no aparece. En cuanto se corre el SQL todo vuelve a funcionar solo.
+
+## Antes de publicar: probá la versión de prueba (preview) de Vercel en el celular
+
+Con el SQL ya corrido, abrí en el celular la versión de prueba (preview) que Vercel arma para esta rama y revisá:
+
+- En una ficha de un auto disponible, las cuatro opciones del chat (financiar, usado, si está disponible y hablar con Marcos) terminan en un botón que abre WhatsApp (un link wa.me) con el mensaje armado.
+- Escribir un texto libre, por ejemplo "bmw", muestra la tarjeta del auto.
+- En la ficha de un auto vendido, el asistente avisa que se vendió y "Hablar con Marcos" no pregunta si sigue disponible.
+- En el catálogo, el botón "Ver ficha" de una tarjeta lleva a la ficha correcta.
+- En el admin, `/admin/conversaciones?canal=web` muestra la charla de prueba con el auto consultado.
+- En el admin, `/admin/leads` muestra el contacto de prueba con origen "Página web".
 
 ## Puesta en marcha
 
@@ -20,7 +31,7 @@ Qué crea: las tablas donde se guardan las conversaciones del chat, los dos even
 
 ### 2. Confirmar `SITE_URL` en Vercel
 
-En Vercel, en **Settings > Environment Variables**, tiene que existir `SITE_URL` con la dirección real del sitio, empezando con `https://` (por ejemplo `https://tu-sitio.vercel.app`). Si falta o está mal, las cards de autos en el chat pierden el botón "Ver ficha". Si la cambiás, hay que volver a desplegar.
+En Vercel, en **Settings > Environment Variables**, tiene que existir `SITE_URL` con la dirección real del sitio, empezando con `https://` (por ejemplo `https://tu-sitio.vercel.app`). Si falta, el código usa la dirección desde la que se hizo el pedido, así que el chat anda igual. El riesgo es que esté mal (con `www` o sin `www` distinto del real, o la dirección de una versión de prueba): los botones de las cards apuntarían a otra dirección y los toques en "Ver en la web" y "Simular" podrían no contarse. Si la cambiás, hay que volver a desplegar.
 
 ### 3. Programar el borrado a los 90 días (obligatorio)
 

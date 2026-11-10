@@ -160,8 +160,8 @@ export default function PrivacidadPage() {
                 <li>Lo que escribís en el chat y lo que te responde el asistente.</li>
                 <li>El auto que estás consultando.</li>
                 <li>
-                  Un número de visitante al azar que genera tu navegador. No es una identidad: no
-                  sabemos quién sos con ese número.
+                  Un número de visitante al azar que genera tu navegador. No es tu nombre ni tu
+                  teléfono, pero también lo usamos para contar las visitas del sitio.
                 </li>
                 <li>
                   Tu nombre y tu teléfono, solamente si nos los das. Los vinculamos a esa
