@@ -154,13 +154,42 @@ export default function PrivacidadPage() {
               <p>Los borramos en un plazo máximo de 30 días y te lo confirmamos.</p>
             </Seccion>
 
-            <Seccion id="cambios" numero={8} titulo="Cambios en esta política">
+            <Seccion id="asistente-web" numero={8} titulo="El asistente de nuestra web">
+              <p>Si usás el asistente de la web (el chat de las fichas y del catálogo), guardamos:</p>
+              <ul className="list-disc space-y-2 pl-6 marker:text-car-gold">
+                <li>Lo que escribís en el chat y lo que te responde el asistente.</li>
+                <li>El auto que estás consultando.</li>
+                <li>
+                  Un número de visitante al azar que genera tu navegador. No es una identidad: no
+                  sabemos quién sos con ese número.
+                </li>
+                <li>
+                  Tu nombre y tu teléfono, solamente si nos los das. Los vinculamos a esa
+                  conversación a través del número de visitante.
+                </li>
+              </ul>
+              <p>
+                Lo usamos para atenderte y para mejorar el asistente. No guardamos tu dirección IP
+                ni datos de tu dispositivo en el chat, y no los compartimos con nadie más allá de
+                los proveedores que figuran en esta página (Supabase y Vercel).
+              </p>
+              <p>
+                Las conversaciones del asistente de la web se borran a los 90 días. Si querés que
+                las borremos antes, escribinos por WhatsApp al{" "}
+                <a href={waUrl} target="_blank" rel="noopener" className={enlaceClase}>
+                  {waTexto}
+                </a>{" "}
+                y te las eliminamos en un plazo máximo de 30 días.
+              </p>
+            </Seccion>
+
+            <Seccion id="cambios" numero={9} titulo="Cambios en esta política">
               <p>Si la modificamos, te avisamos publicando la nueva versión en esta página.</p>
             </Seccion>
           </div>
 
           <p className="mt-12 border-t border-car-gold/15 pt-6 text-xs text-car-muted">
-            Última actualización: 13/10/2026
+            Última actualización: 10/11/2026
           </p>
         </div>
       </main>
