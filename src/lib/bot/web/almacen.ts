@@ -70,15 +70,17 @@ export async function contarMensajesWeb(db: SupabaseClient, desde: Date, visitan
 
 /**
  * Guarda el lead en la tabla que lee /admin/leads, con origen "web". El teléfono va en `telefono` (lo que muestra el
- * admin) y en `whatsapp` (así se cumple leads_contacto_check); `instagram_id` queda vacío. Si ya hay un lead web con
- * ese teléfono no se duplica (el motor puede volver a pedir guardarlo en un mensaje posterior).
+ * admin) y en `whatsapp` (así se cumple leads_contacto_check); `instagram_id` queda vacío. `web_visitante` guarda el id
+ * al azar del visitante para poder marcar su conversación en el admin. Si ya hay un lead web con ese teléfono de ese
+ * mismo visitante no se duplica (el motor puede volver a pedir guardarlo en un mensaje posterior).
  */
-export async function guardarLeadWeb(db: SupabaseClient, _visitante: string, lead: LeadInput): Promise<void> {
+export async function guardarLeadWeb(db: SupabaseClient, visitante: string, lead: LeadInput): Promise<void> {
   const { data: existentes, error: errorBusqueda } = await db
     .from("leads")
     .select("id")
     .eq("origen", "web")
     .eq("telefono", lead.telefono)
+    .eq("web_visitante", visitante)
     .limit(1);
 
   if (errorBusqueda) throw new Error(`No se pudo buscar el lead: ${errorBusqueda.message}`);
@@ -91,6 +93,7 @@ export async function guardarLeadWeb(db: SupabaseClient, _visitante: string, lea
     vehiculo_interes: lead.vehiculo_interes ?? null,
     mensaje: lead.mensaje ?? null,
     origen: "web",
+    web_visitante: visitante,
   });
 
   if (error) throw new Error(`No se pudo guardar el lead: ${error.message}`);

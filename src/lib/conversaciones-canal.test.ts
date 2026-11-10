@@ -48,16 +48,19 @@ describe("hrefDetalle", () => {
     expect(hrefDetalle("12345678")).toBe("/admin/conversaciones/12345678");
     expect(hrefDetalle("abc-12345678", "web")).toBe("/admin/conversaciones/abc-12345678?canal=web");
   });
+  it("escapa el id", () => {
+    expect(hrefDetalle("a/b?c", "web")).toBe("/admin/conversaciones/a%2Fb%3Fc?canal=web");
+  });
 });
 
 describe("filtros por canal", () => {
-  it("Instagram tiene todos; la página no tiene Postulaciones ni Dejaron sus datos", () => {
+  it("Instagram tiene todos; la página no tiene Postulaciones pero sí Dejaron sus datos", () => {
     expect(filtrosDelCanal("instagram")).toBe(FILTROS);
-    expect(filtrosDelCanal("web").map((f) => f.valor)).toEqual(["todas", "fallas"]);
+    expect(filtrosDelCanal("web").map((f) => f.valor)).toEqual(["todas", "fallas", "datos"]);
   });
   it("un filtro que la página no tiene vale como todas", () => {
     expect(filtroParaCanal("postulaciones", "web")).toBe("todas");
-    expect(filtroParaCanal("datos", "web")).toBe("todas");
+    expect(filtroParaCanal("datos", "web")).toBe("datos");
     expect(filtroParaCanal("fallas", "web")).toBe("fallas");
     expect(filtroParaCanal("postulaciones", "instagram")).toBe("postulaciones");
   });
@@ -76,6 +79,8 @@ describe("filtros por canal", () => {
     const a: ConversacionResumen = { ...base, id: "a", noEntendidos: 0 };
     const b: ConversacionResumen = { ...base, id: "b", noEntendidos: 2 };
     expect(filtrarConversacionesWeb([a, b], "fallas").map((c) => c.id)).toEqual(["b"]);
+    const c: ConversacionResumen = { ...base, id: "c", noEntendidos: 0, dejoDatos: true };
+    expect(filtrarConversacionesWeb([a, b, c], "datos").map((x) => x.id)).toEqual(["c"]);
     expect(filtrarConversacionesWeb([a, b], "todas").map((c) => c.id)).toEqual(["a", "b"]);
   });
 });

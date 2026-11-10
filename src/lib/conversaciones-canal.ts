@@ -15,12 +15,11 @@ export function canalDeUrl(valor: string | undefined): Canal {
 }
 
 /**
- * Los filtros que tiene cada canal. "Postulaciones" es del bot de Instagram; "Dejaron sus datos" tampoco aplica a la
- * página, porque los leads web no guardan qué visitante los dejó (no se guarda nada que identifique a nadie).
+ * Los filtros que tiene cada canal. "Postulaciones" es solo del bot de Instagram (la página no tiene postulaciones).
  */
 export function filtrosDelCanal(canal: Canal): Array<{ valor: FiltroConversaciones; texto: string }> {
   if (canal === "instagram") return FILTROS;
-  return FILTROS.filter((f) => f.valor === "todas" || f.valor === "fallas").map((f) =>
+  return FILTROS.filter((f) => f.valor !== "postulaciones").map((f) =>
     f.valor === "fallas" ? { ...f, texto: "Con fallas del asistente" } : f,
   );
 }
@@ -32,7 +31,9 @@ export function filtroParaCanal(filtro: FiltroConversaciones, canal: Canal): Fil
 
 /** Deja solo las conversaciones web que cumplen el filtro (el de Instagram lo aplica `armarConversaciones`). */
 export function filtrarConversacionesWeb(filas: ConversacionResumen[], filtro: FiltroConversaciones): ConversacionResumen[] {
-  return filtro === "fallas" ? filas.filter((f) => f.noEntendidos > 0) : filas;
+  if (filtro === "fallas") return filas.filter((f) => f.noEntendidos > 0);
+  if (filtro === "datos") return filas.filter((f) => f.dejoDatos);
+  return filas;
 }
 
 /** Dirección de la lista de conversaciones; Instagram queda igual que antes (sin `canal`). */
@@ -42,7 +43,7 @@ export function hrefConversaciones(a: { dias: number; filtro: FiltroConversacion
 
 /** Dirección del detalle de una conversación. */
 export function hrefDetalle(id: string, canal: Canal = "instagram"): string {
-  return `/admin/conversaciones/${id}${canal === "web" ? "?canal=web" : ""}`;
+  return `/admin/conversaciones/${encodeURIComponent(id)}${canal === "web" ? "?canal=web" : ""}`;
 }
 
 /** Cómo se llama cada lado de la charla en cada canal. */

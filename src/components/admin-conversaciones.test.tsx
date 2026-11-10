@@ -49,6 +49,12 @@ describe("ListaConversaciones", () => {
     expect(html).toContain("Visitante: ");
   });
 
+  it("la web ofrece el filtro Dejaron sus datos y marca la conversación que los dejó", () => {
+    const html = renderToStaticMarkup(<ListaConversaciones conversaciones={[conv({ dejoDatos: true })]} filtro="datos" dias={7} canal="web" />);
+    expect(html).toContain('href="/admin/conversaciones?dias=7&amp;filtro=datos&amp;canal=web"');
+    expect(html).toContain("Dejó sus datos");
+  });
+
   it("el estado vacío de la web se lee bien", () => {
     const html = renderToStaticMarkup(<ListaConversaciones conversaciones={[]} filtro="todas" dias={30} canal="web" />);
     expect(html).toContain("Todavía no hay conversaciones del asistente en este período.");

@@ -5,7 +5,7 @@ import { ChatConversacion } from "@/components/chat-conversacion";
 import { EnviarCardAuto } from "@/components/enviar-card-auto";
 import { requireAdminSession } from "@/lib/auth";
 import { obtenerCatalogo } from "@/lib/bot/catalogo";
-import { dejoDatos, traerChat, traerChatWeb, traerPerfil } from "@/lib/bot-datos";
+import { dejoDatos, dejoDatosWeb, traerChat, traerChatWeb, traerPerfil } from "@/lib/bot-datos";
 import { esCierrePostulacion, fechaHora, nombreDeConversacion } from "@/lib/conversaciones";
 import { canalDeUrl, esIdVisitante, mensajesWebComoIg, ultimoAutoConsultado } from "@/lib/conversaciones-canal";
 import { createAdminSupabaseClient } from "@/lib/supabase";
@@ -104,11 +104,21 @@ async function ChatWeb({ id }: { id: string }) {
 
   const mensajes = mensajesWebComoIg(filas);
   const slug = ultimoAutoConsultado(filas);
-  let auto: string | null = null;
+  // El nombre del auto es solo un adorno: si no se puede leer, se muestra la dirección y la página sigue.
+  let auto: string | null = slug;
   if (slug) {
-    const { data } = await db.from("vehiculos_posse").select("nombre").eq("slug", slug).maybeSingle();
-    auto = data?.nombre ? String(data.nombre).trim() : slug;
+    try {
+      const { data } = await db.from("vehiculos_posse").select("nombre").eq("slug", slug).maybeSingle();
+      if (data?.nombre) auto = String(data.nombre).trim() || slug;
+    } catch (e) {
+      console.error("[conversaciones] Nombre del auto:", e instanceof Error ? e.message : e);
+    }
   }
+  // Si no se puede saber, la etiqueta simplemente no se muestra.
+  const conDatos = await dejoDatosWeb(db, id).catch((e: unknown) => {
+    console.error("[conversaciones] Leads:", e instanceof Error ? e.message : e);
+    return false;
+  });
   const noEntendidos = filas.filter((m) => m.role === "user" && m.nota === "no_entendido").length;
   const armoMensaje = filas.some((m) => m.tipo === "cierre");
 
@@ -125,6 +135,7 @@ async function ChatWeb({ id }: { id: string }) {
           {mensajes.length} mensajes · del {fechaHora(mensajes[0].created_at)} al {fechaHora(mensajes[mensajes.length - 1].created_at)}
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+          {conDatos && <span className="rounded-full border border-[#25D366]/40 px-2 py-0.5 text-[#25D366]">Dejó sus datos (ver en Leads)</span>}
           {armoMensaje && (
             <span className="rounded-full border border-car-gold/50 px-2 py-0.5 text-car-gold">Armó el mensaje para Marcos</span>
           )}
@@ -140,7 +151,7 @@ async function ChatWeb({ id }: { id: string }) {
         <ChatConversacion mensajes={mensajes} canal="web" />
       </div>
       <p className="mt-4 text-xs leading-5 text-car-muted">
-        Esta pantalla es solo de lectura. Si dejó su nombre y teléfono, está en Leads.
+        Esta pantalla es solo de lectura. Lo que dejó el visitante (nombre y teléfono) está en Leads.
       </p>
     </AdminShell>
   );

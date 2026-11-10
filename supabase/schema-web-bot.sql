@@ -59,6 +59,9 @@ alter table public.eventos add constraint eventos_tipo_check
   check (tipo in ('visita', 'whatsapp', 'simular', 'simulacion', 'chat_abrio', 'chat_whatsapp'));
 
 -- Los leads tambien pueden venir de la web (el telefono va en "whatsapp"; instagram_id queda vacio).
+-- "web_visitante": id al azar del visitante que dejo los datos, para marcar su conversacion en el admin.
+alter table public.leads add column if not exists web_visitante text;
+
 alter table public.leads drop constraint if exists leads_contacto_check;
 alter table public.leads add constraint leads_contacto_check
   check (whatsapp is not null or instagram_id is not null or origen = 'web');

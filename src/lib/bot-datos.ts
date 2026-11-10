@@ -96,6 +96,8 @@ export type DatosWeb = {
   eventos: EventoChat[];
   /** Leads que dejaron sus datos desde la página (desde la medianoche argentina del primer día, el mismo corte que el resto del resumen). */
   leadsWeb: number;
+  /** Visitantes (distintos) cuyo chat terminó en un lead, en la misma ventana. Los leads viejos, sin visitante, no figuran. */
+  visitantesConDatos: string[];
   /** Hubo más filas que el tope: se muestran las más recientes. */
   truncado: boolean;
 };
@@ -121,23 +123,13 @@ async function traerPaginado<T>(
   return { filas, truncado: true };
 }
 
-async function contarLeadsWeb(db: SupabaseClient, desde: string): Promise<number> {
-  const { count, error } = await db
-    .from("leads")
-    .select("id", { count: "exact", head: true })
-    .eq("origen", "web")
-    .gte("created_at", desde);
-  if (error) throw new Error(`No se pudieron leer los leads: ${error.message}`);
-  return count ?? 0;
-}
-
 /** Lo necesario para resumir el asistente de la página y listar sus conversaciones de los últimos `dias` días. */
 export async function cargarDatosWeb(db: SupabaseClient, dias: number): Promise<DatosWeb> {
   // Un día de más: el corte exacto se hace después, en hora argentina.
   const desde = haceDias(dias + 1);
   // Los leads solo llegan como número, así que se cortan ya en la consulta, en el mismo instante que `enVentana`.
   const desdeLeads = ventanaDeDias(dias, new Date().toISOString()).desde;
-  const [mensajes, eventos, leadsWeb] = await Promise.all([
+  const [mensajes, eventos, leads] = await Promise.all([
     traerPaginado<MensajeWebFila>(
       (a, b) =>
         db.from("web_mensajes").select(COLUMNAS_WEB).gte("created_at", desde).order("created_at", { ascending: false }).range(a, b),
@@ -154,12 +146,23 @@ export async function cargarDatosWeb(db: SupabaseClient, dias: number): Promise<
           .range(a, b),
       "No se pudieron leer los eventos",
     ),
-    contarLeadsWeb(db, desdeLeads),
+    traerPaginado<{ web_visitante: string | null }>(
+      (a, b) =>
+        db
+          .from("leads")
+          .select("web_visitante")
+          .eq("origen", "web")
+          .gte("created_at", desdeLeads)
+          .order("created_at", { ascending: false })
+          .range(a, b),
+      "No se pudieron leer los leads",
+    ),
   ]);
   return {
     mensajes: mensajes.filas,
     eventos: eventos.filas,
-    leadsWeb,
+    leadsWeb: leads.filas.length,
+    visitantesConDatos: [...new Set(leads.filas.map((l) => l.web_visitante).filter((v): v is string => !!v))],
     truncado: mensajes.truncado || eventos.truncado,
   };
 }
@@ -174,4 +177,15 @@ export async function traerChatWeb(db: SupabaseClient, visitante: string): Promi
     .limit(2000);
   if (error) throw new Error(`No se pudo leer la conversación: ${error.message}`);
   return (data ?? []) as MensajeWebFila[];
+}
+
+/** ¿Este visitante dejó sus datos (hay un lead web con su id)? */
+export async function dejoDatosWeb(db: SupabaseClient, visitante: string): Promise<boolean> {
+  const { count, error } = await db
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("origen", "web")
+    .eq("web_visitante", visitante);
+  if (error) throw new Error(`No se pudieron leer los leads: ${error.message}`);
+  return (count ?? 0) > 0;
 }

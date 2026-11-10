@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cargarDatosWeb, traerChatWeb } from "./bot-datos";
+import { cargarDatosWeb, dejoDatosWeb, traerChatWeb } from "./bot-datos";
 
 type Llamada = { metodo: string; args: unknown[] };
 type Resultado = { data?: unknown; count?: number | null; error: { message: string } | null };
@@ -50,7 +50,7 @@ describe("cargarDatosWeb", () => {
     const { db, consultas } = dbFalsa((tabla) => {
       if (tabla === "web_mensajes") return { data: filas(2, "web_mensajes"), error: null };
       if (tabla === "eventos") return { data: filas(3, "eventos"), error: null };
-      return { count: 5, error: null };
+      return { data: [{ web_visitante: "v1" }, { web_visitante: "v1" }, { web_visitante: null }, { web_visitante: "v2" }, { web_visitante: "v3" }], error: null };
     });
 
     const datos = await cargarDatosWeb(db, 7);
@@ -58,6 +58,7 @@ describe("cargarDatosWeb", () => {
     expect(datos.mensajes).toHaveLength(2);
     expect(datos.eventos).toHaveLength(3);
     expect(datos.leadsWeb).toBe(5);
+    expect(datos.visitantesConDatos).toEqual(["v1", "v2", "v3"]);
     expect(datos.truncado).toBe(false);
 
     const de = (t: string) => consultas.find((c) => c.tabla === t)!.llamadas;
@@ -65,6 +66,7 @@ describe("cargarDatosWeb", () => {
     expect(desde(de("eventos"), "gte")[0][0]).toBe("creado");
     expect(desde(de("web_mensajes"), "gte")[0][0]).toBe("created_at");
     expect(desde(de("leads"), "eq")).toEqual([["origen", "web"]]);
+    expect(desde(de("leads"), "select")).toEqual([["web_visitante"]]);
   });
 
   it("pagina de a 1000 hasta que una página viene incompleta", async () => {
@@ -76,7 +78,7 @@ describe("cargarDatosWeb", () => {
         return { data: filas(pagina === 0 ? 1000 : 10, "web_mensajes"), error: null };
       }
       if (tabla === "eventos") return { data: [], error: null };
-      return { count: 0, error: null };
+      return { data: [], error: null };
     });
 
     const datos = await cargarDatosWeb(db, 7);
@@ -94,7 +96,7 @@ describe("cargarDatosWeb", () => {
     const { db } = dbFalsa((tabla) => {
       if (tabla === "web_mensajes") return { data: filas(1000, "web_mensajes"), error: null };
       if (tabla === "eventos") return { data: [], error: null };
-      return { count: 0, error: null };
+      return { data: [], error: null };
     });
 
     const datos = await cargarDatosWeb(db, 7);
@@ -107,7 +109,7 @@ describe("cargarDatosWeb", () => {
     const { db } = dbFalsa((tabla) => {
       if (tabla === "eventos") return { data: filas(1000, "eventos"), error: null };
       if (tabla === "web_mensajes") return { data: [], error: null };
-      return { count: 0, error: null };
+      return { data: [], error: null };
     });
 
     expect((await cargarDatosWeb(db, 7)).truncado).toBe(true);
@@ -116,15 +118,22 @@ describe("cargarDatosWeb", () => {
   it("lanza con el mensaje de Supabase si falla una lectura", async () => {
     for (const rota of ["web_mensajes", "eventos", "leads"]) {
       const { db } = dbFalsa((tabla) =>
-        tabla === rota ? { data: null, count: null, error: { message: "caido" } } : { data: [], count: 0, error: null },
+        tabla === rota ? { data: null, error: { message: "caido" } } : { data: [], error: null },
       );
       await expect(cargarDatosWeb(db, 7)).rejects.toThrow(/caido/);
     }
   });
 
-  it("un conteo de leads nulo cuenta como cero", async () => {
-    const { db } = dbFalsa((tabla) => (tabla === "leads" ? { count: null, error: null } : { data: [], error: null }));
-    expect((await cargarDatosWeb(db, 7)).leadsWeb).toBe(0);
+  it("sin leads, cero y ningún visitante con datos", async () => {
+    const { db } = dbFalsa(() => ({ data: [], error: null }));
+    const datos = await cargarDatosWeb(db, 7);
+    expect(datos.leadsWeb).toBe(0);
+    expect(datos.visitantesConDatos).toEqual([]);
+  });
+
+  it("si falla la lectura de leads, falla todo (no se muestra a medias)", async () => {
+    const { db } = dbFalsa((tabla) => (tabla === "leads" ? { data: null, error: { message: "sin columna" } } : { data: [], error: null }));
+    await expect(cargarDatosWeb(db, 7)).rejects.toThrow(/sin columna/);
   });
 });
 
@@ -132,7 +141,7 @@ describe("cargarDatosWeb: corte de los leads", () => {
   afterEach(() => vi.useRealTimers());
 
   const gteDeLeads = async (dias: number) => {
-    const { db, consultas } = dbFalsa((tabla) => (tabla === "leads" ? { count: 1, error: null } : { data: [], error: null }));
+    const { db, consultas } = dbFalsa((tabla) => (tabla === "leads" ? { data: [{ web_visitante: "v1" }], error: null } : { data: [], error: null }));
     await cargarDatosWeb(db, dias);
     return desde(consultas.find((c) => c.tabla === "leads")!.llamadas, "gte");
   };
@@ -148,6 +157,29 @@ describe("cargarDatosWeb: corte de los leads", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-11-10T03:05:00.000Z")); // 00:05 en Argentina
     expect(await gteDeLeads(1)).toEqual([["created_at", "2026-11-10T03:00:00.000Z"]]);
+  });
+});
+
+describe("dejoDatosWeb", () => {
+  it("cuenta los leads web de ese visitante", async () => {
+    const { db, consultas } = dbFalsa(() => ({ count: 1, error: null }));
+    expect(await dejoDatosWeb(db, "abc12345")).toBe(true);
+    const { tabla, llamadas } = consultas[0];
+    expect(tabla).toBe("leads");
+    expect(desde(llamadas, "eq")).toEqual([
+      ["origen", "web"],
+      ["web_visitante", "abc12345"],
+    ]);
+  });
+
+  it("sin leads (o conteo nulo) es false", async () => {
+    expect(await dejoDatosWeb(dbFalsa(() => ({ count: 0, error: null })).db, "abc12345")).toBe(false);
+    expect(await dejoDatosWeb(dbFalsa(() => ({ count: null, error: null })).db, "abc12345")).toBe(false);
+  });
+
+  it("lanza con el mensaje de Supabase si falla", async () => {
+    const { db } = dbFalsa(() => ({ count: null, error: { message: "caido" } }));
+    await expect(dejoDatosWeb(db, "abc12345")).rejects.toThrow(/caido/);
   });
 });
 

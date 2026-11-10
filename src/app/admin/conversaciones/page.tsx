@@ -39,14 +39,20 @@ export default async function ConversacionesPage({
   try {
     if (canal === "web") {
       datosWeb = await cargarDatosWeb(db, dias);
-      // Solo para mostrar el nombre del auto en vez de su dirección; si falla, se muestra la dirección.
-      const { data: autos } = await db.from("vehiculos_posse").select("slug, nombre").is("deleted_at", null);
-      nombresAutos = Object.fromEntries((autos ?? []).map((a) => [a.slug as string, String(a.nombre).trim()]));
     } else {
       datos = await cargarDatosBot(db, dias);
     }
   } catch (e) {
     console.error("[conversaciones]", e instanceof Error ? e.message : e);
+  }
+  // Solo para mostrar el nombre del auto en vez de su dirección: si falla (o no hay nombre), se muestra la dirección.
+  if (datosWeb) {
+    try {
+      const { data: autos } = await db.from("vehiculos_posse").select("slug, nombre").is("deleted_at", null);
+      nombresAutos = Object.fromEntries((autos ?? []).map((a) => [a.slug as string, a.nombre ? String(a.nombre).trim() : (a.slug as string)]));
+    } catch (e) {
+      console.error("[conversaciones] Nombres de autos:", e instanceof Error ? e.message : e);
+    }
   }
   const leido = canal === "web" ? datosWeb : datos;
   const ahora = haceDias(0);
@@ -115,7 +121,7 @@ export default async function ConversacionesPage({
                 conversaciones={filtrarConversacionesWeb(
                   armarConversacionesWeb(
                     datosWeb.mensajes.filter((m) => enVentana(m.created_at)),
-                    new Set(),
+                    new Set(datosWeb.visitantesConDatos),
                   ),
                   filtro,
                 )}

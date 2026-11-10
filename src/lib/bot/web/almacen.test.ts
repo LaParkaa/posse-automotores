@@ -220,6 +220,7 @@ describe("guardarLeadWeb", () => {
     expect(busqueda.filter((l) => l.metodo === "eq").map((l) => l.args)).toEqual([
       ["origen", "web"],
       ["telefono", "1155551234"],
+      ["web_visitante", VISITANTE],
     ]);
     expect(cadenas[1]).toEqual([
       {
@@ -232,6 +233,7 @@ describe("guardarLeadWeb", () => {
             vehiculo_interes: "VW Taos 2022",
             mensaje: "Quiere financiar",
             origen: "web",
+            web_visitante: VISITANTE,
           },
         ],
       },
@@ -244,12 +246,22 @@ describe("guardarLeadWeb", () => {
     expect(cadenas[1][0].args[0]).toMatchObject({ vehiculo_interes: null, mensaje: null });
   });
 
-  it("no inserta dos veces el mismo teléfono", async () => {
+  it("no inserta dos veces el mismo teléfono del mismo visitante", async () => {
     const { db, tablas } = fakeDb({ data: [{ id: "l1" }] });
 
     await guardarLeadWeb(db, VISITANTE, lead);
 
     expect(tablas).toEqual(["leads"]);
+  });
+
+  it("el mismo teléfono desde otro visitante es otro lead: se busca con el visitante y se inserta", async () => {
+    const otro = "9c1d2e3f-0000-4000-8000-aaaaaaaaaaaa";
+    const { db, cadenas } = fakeDb({ data: [] }, {});
+
+    await guardarLeadWeb(db, otro, lead);
+
+    expect(cadenas[0].filter((l) => l.metodo === "eq").map((l) => l.args)).toContainEqual(["web_visitante", otro]);
+    expect(cadenas[1][0].args[0]).toMatchObject({ web_visitante: otro });
   });
 
   it("lanza con el mensaje de Supabase si falla la búsqueda", async () => {
