@@ -165,21 +165,23 @@ export default function PrivacidadPage() {
                 </li>
                 <li>
                   Tu nombre y tu teléfono, solamente si nos los das. Los vinculamos a esa
-                  conversación a través del número de visitante.
+                  conversación a través del número de visitante y los guardamos por el plazo de la
+                  sección 5.
                 </li>
               </ul>
               <p>
                 Lo usamos para atenderte y para mejorar el asistente. No guardamos tu dirección IP
-                ni datos de tu dispositivo en el chat, y no los compartimos con nadie más allá de
-                los proveedores que figuran en esta página (Supabase y Vercel).
+                ni datos de tu dispositivo en el chat. Nada de lo que guardamos en el asistente se
+                comparte con nadie más allá de los proveedores que figuran en esta página (Supabase
+                y Vercel).
               </p>
               <p>
                 Las conversaciones del asistente de la web se borran a los 90 días. Si querés que
-                las borremos antes, escribinos por WhatsApp al{" "}
+                las borremos antes (o que borremos tu nombre y tu teléfono), escribinos por WhatsApp al{" "}
                 <a href={waUrl} target="_blank" rel="noopener" className={enlaceClase}>
                   {waTexto}
                 </a>{" "}
-                y te las eliminamos en un plazo máximo de 30 días.
+                y lo eliminamos en un plazo máximo de 30 días.
               </p>
             </Seccion>
 
