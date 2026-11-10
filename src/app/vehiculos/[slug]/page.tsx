@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { FloatingWhatsApp } from "@/components/floating-whatsapp";
+import { Asistente } from "@/components/asistente/asistente";
 import { getVehiculoBySlug } from "@/lib/data";
 import { sePuedeOptimizar } from "@/lib/imagen";
 import { buildWhatsAppUrl } from "@/lib/utils";
@@ -183,7 +183,7 @@ export default async function VehiculoPage({ params }: { params: Promise<{ slug:
         </section>
       </main>
       <SiteFooter />
-      <FloatingWhatsApp />
+      <Asistente pagina="ficha" slug={v.slug} />
     </>
   );
 }

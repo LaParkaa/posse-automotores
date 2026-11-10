@@ -7,7 +7,8 @@ import { registrarEvento } from "@/lib/rastreo";
 /**
  * Registra las visitas y los clics del sitio público para las estadísticas del admin. No dibuja nada.
  * Cualquier link a WhatsApp cuenta como consulta y cualquier link al simulador como "simular"; si el link trae
- * `data-vehiculo` se asigna a ese auto y, si no, al auto de la ficha en la que está la persona.
+ * `data-vehiculo` se asigna a ese auto y, si no, al auto de la ficha en la que está la persona. Un link a WhatsApp
+ * dentro del asistente (`[data-asistente]`) suma también `chat_whatsapp`.
  */
 export function Rastreador() {
   const ruta = usePathname();
@@ -23,8 +24,11 @@ export function Rastreador() {
       const href = enlace.getAttribute("href") ?? "";
       const deEsteAuto = enlace.dataset.vehiculo || slugDeRuta(location.pathname);
 
-      if (/^https?:\/\/(wa\.me|api\.whatsapp\.com)\//.test(href)) registrarEvento("whatsapp", deEsteAuto);
-      else if (href.startsWith("/financiacion")) registrarEvento("simular", slugDeHrefSimulador(href) ?? deEsteAuto);
+      if (/^https?:\/\/(wa\.me|api\.whatsapp\.com)\//.test(href)) {
+        registrarEvento("whatsapp", deEsteAuto);
+        // Dentro del asistente cuenta además como consulta que salió del chat.
+        if (enlace.closest("[data-asistente]")) registrarEvento("chat_whatsapp", deEsteAuto);
+      } else if (href.startsWith("/financiacion")) registrarEvento("simular", slugDeHrefSimulador(href) ?? deEsteAuto);
     };
     // En la captura: se mide aunque otro componente frene el evento.
     document.addEventListener("click", alTocar, true);

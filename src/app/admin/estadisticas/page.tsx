@@ -2,8 +2,10 @@ import { AdminShell } from "@/components/admin-shell";
 import { AnunciosInstagram } from "@/components/anuncios-instagram";
 import { EstadisticasVista, PERIODOS } from "@/components/estadisticas-vista";
 import { ResumenBotVista } from "@/components/resumen-bot";
+import { ResumenBotWebVista } from "@/components/resumen-bot-web";
 import { requireAdminSession } from "@/lib/auth";
-import { cargarDatosBot } from "@/lib/bot-datos";
+import { resumirBotWeb } from "@/lib/bot/web/estadisticas";
+import { cargarDatosBot, cargarDatosWeb } from "@/lib/bot-datos";
 import { resumirBot } from "@/lib/conversaciones";
 import { resumir, type EventoGuardado } from "@/lib/estadisticas";
 import { createAdminSupabaseClient } from "@/lib/supabase";
@@ -64,6 +66,15 @@ export default async function EstadisticasPage({ searchParams }: { searchParams:
     console.error("[estadisticas] Bot:", e instanceof Error ? e.message : e);
   }
 
+  // El asistente de la página: igual, si sus tablas no se pueden leer (por ejemplo, todavía no se crearon) se omite.
+  let resumenBotWeb = null;
+  try {
+    const datos = await cargarDatosWeb(supabase, dias);
+    resumenBotWeb = resumirBotWeb({ mensajes: datos.mensajes, eventos: datos.eventos, leadsWeb: datos.leadsWeb, dias, ahora: haceDias(0) });
+  } catch (e) {
+    console.error("[estadisticas] Bot de la página:", e instanceof Error ? e.message : e);
+  }
+
   return (
     <AdminShell>
       <div className="mb-6">
@@ -93,6 +104,12 @@ export default async function EstadisticasPage({ searchParams }: { searchParams:
       {resumenBot && (
         <div className="mt-8">
           <ResumenBotVista resumen={resumenBot} titulo="Bot de Instagram" verConversaciones />
+        </div>
+      )}
+
+      {resumenBotWeb && (
+        <div className="mt-8">
+          <ResumenBotWebVista resumen={resumenBotWeb} titulo="Bot de la página" verConversaciones compacto />
         </div>
       )}
 

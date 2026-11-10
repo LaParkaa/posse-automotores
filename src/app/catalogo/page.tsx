@@ -1,6 +1,6 @@
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { FloatingWhatsApp } from "@/components/floating-whatsapp";
+import { Asistente } from "@/components/asistente/asistente";
 import { CatalogoLive } from "@/components/catalogo-live";
 import { ContadorStock } from "@/components/contador-stock";
 import { MarcasCarrusel } from "@/components/marcas-carrusel";
@@ -159,7 +159,7 @@ export default async function CatalogoPage({
         />
       </main>
       <SiteFooter />
-      <FloatingWhatsApp />
+      <Asistente pagina="catalogo" />
     </>
   );
 }

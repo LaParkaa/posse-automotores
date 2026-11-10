@@ -46,6 +46,19 @@ describe("validarEvento", () => {
     expect(validarEvento({ tipo: "visita", ruta: "/vehiculos/gol-2010" })?.vehiculo_slug).toBe("gol-2010");
   });
 
+  it("acepta los eventos del chat y saca el auto de la ficha", () => {
+    expect(validarEvento({ tipo: "chat_abrio", ruta: "/vehiculos/gol-2010", visitante: VID })).toEqual({
+      tipo: "chat_abrio", ruta: "/vehiculos/gol-2010", vehiculo_slug: "gol-2010", visitante: VID, origen: null,
+    });
+    expect(validarEvento({ tipo: "chat_whatsapp", ruta: "/catalogo", visitante: VID })).toEqual({
+      tipo: "chat_whatsapp", ruta: "/catalogo", vehiculo_slug: null, visitante: VID, origen: null,
+    });
+  });
+
+  it("rechaza un tipo de chat que no existe", () => {
+    expect(validarEvento({ tipo: "chat_inventado", ruta: "/" })).toBeNull();
+  });
+
   it("descarta lo invalido en vez de guardarlo", () => {
     const e = validarEvento({ tipo: "visita", ruta: "/", vehiculo_slug: "NO VALIDO!", visitante: "x", origen: "tiktok" });
     expect(e).toEqual({ tipo: "visita", ruta: "/", vehiculo_slug: null, visitante: null, origen: null });

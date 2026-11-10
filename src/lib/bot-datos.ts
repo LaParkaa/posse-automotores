@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { LeadIg, MensajeIg, PerfilIg } from "./conversaciones";
+import type { EventoChat, MensajeWebFila } from "./bot/web/estadisticas";
+import { ventanaDeDias, type LeadIg, type MensajeIg, type PerfilIg } from "./conversaciones";
 
 /**
  * Lectura de las tablas del bot para el admin (solo servidor, con la clave de servicio). Todo se calcula en cada
@@ -85,5 +86,106 @@ export async function traerPerfil(db: SupabaseClient, igUserId: string): Promise
 
 export async function dejoDatos(db: SupabaseClient, igUserId: string): Promise<boolean> {
   const { count } = await db.from("leads").select("id", { count: "exact", head: true }).eq("instagram_id", igUserId);
+  return (count ?? 0) > 0;
+}
+
+// ---- Asistente de la página (web_mensajes, eventos y leads con origen "web") ----
+
+export type DatosWeb = {
+  mensajes: MensajeWebFila[];
+  eventos: EventoChat[];
+  /** Leads que dejaron sus datos desde la página (desde la medianoche argentina del primer día, el mismo corte que el resto del resumen). */
+  leadsWeb: number;
+  /** Visitantes (distintos) cuyo chat terminó en un lead, en la misma ventana. Los leads viejos, sin visitante, no figuran. */
+  visitantesConDatos: string[];
+  /** Hubo más filas que el tope: se muestran las más recientes. */
+  truncado: boolean;
+};
+
+const COLUMNAS_WEB = "visitante, role, content, tipo, vehiculo_slug, nota, created_at";
+const COLUMNAS_EVENTO = "tipo, ruta, vehiculo_slug, visitante, creado";
+// Los eventos que usa el resumen del asistente; el resto (whatsapp, simular) no hace falta traerlo.
+const TIPOS_DEL_CHAT = ["visita", "chat_abrio", "chat_whatsapp", "simulacion"];
+
+/** Lee una tabla de a páginas, de la fila más reciente a la más vieja, con el mismo tope que `traerMensajes`. */
+async function traerPaginado<T>(
+  pedirPagina: (desdeFila: number, hastaFila: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>,
+  falla: string,
+): Promise<{ filas: T[]; truncado: boolean }> {
+  const filas: T[] = [];
+  for (let pagina = 0; pagina < MAX_PAGINAS; pagina++) {
+    const { data, error } = await pedirPagina(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA - 1);
+    if (error) throw new Error(`${falla}: ${error.message}`);
+    const lote = (data ?? []) as T[];
+    filas.push(...lote);
+    if (lote.length < POR_PAGINA) return { filas, truncado: false };
+  }
+  return { filas, truncado: true };
+}
+
+/** Lo necesario para resumir el asistente de la página y listar sus conversaciones de los últimos `dias` días. */
+export async function cargarDatosWeb(db: SupabaseClient, dias: number): Promise<DatosWeb> {
+  // Un día de más: el corte exacto se hace después, en hora argentina.
+  const desde = haceDias(dias + 1);
+  // Los leads solo llegan como número, así que se cortan ya en la consulta, en el mismo instante que `enVentana`.
+  const desdeLeads = ventanaDeDias(dias, new Date().toISOString()).desde;
+  const [mensajes, eventos, leads] = await Promise.all([
+    traerPaginado<MensajeWebFila>(
+      (a, b) =>
+        db.from("web_mensajes").select(COLUMNAS_WEB).gte("created_at", desde).order("created_at", { ascending: false }).range(a, b),
+      "No se pudieron leer los mensajes de la página",
+    ),
+    traerPaginado<EventoChat>(
+      (a, b) =>
+        db
+          .from("eventos")
+          .select(COLUMNAS_EVENTO)
+          .in("tipo", TIPOS_DEL_CHAT)
+          .gte("creado", desde)
+          .order("creado", { ascending: false })
+          .range(a, b),
+      "No se pudieron leer los eventos",
+    ),
+    traerPaginado<{ web_visitante: string | null }>(
+      (a, b) =>
+        db
+          .from("leads")
+          .select("web_visitante")
+          .eq("origen", "web")
+          .gte("created_at", desdeLeads)
+          .order("created_at", { ascending: false })
+          .range(a, b),
+      "No se pudieron leer los leads",
+    ),
+  ]);
+  return {
+    mensajes: mensajes.filas,
+    eventos: eventos.filas,
+    leadsWeb: leads.filas.length,
+    visitantesConDatos: [...new Set(leads.filas.map((l) => l.web_visitante).filter((v): v is string => !!v))],
+    truncado: mensajes.truncado || eventos.truncado,
+  };
+}
+
+/** El chat completo de un visitante de la página, del primer mensaje al último. */
+export async function traerChatWeb(db: SupabaseClient, visitante: string): Promise<MensajeWebFila[]> {
+  const { data, error } = await db
+    .from("web_mensajes")
+    .select(COLUMNAS_WEB)
+    .eq("visitante", visitante)
+    .order("created_at", { ascending: true })
+    .limit(2000);
+  if (error) throw new Error(`No se pudo leer la conversación: ${error.message}`);
+  return (data ?? []) as MensajeWebFila[];
+}
+
+/** ¿Este visitante dejó sus datos (hay un lead web con su id)? */
+export async function dejoDatosWeb(db: SupabaseClient, visitante: string): Promise<boolean> {
+  const { count, error } = await db
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("origen", "web")
+    .eq("web_visitante", visitante);
+  if (error) throw new Error(`No se pudieron leer los leads: ${error.message}`);
   return (count ?? 0) > 0;
 }

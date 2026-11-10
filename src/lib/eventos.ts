@@ -3,7 +3,8 @@
  * número al azar del navegador. Código puro (sin React ni red) para poder probarlo.
  */
 
-export const TIPOS_EVENTO = ["visita", "whatsapp", "simular", "simulacion"] as const;
+// chat_abrio: abrió el asistente de la página · chat_whatsapp: tocó un link a WhatsApp dentro del chat.
+export const TIPOS_EVENTO = ["visita", "whatsapp", "simular", "simulacion", "chat_abrio", "chat_whatsapp"] as const;
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
 
 export const ORIGENES = ["instagram", "facebook", "google", "whatsapp", "directo", "otro"] as const;
