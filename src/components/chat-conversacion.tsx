@@ -1,7 +1,9 @@
 import { fechaHora, type MensajeIg } from "@/lib/conversaciones";
+import { ETIQUETAS_CANAL, type Canal } from "@/lib/conversaciones-canal";
 
 /** Un chat del bot en burbujas: el cliente a la izquierda y el bot a la derecha. */
-export function ChatConversacion({ mensajes }: { mensajes: MensajeIg[] }) {
+export function ChatConversacion({ mensajes, canal = "instagram" }: { mensajes: MensajeIg[]; canal?: Canal }) {
+  const etiquetas = ETIQUETAS_CANAL[canal];
   return (
     <ol className="space-y-3" aria-label="Mensajes">
       {mensajes.map((m, i) => {
@@ -20,8 +22,8 @@ export function ChatConversacion({ mensajes }: { mensajes: MensajeIg[] }) {
                 {m.content}
               </p>
               <p className="mt-1 text-[11px] text-car-muted">
-                {delCliente ? "Cliente" : "Bot"} · {fechaHora(m.created_at)}
-                {fallo && <span className="ml-2 font-semibold text-red-300">El bot no entendió este mensaje</span>}
+                {delCliente ? etiquetas.cliente : etiquetas.bot} · {fechaHora(m.created_at)}
+                {fallo && <span className="ml-2 font-semibold text-red-300">{`El ${etiquetas.bot.toLowerCase()} no entendió este mensaje`}</span>}
               </p>
             </div>
           </li>

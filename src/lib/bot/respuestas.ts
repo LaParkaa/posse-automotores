@@ -1,9 +1,12 @@
-import { buildWhatsAppUrlInstagram, buildWhatsAppUrlPostulacion, type DatosPostulacionMensaje } from "../utils";
+import { buildWhatsAppUrlInstagram, buildWhatsAppUrlWeb, buildWhatsAppUrlPostulacion, type DatosPostulacionMensaje } from "../utils";
 import type { Negocio } from "./negocio";
 import { descripcionDelUsado, type UsadoDelCliente } from "./nlu/usado";
 import type { Boton, Perfil, Tarjeta, VehiculoCatalogo } from "./types";
 
-export type Contexto = { negocio: Negocio; siteUrl: string };
+/** Por donde escribe el cliente: cambia solo el origen que dice el mensaje de WhatsApp y los textos que lo nombran. */
+export type Canal = "instagram" | "web";
+
+export type Contexto = { negocio: Negocio; siteUrl: string; canal?: Canal };
 
 // Limites de Instagram para las tarjetas (plantilla generica).
 const MAX_TITULO = 80;
@@ -99,11 +102,11 @@ export function datosVehiculo(v: VehiculoCatalogo): string {
     .join(" · ");
 }
 
-/** Boton que abre el WhatsApp de la secretaria con el mensaje del auto (origen Instagram). */
-export function botonContacto(v: VehiculoCatalogo | null, negocio: Negocio): Boton {
+/** Boton que abre el WhatsApp de la secretaria con el mensaje del auto (origen Instagram, o la web si `canal` es "web"). */
+export function botonContacto(v: VehiculoCatalogo | null, negocio: Negocio, canal?: Canal): Boton {
   return {
     titulo: recortar(`Hablar con ${negocio.secretaria}`, MAX_BOTON),
-    url: buildWhatsAppUrlInstagram(v),
+    url: canal === "web" ? buildWhatsAppUrlWeb(v) : buildWhatsAppUrlInstagram(v),
   };
 }
 
@@ -157,7 +160,7 @@ function subtituloDe(v: VehiculoCatalogo, precio: string): string {
 export function tarjetaDe(v: VehiculoCatalogo, ctx: Contexto): Tarjeta {
   const precio = precioDe(v) ?? `precio con ${ctx.negocio.secretaria}`;
   const link = linkFicha(v, ctx.siteUrl);
-  const botones: Boton[] = [botonContacto(v, ctx.negocio)];
+  const botones: Boton[] = [botonContacto(v, ctx.negocio, ctx.canal)];
   // Orden: "Ver en la web", "Simular mi plan", "Hablar con Marcos" (Instagram admite hasta 3 botones).
   const financiar = botonFinanciar(v, ctx);
   if (financiar) botones.unshift(financiar);
@@ -180,7 +183,7 @@ export function tarjetaContacto(v: VehiculoCatalogo | null, ctx: Contexto): Tarj
     titulo: recortar(v ? `${v.nombre} ${v.anio}` : negocio.nombre, MAX_TITULO),
     subtitulo: recortar(`Escribile a ${negocio.secretaria} y te cuenta todo`, MAX_SUBTITULO),
     imagenUrl: null,
-    botones: [botonContacto(v, negocio)],
+    botones: [botonContacto(v, negocio, ctx.canal)],
   };
 }
 
@@ -190,7 +193,7 @@ export function tarjetaContacto(v: VehiculoCatalogo | null, ctx: Contexto): Tarj
  */
 export function tarjetaFinanciacion(v: VehiculoCatalogo | null, ctx: Contexto, usado: UsadoDelCliente | null = null): Tarjeta {
   const { negocio } = ctx;
-  const botones = [botonFinanciar(v, ctx, usado), botonContacto(v, negocio)].filter((b): b is Boton => b !== null);
+  const botones = [botonFinanciar(v, ctx, usado), botonContacto(v, negocio, ctx.canal)].filter((b): b is Boton => b !== null);
   const suUsado = usado ? descripcionDelUsado(usado) : null;
   return {
     titulo: recortar(v ? `${v.nombre} ${v.anio}` : "Simulá tu financiación", MAX_TITULO),
@@ -262,7 +265,7 @@ export function tarjetaEleccion(v: VehiculoCatalogo, numero: number, ctx: Contex
     // El estado va primero: si el subtitulo se recorta, se pierde el km y no el aviso de que no esta a la venta.
     subtitulo: recortar(datos === "" ? estado : `${estado} · ${datos}`, MAX_SUBTITULO),
     imagenUrl: urlImagen(v, ctx.siteUrl),
-    botones: [botonContacto(v, ctx.negocio)],
+    botones: [botonContacto(v, ctx.negocio, ctx.canal)],
   };
 }
 

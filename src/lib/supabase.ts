@@ -36,9 +36,12 @@ export function createAdminSupabaseClient() {
 // Tope por consulta del bot: deja margen dentro de los ~20 s de Meta para el resto del turno.
 const TOPE_CONSULTA_BOT_MS = 6000;
 
-/** Cliente de servicio del webhook de Instagram: igual al admin, pero cada consulta tiene tope de tiempo. */
-export function createBotSupabaseClient() {
+/**
+ * Cliente de servicio del webhook de Instagram: igual al admin, pero cada consulta tiene tope de tiempo
+ * (`topeMs`: 6 s por defecto; el chat web pasa uno mucho menor porque su ruta dura 10 s en total).
+ */
+export function createBotSupabaseClient(topeMs: number = TOPE_CONSULTA_BOT_MS) {
   return createClient(supabaseUrl, supabaseServiceKey, {
-    global: { fetch: fetchConTope(TOPE_CONSULTA_BOT_MS) },
+    global: { fetch: fetchConTope(topeMs) },
   });
 }

@@ -435,6 +435,12 @@ export const postulacionAdjunto = (reclutador: string) => [
   `Los archivos no me llegan bien por acá 🙂 Mandale tu CV a ${reclutador} por WhatsApp 👇 y yo sigo con tu postulación acá 🙂`,
 ];
 
+/** Canal web: no se arma postulacion, se manda a quien busca trabajo directo a Marcos por WhatsApp. */
+export const empleoWeb = (reclutador: string) => [
+  `¡Qué bueno que quieras sumarte al equipo! 🙌 Escribile directo a ${reclutador} por WhatsApp y mandale tu CV 👇`,
+  `¡Genial que quieras trabajar con nosotros! 😊 Contale a ${reclutador} por WhatsApp y mandale tu CV 👇`,
+];
+
 /** Instagram tomo el numero como un contacto y no llego como texto: se pide de nuevo, dentro de una frase. */
 export const telefonoComoContacto = [
   "Instagram tomó tu número como un contacto y no me llega 😅 ¿Me lo escribís en una frase? Por ejemplo: Mi número es 3537 123456",

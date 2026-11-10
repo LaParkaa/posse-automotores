@@ -7,7 +7,7 @@ import { descripcionDelUsado, extraerUsado, type UsadoDelCliente } from "./nlu/u
 import { coincideAprox, esSoloEmojis, tokenizar } from "./nlu/normalizar";
 import { ALIAS_MARCA } from "./nlu/vocabulario";
 import { adjuntoEnPostulacion, iniciarPostulacion, pasoPostulacion } from "./postulacion";
-import { botonFinanciar, datosVehiculo, listaNumerada, precioDe, tarjetaEleccion } from "./respuestas";
+import { botonFinanciar, datosVehiculo, listaNumerada, precioDe, tarjetaEleccion, type Canal } from "./respuestas";
 import { sesionNueva, sesionVigente, type Filtros, type Oferta, type Sesion } from "./sesion";
 import * as T from "./textos";
 import {
@@ -26,6 +26,7 @@ import {
   nombrados,
   nombreParaSaludo,
   referenciaContextual,
+  reclutador,
   saludarAntes,
   salirDelPaso,
   secretaria,
@@ -72,6 +73,8 @@ export type EntradaMotor = {
   ahora: Date;
   siteUrl: string;
   negocio: Negocio;
+  /** Por donde escribe el cliente. Sin valor es "instagram" (el comportamiento de siempre). */
+  canal?: Canal;
 };
 
 export type ResultadoMotor = {
@@ -121,7 +124,7 @@ export function conversar(e: EntradaMotor): ResultadoMotor {
   const t: Turno = {
     e,
     s: structuredClone(base),
-    ctx: { negocio: e.negocio, siteUrl: e.siteUrl },
+    ctx: { negocio: e.negocio, siteUrl: e.siteUrl, canal: e.canal ?? "instagram" },
     mensajes: [],
     lead: null,
     aprenderHistoria: null,
@@ -167,11 +170,18 @@ function turno(t: Turno): void {
   const intenciones = detectarIntenciones(texto);
   // Pedir trabajo manda sobre todo lo demas, tambien sobre una respuesta a historia: un "cv" a la historia
   // del puesto no es de ningun auto, y preguntar "de que auto era?" no tendria sentido.
-  if (tiene(intenciones, "empleo")) return iniciarPostulacion(t, texto);
+  // En la web no hay postulacion de varios pasos (esa conversacion es de WhatsApp): se deriva a Marcos.
+  if (tiene(intenciones, "empleo")) return t.ctx.canal === "web" ? derivarEmpleoWeb(t) : iniciarPostulacion(t, texto);
   const ent = extraerEntidades(texto, t.e.catalogo);
   if (historiaId !== null && !respuestaAHistoria(t, historiaId, texto, ent, intenciones)) return;
   if (esCorreccion(t, texto)) return corregirHistoria(t);
   responderIntenciones(t, texto, intenciones, ent, { autoDeHistoria: historiaId !== null, saludar: true });
+}
+
+/** Canal web: quien busca trabajo escribe directo a Marcos por WhatsApp; no se arma ninguna postulacion. */
+function derivarEmpleoWeb(t: Turno): void {
+  decir(t, variante(t, "empleo-web", T.empleoWeb(reclutador(t))));
+  mostrarContacto(t, null);
 }
 
 // ---------------------------------------------------------------------------------------------

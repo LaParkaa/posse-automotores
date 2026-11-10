@@ -1,4 +1,4 @@
-import { toArDay } from "./metrics";
+import { AR_OFFSET_MS, toArDay } from "./metrics";
 
 /**
  * Conversaciones del bot de Instagram para el admin: la lista de personas, los números del bot y el reconocimiento
@@ -69,17 +69,37 @@ export type ResumenBot = {
   porDia: Array<{ dia: string; etiqueta: string; personas: number }>;
 };
 
-/** Resume los últimos `dias` días (el día de `ahora` incluido, en hora argentina). */
-export function resumirBot(mensajes: MensajeIg[], leads: LeadIg[], dias: number, ahora: string): ResumenBot {
+/**
+ * La ventana de los últimos `dias` días (el día de `ahora` incluido, en hora argentina): un lugar por día, para
+ * armar la serie, y cómo saber a qué día cae un instante. La comparten el resumen del bot de Instagram y el de la página.
+ */
+export function ventanaDeDias(dias: number, ahora: string) {
   const hoy = toArDay(ahora).getTime();
   const primero = hoy - (dias - 1) * DIA_MS;
-  const enVentana = (iso: string) => {
-    const t = toArDay(iso).getTime();
-    return t >= primero && t <= hoy;
+  return {
+    /** El instante (ISO) en que empieza el primer día: su medianoche argentina. Sirve para cortar una consulta. */
+    desde: new Date(primero + AR_OFFSET_MS).toISOString(),
+    /** Una entrada por día, del más viejo al de hoy. */
+    dias: Array.from({ length: dias }, (_, i) => {
+      const d = new Date(primero + i * DIA_MS);
+      return { dia: claveDia(d), etiqueta: `${d.getUTCDate()} ${MESES[d.getUTCMonth()]}` };
+    }),
+    enVentana(iso: string): boolean {
+      const t = toArDay(iso).getTime();
+      return t >= primero && t <= hoy;
+    },
+    /** "2026-11-10": el día argentino de ese instante. */
+    claveDeDia: (iso: string) => claveDia(toArDay(iso)),
   };
+}
+
+/** Resume los últimos `dias` días (el día de `ahora` incluido, en hora argentina). */
+export function resumirBot(mensajes: MensajeIg[], leads: LeadIg[], dias: number, ahora: string): ResumenBot {
+  const ventana = ventanaDeDias(dias, ahora);
+  const { enVentana } = ventana;
 
   const personasPorDia = new Map<string, Set<string>>();
-  for (let i = 0; i < dias; i++) personasPorDia.set(claveDia(new Date(primero + i * DIA_MS)), new Set());
+  for (const { dia } of ventana.dias) personasPorDia.set(dia, new Set());
 
   const personas = new Set<string>();
   const postulantes = new Set<string>();
@@ -90,7 +110,7 @@ export function resumirBot(mensajes: MensajeIg[], leads: LeadIg[], dias: number,
 
   for (const m of mensajes) {
     if (!enVentana(m.created_at)) continue;
-    const dia = claveDia(toArDay(m.created_at));
+    const dia = ventana.claveDeDia(m.created_at);
     if (m.role === "user") {
       recibidos++;
       if (m.nota === "no_entendido") noEntendidos++;
@@ -116,10 +136,7 @@ export function resumirBot(mensajes: MensajeIg[], leads: LeadIg[], dias: number,
     dejaronDatos: conDatos.size,
     postulaciones: postulantes.size,
     volvieron: [...diasDePersona.values()].filter((d) => d.size >= 2).length,
-    porDia: [...personasPorDia].map(([dia, set]) => {
-      const d = new Date(`${dia}T00:00:00Z`);
-      return { dia, etiqueta: `${d.getUTCDate()} ${MESES[d.getUTCMonth()]}`, personas: set.size };
-    }),
+    porDia: ventana.dias.map(({ dia, etiqueta }) => ({ dia, etiqueta, personas: personasPorDia.get(dia)?.size ?? 0 })),
   };
 }
 
@@ -135,11 +152,13 @@ export type ConversacionResumen = {
   noEntendidos: number;
   postulo: boolean;
   dejoDatos: boolean;
+  /** Solo la página web: slug del último auto de la charla (null si no hubo ninguno). Instagram no lo usa. */
+  autoConsultado?: string | null;
 };
 
 const MAX_VISTA_PREVIA = 90;
 
-function vistaPrevia(texto: string): string {
+export function vistaPrevia(texto: string): string {
   const una = texto.replace(/\s+/g, " ").trim();
   return una.length > MAX_VISTA_PREVIA ? `${una.slice(0, MAX_VISTA_PREVIA - 1)}…` : una;
 }

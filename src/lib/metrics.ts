@@ -1,7 +1,7 @@
 import type { Vehiculo } from "./types";
 
 /** Argentina no aplica horario de verano: el offset es fijo. */
-const AR_OFFSET_MS = 3 * 60 * 60 * 1000;
+export const AR_OFFSET_MS = 3 * 60 * 60 * 1000;
 const DIA_MS = 24 * 60 * 60 * 1000;
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
