@@ -22,6 +22,8 @@ const ESPERA_MAXIMA_VISTO_MS = 1500;
 const DEMORA_TARJETAS_MS = 900;
 const DEMORA_MAXIMA_MENSAJE_MS = 1200;
 const DEMORA_MAXIMA_TURNO_MS = 3000;
+// Argentina no aplica horario de verano: el offset es fijo.
+const AR_OFFSET_MS = 3 * 60 * 60 * 1000;
 
 /** Todo lo que toca red o base de datos entra por aca, asi el flujo se testea sin ninguna de las dos. */
 export type DepsBot = {
@@ -66,6 +68,13 @@ export async function procesarEventos(eventos: EventoEntrante[], deps: DepsBot):
       if (evento.tipo === "mensaje") await avisarError(evento.senderId, deps);
     }
   }
+}
+
+/** True si la hora argentina actual cae fuera de la franja en que el bot contesta (ver negocio.ts). */
+function fueraDeHorario(ahora: Date, negocio: Negocio): boolean {
+  const horaAr = new Date(ahora.getTime() - AR_OFFSET_MS).getUTCHours();
+  const { horarioBotDesde: desde, horarioBotHasta: hasta } = negocio;
+  return !(horaAr >= desde || horaAr < hasta);
 }
 
 /** True si el texto es una respuesta automatica de Instagram (ausencia, respuesta instantanea) y no una persona. */
@@ -116,6 +125,9 @@ async function procesarMensaje(evento: Mensaje, deps: DepsBot): Promise<void> {
   if (!(await deps.reclamarMensaje(senderId, mid, texto ?? "[adjunto]"))) return;
   // Solo los tipos (nunca el contenido): sirve para saber como manda Instagram cada cosa (ej. un telefono como contacto).
   if (adjuntos.length > 0) console.info("[bot] Adjuntos recibidos", { tipos: adjuntos, conTexto: Boolean(texto) });
+
+  // Fuera de la franja horaria del bot (ver negocio.ts) el mensaje queda registrado pero lo atiende una persona.
+  if (fueraDeHorario(deps.ahora(), deps.negocio)) return;
 
   const chat = await deps.cargarChat(senderId);
   const ahora = deps.ahora();

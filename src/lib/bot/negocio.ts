@@ -29,6 +29,13 @@ export type Negocio = {
   /** Horas que el bot se calla en un chat cuando contesta una persona desde la cuenta. */
   pausaHumanoHoras: number;
   /**
+   * Franja horaria (hora argentina) en que el bot contesta; el resto del dia los mensajes
+   * los atiende una persona a mano y el bot no responde. Cruza la medianoche: activo si la
+   * hora es >= horarioBotDesde o < horarioBotHasta.
+   */
+  horarioBotDesde: number;
+  horarioBotHasta: number;
+  /**
    * Frases de las respuestas automaticas de Instagram (mensaje de ausencia, respuesta instantanea).
    * Salen desde la cuenta como si las escribiera una persona; si el eco las contiene, no se pausa el chat.
    * Se comparan sin tildes ni mayusculas. Si se cambia el texto automatico en Instagram, actualizar aca.
@@ -59,6 +66,10 @@ export const NEGOCIO: Negocio = {
   documentacion: "Para comprar: DNI. Para financiar, además, comprobante de ingresos.",
 
   pausaHumanoHoras: 6,
+
+  // Acordado con Marcos: el bot contesta de 22 a 9; en el resto del dia atendemos nosotros a mano.
+  horarioBotDesde: 22,
+  horarioBotHasta: 9,
 
   mensajesAutomaticos: ["recibio tu mensaje", "horarios de atencion no se encuentran disponibles"],
 };
