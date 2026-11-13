@@ -13,7 +13,8 @@ import type { Tarjeta } from "./types";
 // El motor ya tiene sus propios tests: aca se controla lo que devuelve para probar solo el flujo del handler.
 vi.mock("./motor", () => ({ conversar: vi.fn() }));
 
-const AHORA = new Date("2026-10-11T15:00:00Z");
+// 02:00 en Argentina (UTC-3): dentro de la franja en que el bot contesta (ver negocio.ts).
+const AHORA = new Date("2026-10-11T05:00:00Z");
 const SESION = { ...sesionNueva(AHORA), saludado: true };
 
 const TARJETA: Tarjeta = {
@@ -158,6 +159,36 @@ describe("procesarEventos: mensajes", () => {
     await procesarEventos([mensaje()], deps);
 
     expect(deps.enviarTexto).toHaveBeenCalledWith("111", "¡Hola! ¿Qué andás buscando?");
+  });
+
+  it("fuera de la franja horaria del bot no contesta, no mira el chat ni el catalogo", async () => {
+    // 12:00 en Argentina (UTC-3): fuera de la franja 22-9 en que contesta el bot.
+    const deps = crearDeps({ ahora: () => new Date("2026-10-11T15:00:00Z") });
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(deps.reclamarMensaje).toHaveBeenCalled(); // el mensaje queda registrado
+    expect(deps.cargarChat).not.toHaveBeenCalled();
+    expect(deps.catalogo).not.toHaveBeenCalled();
+    expect(conversar).not.toHaveBeenCalled();
+    expect(deps.enviarTexto).not.toHaveBeenCalled();
+    expect(deps.enviarTarjetas).not.toHaveBeenCalled();
+  });
+
+  it("al borde de la franja (22 hs) ya contesta", async () => {
+    const deps = crearDeps({ ahora: () => new Date("2026-10-12T01:00:00Z") }); // 22:00 en Argentina
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(deps.enviarTexto).toHaveBeenCalledWith("111", "¡Hola! ¿Qué andás buscando?");
+  });
+
+  it("al borde de la franja (9 hs) ya no contesta", async () => {
+    const deps = crearDeps({ ahora: () => new Date("2026-10-11T12:00:00Z") }); // 09:00 en Argentina
+
+    await procesarEventos([mensaje()], deps);
+
+    expect(deps.enviarTexto).not.toHaveBeenCalled();
   });
 
   it("sin sesion guardada el motor arranca con una sesion nueva", async () => {
