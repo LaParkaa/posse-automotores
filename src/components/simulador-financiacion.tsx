@@ -7,7 +7,9 @@ import { registrarEvento } from "@/lib/rastreo";
 import {
   ESTADOS,
   PLAZOS,
+  cuotaEstimadaPublica,
   esNavegadorInterno,
+  planParaPlazo,
   urlFinanciacion,
   validar,
   type EstadoUsado,
@@ -15,6 +17,9 @@ import {
   type SolicitudFinanciacion,
   type UsadoInicial,
 } from "@/lib/financiacion";
+import { formatARS } from "@/lib/creditos/formato";
+import type { PlanFinanciacionPublico } from "@/lib/creditos/types";
+import { guardarSimulacionWeb } from "@/app/financiacion/actions";
 
 export type AutoParaFinanciar = {
   slug: string;
@@ -109,11 +114,14 @@ export function SimuladorFinanciacion({
   autos,
   autoInicial,
   usadoInicial = null,
+  planes = [],
 }: {
   autos: AutoParaFinanciar[];
   autoInicial?: string;
   /** Si el cliente ya contó qué auto entrega (por el bot), el formulario abre con "Sí" y esos datos. */
   usadoInicial?: UsadoInicial | null;
+  /** Tasas públicas configuradas en /admin/creditos/tasas, para mostrar una cuota estimada. */
+  planes?: PlanFinanciacionPublico[];
 }) {
   const [autoSlug, setAutoSlug] = useState(autos.some((a) => a.slug === autoInicial) ? (autoInicial as string) : "");
   const [conPermuta, setConPermuta] = useState(usadoInicial !== null);
@@ -124,9 +132,14 @@ export function SimuladorFinanciacion({
   const [conFotos, setConFotos] = useState(false);
   const [nombre, setNombre] = useState("");
   const [plazo, setPlazo] = useState<Plazo>(24);
+  const [montoAFinanciar, setMontoAFinanciar] = useState("");
   const [intentado, setIntentado] = useState(false);
   const [enlace, setEnlace] = useState<string | null>(null);
   const formulario = useRef<HTMLFormElement>(null);
+
+  const planAplicable = planParaPlazo(planes, plazo);
+  const monto = Number(montoAFinanciar) || 0;
+  const cuotaEstimada = planAplicable && monto > 0 ? cuotaEstimadaPublica(monto, planAplicable, plazo) : null;
 
   const etiquetaAuto =
     autoSlug === OTRO_AUTO ? "Todavía no elegí un auto" : (autos.find((a) => a.slug === autoSlug)?.etiqueta ?? "");
@@ -154,6 +167,16 @@ export function SimuladorFinanciacion({
     registrarEvento("simulacion", autoSlug === OTRO_AUTO ? null : autoSlug);
     setEnlace(url);
     window.open(url, "_blank", "noopener");
+    if (planAplicable && cuotaEstimada) {
+      void guardarSimulacionWeb({
+        vehiculoDescripcion: etiquetaAuto,
+        clienteNombre: nombre,
+        montoAFinanciar: monto,
+        plazoMeses: plazo,
+        tnaAplicada: planAplicable.tna_final_pct,
+        cuotaEstimada,
+      });
+    }
   };
 
   return (
@@ -281,6 +304,33 @@ export function SimuladorFinanciacion({
             ))}
           </div>
         </div>
+
+        {planes.length > 0 && (
+          <div className="mt-5">
+            <label className="mb-2 block text-base text-car-white/90" htmlFor="monto-financiar">
+              ¿Cuánto necesitás financiar? (aprox., en pesos)
+            </label>
+            <input
+              id="monto-financiar"
+              value={montoAFinanciar}
+              onChange={(e) => setMontoAFinanciar(e.target.value.replace(/\D/g, ""))}
+              inputMode="numeric"
+              placeholder="Ej: 10000000"
+              className={CAMPO}
+            />
+            {cuotaEstimada !== null && planAplicable && (
+              <p className="mt-3 rounded-xl border border-car-gold/30 bg-car-gold/10 p-4 text-car-white">
+                Cuota estimada con <span className="font-semibold">{planAplicable.nombre}</span>:{" "}
+                <span className="font-condensed text-xl font-black text-car-gold">
+                  {plazo}x {formatARS(cuotaEstimada)}
+                </span>
+                <span className="mt-1 block text-sm text-car-muted">
+                  Estimación informativa, sujeta a aprobación crediticia final.
+                </span>
+              </p>
+            )}
+          </div>
+        )}
       </section>
 
       <div className="pt-2">
