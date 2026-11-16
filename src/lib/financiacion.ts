@@ -1,4 +1,6 @@
 import { WHATSAPP_LOCAL } from "@/lib/utils";
+import { calcularFinanciacion } from "@/lib/creditos/calculo";
+import type { PlanFinanciacionPublico } from "@/lib/creditos/types";
 
 /**
  * Simulador de financiación: no calcula cuotas, junta los datos de la persona y arma el mensaje de WhatsApp
@@ -107,4 +109,28 @@ export function armarMensaje(s: SolicitudFinanciacion, conEmojis = true): string
 
 export function urlFinanciacion(s: SolicitudFinanciacion, conEmojis = true): string {
   return `https://wa.me/${WHATSAPP_LOCAL}?text=${encodeURIComponent(armarMensaje(s, conEmojis))}`;
+}
+
+/**
+ * Cuota estimada para el simulador público: usa la TNA final del plan (ya con los gastos de
+ * otorgamiento incluidos, sin exponer ese desglose) sobre el monto que la persona dice que
+ * quiere financiar. Es una estimación para orientar, no un cálculo definitivo de crédito.
+ */
+export function cuotaEstimadaPublica(
+  montoAFinanciar: number,
+  plan: PlanFinanciacionPublico,
+  plazoMeses: number
+): number {
+  if (montoAFinanciar <= 0 || plazoMeses <= 0) return 0;
+  return calcularFinanciacion({
+    capitalAFinanciar: montoAFinanciar,
+    tnaPct: plan.tna_final_pct,
+    gastosOtorgamientoPct: 0,
+    plazoMeses,
+  }).cuotaFinal;
+}
+
+/** El primer plan público que habilita ese plazo (o el primero de la lista si ninguno calza exacto). */
+export function planParaPlazo(planes: PlanFinanciacionPublico[], plazoMeses: number): PlanFinanciacionPublico | null {
+  return planes.find((p) => p.plazos_habilitados.includes(plazoMeses)) ?? planes[0] ?? null;
 }

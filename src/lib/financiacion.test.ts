@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { armarMensaje, esNavegadorInterno, urlFinanciacion, usadoDeUrl, validar, type SolicitudFinanciacion } from "./financiacion";
+import {
+  armarMensaje,
+  cuotaEstimadaPublica,
+  esNavegadorInterno,
+  planParaPlazo,
+  urlFinanciacion,
+  usadoDeUrl,
+  validar,
+  type SolicitudFinanciacion,
+} from "./financiacion";
+import type { PlanFinanciacionPublico } from "./creditos/types";
 import { WHATSAPP_LOCAL } from "./utils";
 
 const BASE: SolicitudFinanciacion = {
@@ -148,5 +158,35 @@ describe("usadoDeUrl", () => {
   it("limpia lo que viene de la direccion: espacios, saltos de linea y largo", () => {
     expect(usadoDeUrl({ usado: "  Gol\n\nPower  " })?.modelo).toBe("Gol Power");
     expect(usadoDeUrl({ usado: "x".repeat(200) })?.modelo.length).toBe(60);
+  });
+});
+
+const PLAN_A: PlanFinanciacionPublico = { id: "a", nombre: "Propia", plazos_habilitados: [12, 24], tna_final_pct: 50 };
+const PLAN_B: PlanFinanciacionPublico = { id: "b", nombre: "Bancor", plazos_habilitados: [36, 48, 60], tna_final_pct: 63.5 };
+
+describe("planParaPlazo", () => {
+  it("elige el primer plan que habilita ese plazo", () => {
+    expect(planParaPlazo([PLAN_A, PLAN_B], 24)).toBe(PLAN_A);
+    expect(planParaPlazo([PLAN_A, PLAN_B], 48)).toBe(PLAN_B);
+  });
+
+  it("si ninguno calza, cae en el primero de la lista", () => {
+    expect(planParaPlazo([PLAN_A, PLAN_B], 6)).toBe(PLAN_A);
+  });
+
+  it("sin planes devuelve null", () => {
+    expect(planParaPlazo([], 24)).toBeNull();
+  });
+});
+
+describe("cuotaEstimadaPublica", () => {
+  it("calcula la cuota con la TNA final del plan (ya con gastos incluidos)", () => {
+    const cuota = cuotaEstimadaPublica(100000, PLAN_A, 12);
+    expect(cuota).toBeGreaterThan(100000 / 12);
+  });
+
+  it("sin monto o sin plazo no calcula nada", () => {
+    expect(cuotaEstimadaPublica(0, PLAN_A, 12)).toBe(0);
+    expect(cuotaEstimadaPublica(100000, PLAN_A, 0)).toBe(0);
   });
 });

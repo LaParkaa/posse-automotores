@@ -5,6 +5,7 @@ import { FloatingWhatsApp } from "@/components/floating-whatsapp";
 import { SimuladorFinanciacion } from "@/components/simulador-financiacion";
 import { usadoDeUrl } from "@/lib/financiacion";
 import { getVehiculosDisponibles } from "@/lib/data";
+import { getPlanesActivosPublicos } from "@/lib/creditos/data";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,12 @@ export default async function FinanciacionPage({
   searchParams: Promise<{ auto?: string; usado?: string; usadoAnio?: string; permuta?: string }>;
 }) {
   const { auto, ...paramsUsado } = await searchParams;
-  const vehiculos = await getVehiculosDisponibles();
+  const [vehiculos, planes] = await Promise.all([
+    getVehiculosDisponibles(),
+    // Si todavía no se corrió la migración de supabase/schema-creditos.sql, no tiene que romper
+    // la página pública: el simulador sigue funcionando, solo sin la cuota estimada.
+    getPlanesActivosPublicos().catch(() => []),
+  ]);
   const autos = vehiculos.map((v) => ({
     slug: v.slug,
     etiqueta: `${v.nombre.trim()} (${v.anio})`,
@@ -39,7 +45,7 @@ export default async function FinanciacionPage({
           Simulá tu <span className="text-car-gold">Plan</span>
         </h1>
         <div className="mb-8 mt-4 h-0.5 w-12 bg-car-gold" />
-        <SimuladorFinanciacion autos={autos} autoInicial={auto} usadoInicial={usadoDeUrl(paramsUsado)} />
+        <SimuladorFinanciacion autos={autos} autoInicial={auto} usadoInicial={usadoDeUrl(paramsUsado)} planes={planes} />
       </main>
       <SiteFooter />
       <FloatingWhatsApp />
