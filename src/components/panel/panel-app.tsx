@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { BarChart3, Car, ChevronLeft, House, KeyRound, Plus } from "lucide-react";
 import { cambiarEstado, deshacerVenta, marcarVendido } from "@/app/panel/actions";
@@ -11,6 +11,7 @@ import { useVehiculosRealtime } from "@/lib/use-vehiculos-realtime";
 import { KpiHeader } from "./kpi-header";
 import { LlavesView } from "./llaves-view";
 import { PanelInicio } from "./panel-inicio";
+import { PublicarSheet } from "./publicar-sheet";
 import { SaleSheet } from "./sale-sheet";
 import { SalesChart } from "./sales-chart";
 import { StockList } from "./stock-list";
@@ -40,12 +41,17 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
   // Siempre abre en el menú de inicio; la sección elegida queda en la dirección (/panel#llaves).
   const [tab, irA] = usePanelTab();
   const [ventaAbierta, setVentaAbierta] = useState<Vehiculo | null>(null);
+  // Guarda solo el id: así la hoja siempre muestra el auto al día (Realtime) y se cierra si el auto desaparece.
+  const [publicarId, setPublicarId] = useState<string | null>(null);
   const [pendientes, setPendientes] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<Toast | null>(null);
   const [, startTransition] = useTransition();
 
   const activos = useMemo(() => vivos.filter((v) => v.deleted_at === null), [vivos]);
   const kpis = useMemo(() => getKpis(activos, ahoraVivo), [activos, ahoraVivo]);
+  const publicarAbierto = useMemo(() => activos.find((v) => v.id === publicarId) ?? null, [activos, publicarId]);
+  // Estable: la hoja lo usa en un efecto y no debe reengancharse en cada render.
+  const cerrarPublicar = useCallback(() => setPublicarId(null), []);
   const sinLlave = useMemo(() => activos.filter((v) => v.estado !== "vendido" && !v.key_image_url).length, [activos]);
 
   // El toast se va solo a los 6 segundos, que es la ventana para tocar "Deshacer".
@@ -156,7 +162,7 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
         ) : tab === "stock" ? (
           <div className="space-y-4">
             <KpiHeader kpis={kpis} />
-            <StockList vehiculos={activos} onEstado={onEstado} pendientes={pendientes} />
+            <StockList vehiculos={activos} onEstado={onEstado} pendientes={pendientes} onPublicar={setPublicarId} />
           </div>
         ) : tab === "llaves" ? (
           <LlavesView vehiculos={activos} onToast={(texto, tono) => setToast({ texto, tono })} />
@@ -222,6 +228,14 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
           <Plus size={20} /> Agregar
         </Link>
       </nav>
+      )}
+
+      {publicarAbierto && (
+        <PublicarSheet
+          vehiculo={publicarAbierto}
+          onCerrar={cerrarPublicar}
+          onToast={(texto, tono) => setToast({ texto, tono })}
+        />
       )}
 
       <SaleSheet
