@@ -25,4 +25,8 @@ export type Vehiculo = {
   sold_at: string | null;
   sale_price: number | null;
   sale_notes: string | null;
+  /** Foto de la llave física (bucket vehiculos-posse, carpeta llaves/). Solo la usa el panel. */
+  key_image_url: string | null;
+  /** Patente en mayúsculas y sin espacios. Solo la usa el panel. */
+  patente: string | null;
 };

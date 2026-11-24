@@ -1,17 +1,23 @@
 "use client";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { BarChart3, Car, Plus } from "lucide-react";
+import { BarChart3, Car, KeyRound, Plus } from "lucide-react";
 import { cambiarEstado, deshacerVenta, marcarVendido } from "@/app/panel/actions";
 import { getKpis } from "@/lib/metrics";
 import type { EstadoVehiculo, Vehiculo } from "@/lib/types";
 import { useVehiculosRealtime } from "@/lib/use-vehiculos-realtime";
 import { KpiHeader } from "./kpi-header";
+import { LlavesView } from "./llaves-view";
 import { SaleSheet } from "./sale-sheet";
 import { SalesChart } from "./sales-chart";
 import { StockList } from "./stock-list";
 
-type Tab = "stock" | "metricas";
+type Tab = "stock" | "llaves" | "metricas";
+const TABS: { valor: Tab; texto: string }[] = [
+  { valor: "stock", texto: "Stock" },
+  { valor: "llaves", texto: "Llaves" },
+  { valor: "metricas", texto: "Métricas" },
+];
 type Toast = { texto: string; tono: "ok" | "error"; deshacer?: () => void };
 
 export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: string }) {
@@ -128,17 +134,18 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
 
         <KpiHeader kpis={kpis} />
 
-        <div className="mt-3 grid grid-cols-2 gap-1 rounded-full bg-car-gray2 p-1">
-          {(["stock", "metricas"] as Tab[]).map((valor) => (
+        <div className="mt-3 grid grid-cols-3 gap-1 rounded-full bg-car-gray2 p-1">
+          {TABS.map(({ valor, texto }) => (
             <button
               key={valor}
               type="button"
               onClick={() => setTab(valor)}
+              aria-pressed={tab === valor}
               className={`min-h-11 rounded-full text-sm font-bold uppercase tracking-wide transition ${
                 tab === valor ? "bg-car-gold text-car-black" : "text-car-muted"
               }`}
             >
-              {valor === "stock" ? "Stock" : "Métricas"}
+              {texto}
             </button>
           ))}
         </div>
@@ -147,6 +154,8 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
       <main className="flex-1 px-4 pb-32 pt-4">
         {tab === "stock" ? (
           <StockList vehiculos={activos} onEstado={onEstado} pendientes={pendientes} />
+        ) : tab === "llaves" ? (
+          <LlavesView vehiculos={activos} onToast={(texto, tono) => setToast({ texto, tono })} />
         ) : (
           <SalesChart vehiculos={activos} ahora={ahoraVivo} />
         )}
@@ -185,6 +194,15 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
           }`}
         >
           <Car size={20} /> Stock
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("llaves")}
+          className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold uppercase ${
+            tab === "llaves" ? "text-car-gold" : "text-car-muted"
+          }`}
+        >
+          <KeyRound size={20} /> Llaves
         </button>
         <button
           type="button"
