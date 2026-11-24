@@ -1,23 +1,20 @@
 "use client";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { BarChart3, Car, KeyRound, Plus } from "lucide-react";
+import { BarChart3, Car, ChevronLeft, House, KeyRound, Plus } from "lucide-react";
 import { cambiarEstado, deshacerVenta, marcarVendido } from "@/app/panel/actions";
 import { getKpis } from "@/lib/metrics";
+import { TITULOS_PANEL } from "@/lib/panel-tabs";
+import { usePanelTab } from "@/lib/use-panel-tab";
 import type { EstadoVehiculo, Vehiculo } from "@/lib/types";
 import { useVehiculosRealtime } from "@/lib/use-vehiculos-realtime";
 import { KpiHeader } from "./kpi-header";
 import { LlavesView } from "./llaves-view";
+import { PanelInicio } from "./panel-inicio";
 import { SaleSheet } from "./sale-sheet";
 import { SalesChart } from "./sales-chart";
 import { StockList } from "./stock-list";
 
-type Tab = "stock" | "llaves" | "metricas";
-const TABS: { valor: Tab; texto: string }[] = [
-  { valor: "stock", texto: "Stock" },
-  { valor: "llaves", texto: "Llaves" },
-  { valor: "metricas", texto: "Métricas" },
-];
 type Toast = { texto: string; tono: "ok" | "error"; deshacer?: () => void };
 
 export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: string }) {
@@ -40,7 +37,8 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
     };
   }, []);
 
-  const [tab, setTab] = useState<Tab>("stock");
+  // Siempre abre en el menú de inicio; la sección elegida queda en la dirección (/panel#llaves).
+  const [tab, irA] = usePanelTab();
   const [ventaAbierta, setVentaAbierta] = useState<Vehiculo | null>(null);
   const [pendientes, setPendientes] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<Toast | null>(null);
@@ -48,6 +46,7 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
 
   const activos = useMemo(() => vivos.filter((v) => v.deleted_at === null), [vivos]);
   const kpis = useMemo(() => getKpis(activos, ahoraVivo), [activos, ahoraVivo]);
+  const sinLlave = useMemo(() => activos.filter((v) => v.estado !== "vendido" && !v.key_image_url).length, [activos]);
 
   // El toast se va solo a los 6 segundos, que es la ventana para tocar "Deshacer".
   useEffect(() => {
@@ -55,6 +54,11 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
     const id = setTimeout(() => setToast(null), 6000);
     return () => clearTimeout(id);
   }, [toast]);
+
+  // Cada pantalla nueva arranca desde arriba, no donde quedó la anterior.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [tab]);
 
   function marcarPendiente(id: string, activo: boolean) {
     setPendientes((prev) => {
@@ -121,43 +125,46 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
 
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col">
-      <header
-        className="sticky top-0 z-30 border-b border-white/10 bg-car-black/95 px-4 pb-3 backdrop-blur"
-        style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
-      >
-        <div className="mb-3 flex items-center gap-2">
-          <img src="/logo-posse.png" alt="Posse Automotores" className="h-7 w-auto" />
-          <span className="font-condensed text-sm font-black italic uppercase tracking-[3px] text-car-gold">
-            Panel
-          </span>
-        </div>
-
-        <KpiHeader kpis={kpis} />
-
-        <div className="mt-3 grid grid-cols-3 gap-1 rounded-full bg-car-gray2 p-1">
-          {TABS.map(({ valor, texto }) => (
+      {/* El inicio es una pantalla aparte, con su propio encabezado: la barra de arriba es solo de las secciones. */}
+      {tab !== "inicio" && (
+        <header
+          className="sticky top-0 z-30 border-b border-white/10 bg-car-black/95 px-4 pb-2 backdrop-blur"
+          style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
+        >
+          <div className="flex items-center gap-2">
             <button
-              key={valor}
               type="button"
-              onClick={() => setTab(valor)}
-              aria-pressed={tab === valor}
-              className={`min-h-11 rounded-full text-sm font-bold uppercase tracking-wide transition ${
-                tab === valor ? "bg-car-gold text-car-black" : "text-car-muted"
-              }`}
+              onClick={() => irA("inicio")}
+              aria-label="Volver al inicio"
+              className="-ml-2 flex size-11 items-center justify-center rounded-full text-car-white active:bg-white/10"
             >
-              {texto}
+              <ChevronLeft size={24} />
             </button>
-          ))}
-        </div>
-      </header>
+            <h1 className="font-condensed text-xl font-black italic uppercase tracking-wide text-car-white">
+              {TITULOS_PANEL[tab]}
+            </h1>
+          </div>
+        </header>
+      )}
 
-      <main className="flex-1 px-4 pb-32 pt-4">
-        {tab === "stock" ? (
-          <StockList vehiculos={activos} onEstado={onEstado} pendientes={pendientes} />
+      <main
+        className={`flex-1 px-4 ${tab === "inicio" ? "pb-10" : "pb-32 pt-4"}`}
+        style={tab === "inicio" ? { paddingTop: "calc(1.5rem + env(safe-area-inset-top))" } : undefined}
+      >
+        {tab === "inicio" ? (
+          <PanelInicio kpis={kpis} sinLlave={sinLlave} onIr={irA} />
+        ) : tab === "stock" ? (
+          <div className="space-y-4">
+            <KpiHeader kpis={kpis} />
+            <StockList vehiculos={activos} onEstado={onEstado} pendientes={pendientes} />
+          </div>
         ) : tab === "llaves" ? (
           <LlavesView vehiculos={activos} onToast={(texto, tono) => setToast({ texto, tono })} />
         ) : (
-          <SalesChart vehiculos={activos} ahora={ahoraVivo} />
+          <div className="space-y-4">
+            <KpiHeader kpis={kpis} />
+            <SalesChart vehiculos={activos} ahora={ahoraVivo} />
+          </div>
         )}
       </main>
 
@@ -182,37 +189,32 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
         </div>
       )}
 
+      {tab !== "inicio" && (
       <nav
+        aria-label="Secciones"
         className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-lg justify-around border-t border-white/10 bg-car-black/95 backdrop-blur"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <button
-          type="button"
-          onClick={() => setTab("stock")}
-          className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold uppercase ${
-            tab === "stock" ? "text-car-gold" : "text-car-muted"
-          }`}
-        >
-          <Car size={20} /> Stock
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("llaves")}
-          className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold uppercase ${
-            tab === "llaves" ? "text-car-gold" : "text-car-muted"
-          }`}
-        >
-          <KeyRound size={20} /> Llaves
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("metricas")}
-          className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold uppercase ${
-            tab === "metricas" ? "text-car-gold" : "text-car-muted"
-          }`}
-        >
-          <BarChart3 size={20} /> Métricas
-        </button>
+        {(
+          [
+            { valor: "inicio", texto: "Inicio", icono: <House size={20} /> },
+            { valor: "stock", texto: "Stock", icono: <Car size={20} /> },
+            { valor: "llaves", texto: "Llaves", icono: <KeyRound size={20} /> },
+            { valor: "metricas", texto: "Métricas", icono: <BarChart3 size={20} /> },
+          ] as const
+        ).map(({ valor, texto, icono }) => (
+          <button
+            key={valor}
+            type="button"
+            onClick={() => irA(valor)}
+            aria-current={tab === valor ? "page" : undefined}
+            className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold uppercase ${
+              tab === valor ? "text-car-gold" : "text-car-muted"
+            }`}
+          >
+            {icono} {texto}
+          </button>
+        ))}
         <Link
           href="/admin/vehiculos/nuevo"
           className="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold uppercase text-car-muted"
@@ -220,6 +222,7 @@ export function PanelApp({ vehiculos, ahora }: { vehiculos: Vehiculo[]; ahora: s
           <Plus size={20} /> Agregar
         </Link>
       </nav>
+      )}
 
       <SaleSheet
         vehiculo={ventaAbierta}
