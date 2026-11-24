@@ -1,3 +1,4 @@
+import { Megaphone } from "lucide-react";
 import type { EstadoVehiculo, Vehiculo } from "@/lib/types";
 
 const OPCIONES: { estado: EstadoVehiculo; texto: string; activo: string }[] = [
@@ -10,10 +11,13 @@ export function VehicleRow({
   vehiculo,
   onEstado,
   pendiente,
+  onPublicar,
 }: {
   vehiculo: Vehiculo;
   onEstado: (estado: EstadoVehiculo) => void;
   pendiente: boolean;
+  /** Abre la hoja con el aviso armado para Mercado Libre y Marketplace (no se ofrece en autos vendidos). */
+  onPublicar?: () => void;
 }) {
   return (
     <li
@@ -43,6 +47,16 @@ export function VehicleRow({
           <p className="font-condensed text-base font-bold text-car-gold">{vehiculo.precio_texto}</p>
         </div>
       </div>
+
+      {onPublicar && vehiculo.estado !== "vendido" && (
+        <button
+          type="button"
+          onClick={onPublicar}
+          className="flex min-h-11 w-full items-center justify-center gap-2 border-t border-white/10 bg-car-gold/10 text-sm font-bold uppercase tracking-wide text-car-gold transition active:bg-car-gold/20"
+        >
+          <Megaphone size={16} /> Publicar aviso
+        </button>
+      )}
 
       <div className="grid grid-cols-3 gap-px bg-white/10">
         {OPCIONES.map(({ estado, texto, activo }) => {

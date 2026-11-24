@@ -16,10 +16,12 @@ export function StockList({
   vehiculos,
   onEstado,
   pendientes,
+  onPublicar,
 }: {
   vehiculos: Vehiculo[];
   onEstado: (id: string, estado: EstadoVehiculo) => void;
   pendientes: Set<string>;
+  onPublicar: (id: string) => void;
 }) {
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [busqueda, setBusqueda] = useState("");
@@ -75,6 +77,7 @@ export function StockList({
               vehiculo={v}
               pendiente={pendientes.has(v.id)}
               onEstado={(estado) => onEstado(v.id, estado)}
+              onPublicar={() => onPublicar(v.id)}
             />
           ))}
         </ul>
