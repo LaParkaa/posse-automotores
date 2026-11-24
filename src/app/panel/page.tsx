@@ -3,6 +3,8 @@ import { getAllVehiculos } from "@/lib/data";
 import { PanelApp } from "@/components/panel/panel-app";
 
 export const dynamic = "force-dynamic";
+// La búsqueda automática de llaves baja imágenes de internet desde acá: 30 s alcanzan para probar varias candidatas.
+export const maxDuration = 30;
 
 export default async function PanelPage() {
   await requireAdminSession();

@@ -92,6 +92,8 @@ export function VehiculoForm({
       sold_at: null,
       sale_price: null,
       sale_notes: null,
+      key_image_url: null,
+      patente: null,
     };
   }
 

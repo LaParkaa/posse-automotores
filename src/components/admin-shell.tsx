@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { BarChart3, Car, CreditCard, LayoutDashboard, LogOut, MessageSquare, Users, Menu, X, Smartphone } from "lucide-react";
+import { BarChart3, Car, CreditCard, House, KeyRound, LayoutDashboard, LogOut, MessageSquare, Users, Menu, X, Smartphone } from "lucide-react";
 
 const navItems = [
-  { href: "/panel", label: "Panel de stock", icon: Smartphone },
+  { href: "/panel", label: "Inicio", icon: House },
+  { href: "/panel#stock", label: "Panel de stock", icon: Smartphone },
+  { href: "/panel#llaves", label: "Llaves", icon: KeyRound },
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/vehiculos", label: "Vehículos", icon: Car },
   { href: "/admin/creditos", label: "Créditos", icon: CreditCard },
@@ -89,6 +91,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
           <img src="/logo-posse.png" alt="Posse Automotores" className="h-7 w-auto" />
           <span className="font-condensed text-base font-black italic text-car-gold">ADMIN</span>
+          <Link
+            href="/panel"
+            aria-label="Ir al inicio"
+            className="ml-auto grid size-11 place-items-center rounded-lg border border-white/10 bg-car-gray2 text-car-gold transition active:scale-95"
+          >
+            <House size={22} />
+          </Link>
         </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-8">{children}</main>
