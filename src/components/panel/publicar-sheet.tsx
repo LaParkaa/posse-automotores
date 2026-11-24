@@ -14,6 +14,30 @@ const MAX_TITULO_MERCADOLIBRE = 60;
 const BOTON_COPIAR =
   "flex size-11 shrink-0 items-center justify-center rounded-full bg-car-gray2 text-car-muted transition active:scale-95 active:bg-white/10";
 
+/** Copia al portapapeles; si el navegador no deja usar la API moderna (algunos celulares), prueba el método viejo. */
+async function escribirPortapapeles(texto: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch {
+    // Sigue con el método de respaldo.
+  }
+  try {
+    const campo = document.createElement("textarea");
+    campo.value = texto;
+    campo.setAttribute("readonly", "");
+    campo.style.position = "fixed";
+    campo.style.opacity = "0";
+    document.body.appendChild(campo);
+    campo.select();
+    const ok = document.execCommand("copy");
+    campo.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Hoja de abajo hacia arriba con el aviso ya armado para Mercado Libre o Marketplace: se copia cada campo (o todo
  * junto), se comparten las fotos y un botón abre la pantalla de publicar de la plataforma.
@@ -62,11 +86,10 @@ export function PublicarSheet({
   const marca = PLATAFORMAS[plataforma];
 
   async function copiar(clave: string, texto: string, nombre: string) {
-    try {
-      await navigator.clipboard.writeText(texto);
+    if (await escribirPortapapeles(texto)) {
       setCopiado(clave);
       onToast(`${nombre} copiado`, "ok");
-    } catch {
+    } else {
       onToast("No se pudo copiar. Mantené apretado el texto para copiarlo a mano.", "error");
     }
   }
@@ -135,7 +158,7 @@ export function PublicarSheet({
                   type="button"
                   onClick={() => elegir(p)}
                   aria-pressed={activa}
-                  className={`flex min-h-16 items-center justify-center gap-2 rounded-2xl px-3 font-condensed text-lg font-black italic transition active:scale-[0.97] ${
+                  className={`flex min-h-16 items-center justify-center gap-2 rounded-2xl px-2 font-condensed text-base font-black italic leading-tight transition active:scale-[0.97] ${
                     activa ? "opacity-100 shadow-lg ring-2 ring-car-gold ring-offset-2 ring-offset-car-gray" : "opacity-55"
                   }`}
                   style={{ backgroundColor: datos.fondo, color: datos.texto }}
@@ -275,7 +298,7 @@ export function PublicarSheet({
             href={marca.urlPublicar}
             target="_blank"
             rel="noopener"
-            className="mt-5 flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl px-4 font-condensed text-lg font-black italic shadow-lg transition active:scale-[0.98]"
+            className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-3 font-condensed text-base font-black italic leading-tight shadow-lg transition active:scale-[0.98]"
             style={{ backgroundColor: marca.fondo, color: marca.texto }}
           >
             <LogoPlataforma plataforma={plataforma} tamano={26} />
