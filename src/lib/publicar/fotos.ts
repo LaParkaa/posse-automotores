@@ -1,10 +1,13 @@
 import type { Vehiculo } from "@/lib/types";
 
-/** Las fotos del auto para publicar: la portada primero, sin repetir y solo direcciones http(s). */
+/** Direcciones http(s) o rutas propias del sitio (/img/auto.jpg, fotos que viven en /public). Nada más. */
+const esFoto = (url: string) => /^https?:\/\//i.test(url) || /^\/(?!\/)/.test(url);
+
+/** Las fotos del auto para publicar: la portada primero y sin repetir. */
 export function fotosDelAuto(v: Pick<Vehiculo, "cover_image_url" | "imagenes">): string[] {
   const vistas = new Set<string>();
-  for (const url of [v.cover_image_url, ...v.imagenes]) {
-    if (url && /^https?:\/\//i.test(url)) vistas.add(url);
+  for (const url of [v.cover_image_url, ...(v.imagenes ?? [])]) {
+    if (url && esFoto(url)) vistas.add(url);
   }
   return [...vistas];
 }
@@ -36,25 +39,30 @@ export type DepsFotos = {
 
 const esCancelacion = (e: unknown) => (e as { name?: string } | null)?.name === "AbortError";
 
-/**
- * Baja las fotos y las manda juntas a otra app del celular (WhatsApp, Marketplace…). Si el navegador no puede
- * compartir archivos, las descarga una por una. Cancelar el compartir no es un error.
- */
-export async function compartirFotos(urls: string[], nombreAuto: string, deps: DepsFotos): Promise<ResultadoFotos> {
-  if (urls.length === 0) return { estado: "error", mensaje: "Este auto no tiene fotos para compartir." };
+export type FotosBajadas = { ok: true; archivos: File[] } | { ok: false; mensaje: string };
 
-  let archivos: File[];
+/** Baja las fotos del auto a archivos. Se puede hacer de antemano, antes de que el usuario toque "Compartir". */
+export async function bajarFotos(urls: string[], nombreAuto: string, deps: DepsFotos): Promise<FotosBajadas> {
+  if (urls.length === 0) return { ok: false, mensaje: "Este auto no tiene fotos para compartir." };
   try {
-    archivos = await Promise.all(
+    const archivos = await Promise.all(
       urls.map(async (url, i) => {
         const blob = await deps.bajar(url);
         return new File([blob], nombreArchivoFoto(nombreAuto, i, url), { type: blob.type || "image/jpeg" });
       }),
     );
+    return { ok: true, archivos };
   } catch {
-    return { estado: "error", mensaje: "No se pudieron bajar las fotos. Revisá la señal y probá de nuevo." };
+    return { ok: false, mensaje: "No se pudieron bajar las fotos. Revisá la señal y probá de nuevo." };
   }
+}
 
+/**
+ * Manda las fotos ya bajadas a otra app del celular (WhatsApp, Marketplace…); si el navegador no puede compartir
+ * archivos, las descarga una por una. Cancelar el compartir no es un error. Llama a `compartir` sin esperar nada
+ * antes: los navegadores del celular solo dejan compartir pocos segundos después del toque.
+ */
+export async function entregarFotos(archivos: File[], nombreAuto: string, deps: DepsFotos): Promise<ResultadoFotos> {
   if (deps.puedeCompartir(archivos)) {
     try {
       await deps.compartir(archivos, nombreAuto);
@@ -64,9 +72,15 @@ export async function compartirFotos(urls: string[], nombreAuto: string, deps: D
       // Cualquier otro fallo del compartir: se baja igual, que es lo que el usuario quería.
     }
   }
-
   for (const archivo of archivos) deps.guardar(archivo);
   return { estado: "descargado" };
+}
+
+/** Baja y entrega en un solo paso (cuando las fotos todavía no se bajaron de antemano). */
+export async function compartirFotos(urls: string[], nombreAuto: string, deps: DepsFotos): Promise<ResultadoFotos> {
+  const bajadas = await bajarFotos(urls, nombreAuto, deps);
+  if (!bajadas.ok) return { estado: "error", mensaje: bajadas.mensaje };
+  return entregarFotos(bajadas.archivos, nombreAuto, deps);
 }
 
 export const depsDelNavegador: DepsFotos = {

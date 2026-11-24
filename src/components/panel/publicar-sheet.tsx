@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, ExternalLink, ImageOff, LoaderCircle, Share2, TriangleAlert, X } from "lucide-react";
 import { NEGOCIO } from "@/lib/bot/negocio";
 import { armarAviso, avisoComoTexto, type Plataforma } from "@/lib/publicar/aviso";
-import { compartirFotos, depsDelNavegador, fotosDelAuto } from "@/lib/publicar/fotos";
+import { bajarFotos, compartirFotos, depsDelNavegador, entregarFotos, fotosDelAuto } from "@/lib/publicar/fotos";
 import { PLATAFORMAS } from "@/lib/publicar/plataformas";
 import type { Vehiculo } from "@/lib/types";
 import { LogoPlataforma } from "./logos-plataformas";
@@ -57,6 +57,8 @@ export function PublicarSheet({
   const [edicion, setEdicion] = useState<string | null>(null);
   const [copiado, setCopiado] = useState<string | null>(null);
   const [bajando, setBajando] = useState(false);
+  // Las fotos se bajan apenas se abre la hoja: así "Compartir fotos" las manda en el mismo toque, sin esperar la red.
+  const [bajadas, setBajadas] = useState<{ clave: string; archivos: File[] } | null>(null);
   const cerrarRef = useRef<HTMLButtonElement>(null);
 
   // Entrada suave desde abajo, foco en "cerrar", Esc para salir y fondo quieto mientras está abierta.
@@ -82,6 +84,20 @@ export function PublicarSheet({
 
   const aviso = useMemo(() => armarAviso(vehiculo, plataforma, NEGOCIO), [vehiculo, plataforma]);
   const fotos = useMemo(() => fotosDelAuto(vehiculo), [vehiculo]);
+  const claveFotos = fotos.join("\n");
+  const nombreAuto = vehiculo.nombre;
+
+  useEffect(() => {
+    if (!claveFotos) return;
+    let vigente = true;
+    bajarFotos(claveFotos.split("\n"), nombreAuto, depsDelNavegador).then((r) => {
+      if (vigente && r.ok) setBajadas({ clave: claveFotos, archivos: r.archivos });
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [claveFotos, nombreAuto]);
+
   const descripcion = edicion ?? aviso.descripcion;
   const marca = PLATAFORMAS[plataforma];
 
@@ -97,7 +113,10 @@ export function PublicarSheet({
   async function alCompartirFotos() {
     setBajando(true);
     try {
-      const r = await compartirFotos(fotos, vehiculo.nombre, depsDelNavegador);
+      const listas = bajadas && bajadas.clave === claveFotos ? bajadas.archivos : null;
+      const r = listas
+        ? await entregarFotos(listas, nombreAuto, depsDelNavegador)
+        : await compartirFotos(fotos, nombreAuto, depsDelNavegador);
       if (r.estado === "compartido") onToast("Fotos listas para pegar", "ok");
       else if (r.estado === "descargado") onToast("Fotos descargadas", "ok");
       else if (r.estado === "error") onToast(r.mensaje, "error");

@@ -39,6 +39,19 @@ describe("precioNumerico", () => {
     expect(precioNumerico("Consultá precio")).toBeNull();
     expect(precioNumerico("")).toBeNull();
   });
+
+  it("reconoce U$D y dólares como dólares", () => {
+    expect(precioNumerico("U$D 14.500")).toEqual({ moneda: "USD", monto: 14500 });
+    expect(precioNumerico("14.500 dólares")).toEqual({ moneda: "USD", monto: 14500 });
+  });
+
+  it("si el texto es ambiguo devuelve null en vez de pegar un precio equivocado", () => {
+    expect(precioNumerico("USD 14.500 o $17.000.000")).toBeNull();
+    expect(precioNumerico("$9,5 millones")).toBeNull();
+    expect(precioNumerico("USD 14,500")).toBeNull();
+    expect(precioNumerico("USD 14 mil")).toBeNull();
+    expect(precioNumerico("USD 500")).toBeNull();
+  });
 });
 
 describe("armarAviso: título", () => {

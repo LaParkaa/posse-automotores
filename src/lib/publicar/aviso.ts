@@ -49,13 +49,20 @@ function dato(valor: string | null | undefined): string | null {
   return limpio;
 }
 
-/** "USD 14.500" → USD 14500; "$9.500.000" → ARS 9500000; "Consultá precio" → null. */
+/**
+ * "USD 14.500" → USD 14500; "$9.500.000" → ARS 9500000; "Consultá precio" → null. Si el texto puede leerse de más
+ * de una manera (dos números, coma decimal, "mil"/"millones", un monto muy chico) devuelve null: es mejor avisar
+ * que se cargue a mano que pegar un precio equivocado en una publicación.
+ */
 export function precioNumerico(texto: string): { moneda: "ARS" | "USD"; monto: number } | null {
-  const dolares = /usd|u\$s|us\$/i.test(texto);
+  const dolares = /usd|u\$[sd]|us\$|d[oó]lares/i.test(texto);
   if (!dolares && !texto.includes("$")) return null;
-  const digitos = texto.split(",")[0].replace(/\D/g, "");
-  if (!digitos) return null;
-  return { moneda: dolares ? "USD" : "ARS", monto: Number(digitos) };
+  if (/\d,\d/.test(texto) || /\bmil(lones)?\b|mill[oó]n/i.test(texto)) return null;
+  const numeros = texto.match(/\d[\d.]*/g) ?? [];
+  if (numeros.length !== 1) return null;
+  const monto = Number(numeros[0].replace(/\D/g, ""));
+  if (monto < 1000) return null;
+  return { moneda: dolares ? "USD" : "ARS", monto };
 }
 
 export function armarAviso(v: VehiculoPublicable, plataforma: Plataforma, negocio: DatosNegocio): Aviso {

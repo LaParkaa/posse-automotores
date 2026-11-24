@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compartirFotos, fotosDelAuto, nombreArchivoFoto, type DepsFotos } from "./fotos";
+import { bajarFotos, compartirFotos, entregarFotos, fotosDelAuto, nombreArchivoFoto, type DepsFotos } from "./fotos";
 import { PLATAFORMAS } from "./plataformas";
 
 describe("fotosDelAuto", () => {
@@ -10,6 +10,17 @@ describe("fotosDelAuto", () => {
         imagenes: ["https://x/b.jpg", "https://x/a.jpg", "", "ftp://x/c.jpg"],
       }),
     ).toEqual(["https://x/a.jpg", "https://x/b.jpg"]);
+  });
+
+  it("acepta las fotos que viven en /public y descarta las de otro esquema o sin protocolo", () => {
+    expect(
+      fotosDelAuto({ cover_image_url: "/img/a.jpg", imagenes: ["//otro.com/x.jpg", "/img/b.jpg", "javascript:alert(1)"] }),
+    ).toEqual(["/img/a.jpg", "/img/b.jpg"]);
+  });
+
+  it("si la base trae imagenes en null no se rompe", () => {
+    const sinLista = { cover_image_url: "https://x/a.jpg", imagenes: null } as unknown as Parameters<typeof fotosDelAuto>[0];
+    expect(fotosDelAuto(sinLista)).toEqual(["https://x/a.jpg"]);
   });
 
   it("sin portada devuelve solo las imágenes; sin nada devuelve vacío", () => {
@@ -86,6 +97,42 @@ describe("compartirFotos", () => {
   it("sin fotos devuelve un error", async () => {
     const { base } = deps();
     expect((await compartirFotos([], "Fiat Cronos", base)).estado).toBe("error");
+  });
+});
+
+describe("bajarFotos y entregarFotos (para compartir con la fotos ya bajadas)", () => {
+  it("bajarFotos devuelve los archivos con nombre, o un mensaje si no se pudo", async () => {
+    const { base } = deps();
+    const r = await bajarFotos(URLS, "Fiat Cronos", base);
+    expect(r.ok && r.archivos.map((f) => f.name)).toEqual(["fiat-cronos-1.jpg", "fiat-cronos-2.jpg"]);
+    const falla = await bajarFotos(URLS, "Fiat Cronos", {
+      ...base,
+      bajar: async () => {
+        throw new Error("CORS");
+      },
+    });
+    expect(falla.ok).toBe(false);
+  });
+
+  it("entregarFotos llama a compartir sin esperar nada antes (conserva el toque del usuario)", async () => {
+    const { base, llamadas } = deps();
+    const archivos = [new File(["x"], "a.jpg", { type: "image/jpeg" })];
+    const promesa = entregarFotos(archivos, "Fiat Cronos", base);
+    expect(llamadas.compartir).toHaveLength(1); // antes de cualquier await
+    expect(await promesa).toEqual({ estado: "compartido" });
+  });
+
+  it("entregarFotos descarga si no puede compartir, y la cancelación no es un error", async () => {
+    const archivos = [new File(["x"], "a.jpg", { type: "image/jpeg" })];
+    const sinShare = deps({ puedeCompartir: () => false });
+    expect(await entregarFotos(archivos, "Fiat Cronos", sinShare.base)).toEqual({ estado: "descargado" });
+    expect(sinShare.llamadas.guardar).toHaveLength(1);
+    const cancela = deps({
+      compartir: async () => {
+        throw new DOMException("cancelado", "AbortError");
+      },
+    });
+    expect(await entregarFotos(archivos, "Fiat Cronos", cancela.base)).toEqual({ estado: "cancelado" });
   });
 });
 
